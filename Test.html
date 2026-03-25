@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Eicon Search Test</title>
+    <style>
+        body { font-family: sans-serif; background: #222; color: #eee; padding: 20px; }
+        input { width: 100%; padding: 10px; font-size: 1.2em; border-radius: 5px; border: 1px solid #444; background: #111; color: white; }
+        #results { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
+        .icon-card { background: #333; padding: 10px; border-radius: 5px; text-align: center; }
+        img { max-width: 100px; height: auto; display: block; margin: 0 auto 5px; }
+        .status { color: #aaa; font-size: 0.8em; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>Eicon Hijack Test</h2>
+    <div id="status" class="status">Checking local storage...</div>
+    <input type="text" id="search" placeholder="Type to search (e.g. pink)...">
+    
+    <div id="results"></div>
+
+    <script>
+        const STATUS = document.getElementById('status');
+        const RESULTS = document.getElementById('results');
+        const SEARCH = document.getElementById('search');
+
+        // 1. URLs (Derived from the app.js logic)
+        const DATA_URL = "https://xariah.net/eicons/Home/GetEIcons"; 
+
+        async function init() {
+            let rawData = localStorage.getItem('EIconListHourlyObj');
+
+            if (!rawData) {
+                STATUS.innerText = "Downloading database from Xariah (This may fail due to CORS)...";
+                try {
+                    const response = await fetch(DATA_URL);
+                    const buffer = await response.arrayBuffer();
+                    // Convert to base64 or hex to store in LocalStorage string
+                    // Note: In the real app, this is handled as a typed array
+                    const uint8 = new Uint8Array(buffer);
+                    localStorage.setItem('EIconListHourlyObj', uint8.toString());
+                    STATUS.innerText = "Database saved to local storage.";
+                } catch (e) {
+                    STATUS.innerText = "Fetch failed: " + e.message + ". You likely need a CORS bypass.";
+                    return;
+                }
+            } else {
+                STATUS.innerText = "Database loaded from local storage.";
+            }
+
+            // Simple Search Mockup
+            // In the real app, the Worker decodes the Uint8Array into strings.
+            // For this test, we'll assume we have an array of names.
+            SEARCH.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                if (term.length < 2) return;
+
+                // MOCK SEARCH: Since we can't easily parse her custom binary 
+                // without her 'EIconListImpl' class, we use the F-List pattern.
+                renderResults(term);
+            });
+        }
+
+        function renderResults(term) {
+            RESULTS.innerHTML = '';
+            // We simulate the first 4 matches
+            // In your real project, you'd pull these names FROM the decoded Uint8Array
+            const mockNames = [term, term + "1", "super" + term, "big_" + term];
+            
+            mockNames.slice(0, 4).forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'icon-card';
+                div.innerHTML = `
+                    <img src="https://static.f-list.net/images/eicon/${name}.gif" onerror="this.src='https://static.f-list.net/images/eicon/${name}.png'">
+                    <span>${name}</span>
+                `;
+                RESULTS.appendChild(div);
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
