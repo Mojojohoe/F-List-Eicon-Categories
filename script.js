@@ -3,6 +3,8 @@
 // @match        *://xariah.net/*
 // @grant        none
 // @run-at       document-start
+// @updateURL    https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
+// @downloadURL   https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
 // ==/UserScript==
 
 (function() {
