@@ -1,1187 +1,739 @@
-// ==UserScript==
-// @name         Xariah Tagger
-// @version      0.0.07
-// @description  Alpha version of the tagging & search system for xariah eicon database
-// @match        *://xariah.net/*
-// @updateURL    https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
-// @downloadURL  https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
-// @grant        none
-// @run-at       document-start
-// ==/UserScript==
-
-(function() {
-    'use strict';
-
-    const SCRIPT_VERSION = '0.0.07';
-
-    // Injected into every x-popuphost shadow root to hide the native tooltip.
-    // Defined early because the attachShadow hook below references it at call time.
-    const POPUPHOST_SUPPRESS_STYLE = 'x-tooltippopup { display: none !important; }';
-
-
-
-    // --- 1. SHADOW-ROOT OPENER + TOOLTIP SUPPRESSOR ---
-    // Forces all shadow roots into open mode so we can read/write into them.
-    // When x-popuphost creates its shadow root, we immediately:
-    //   a) inject a CSS rule (belt)
-    //   b) watch for x-tooltippopup being added and force inline display:none (braces)
-    //   c) watch x-tooltippopup's style attribute — Xariah writes `top` and `left`
-    //      inline on every mouse move, which can resurrect visibility. We reassert
-    //      display:none as an inline !important each time to keep it dead.
-
-    const _origAttachShadow = Element.prototype.attachShadow;
-    Element.prototype.attachShadow = function(init) {
-        if (init) init.mode = 'open';
-        const shadow = _origAttachShadow.call(this, init);
-        if (this.tagName === 'X-POPUPHOST') {
-            // Belt: CSS rule inside this shadow scope
-            const s = document.createElement('style');
-            s.textContent = POPUPHOST_SUPPRESS_STYLE;
-            shadow.appendChild(s);
-
-            // Braces: catch x-tooltippopup the moment it's inserted and keep it hidden
-            const childObs = new MutationObserver((mutations) => {
-                for (const mut of mutations) {
-                    for (const node of mut.addedNodes) {
-                        if (node.nodeType !== 1) continue;
-                        suppressTooltipNode(node);
-                        // Also scan descendants in case it's wrapped
-                        node.querySelectorAll?.('x-tooltippopup').forEach(suppressTooltipNode);
-                    }
-                }
-            });
-            childObs.observe(shadow, { childList: true, subtree: true });
-        }
-        return shadow;
-    };
-
-    function suppressTooltipNode(node) {
-        if (node.tagName !== 'X-TOOLTIPPOPUP') return;
-        // Force inline display:none with !important — beats any stylesheet or JS assignment
-        node.style.setProperty('display', 'none', 'important');
-
-        // Watch for Xariah re-writing the style attribute (it does this on every pointermove)
-        // and reassert display:none each time, unless WE were the one who wrote it.
-        const styleObs = new MutationObserver(() => {
-            const p = node.style.getPropertyPriority('display');
-            const v = node.style.getPropertyValue('display');
-            if (v !== 'none' || p !== 'important') {
-                node.style.setProperty('display', 'none', 'important');
-            }
-        });
-        styleObs.observe(node, { attributes: true, attributeFilter: ['style'] });
-    }
-
-
-
-    // --- 2. TOOLTIP PATCH ---
-    // The native x-tooltippopup lives inside x-popuphost's shadow root, which lives
-    // inside x-popuplayer's shadow root, inside x-mainapp's shadow root.
-    // x-mainapp is translated down by our tag manager bar height, which shifts its entire
-    // coordinate space — so the native tooltip's clientY-based `top` value always renders
-    // too low by exactly that height. No CSS can reach it from outside.
-    //
-    // Solution A (chosen): suppress the native tooltip entirely by injecting
-    // `x-tooltippopup { display:none }` into x-popuphost's shadow root the moment it
-    // is created (via our already-running attachShadow hook). Then show our own
-    // position:fixed tooltip appended to document.body — completely outside x-mainapp,
-    // immune to translateY, positioned using raw clientX/clientY.
-
-    // Our custom tooltip element — created once, reused
-    let _customTooltip = null;
-    let _tooltipHideTimer = null;
-
-    function getCustomTooltip() {
-        if (_customTooltip) return _customTooltip;
-        _customTooltip = document.createElement('div');
-        _customTooltip.id = 'x-custom-tooltip';
-        _customTooltip.style.cssText = `
-            position: fixed;
-            z-index: 2147483647;
-            background: #1a1a1a;
-            color: #eee;
-            border: 1px solid #555;
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 12px;
-            font-family: sans-serif;
-            pointer-events: none;
-            white-space: pre;
-            max-width: 300px;
-            display: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.6);
-        `;
-        document.body.appendChild(_customTooltip);
-        return _customTooltip;
-    }
-
-    function showCustomTooltip(text, x, y) {
-        clearTimeout(_tooltipHideTimer);
-        const tt = getCustomTooltip();
-        tt.textContent = text;
-        tt.style.display = 'block';
-        // Position 12px right and below the cursor, clamp to viewport
-        const pad = 12;
-        const ttW = tt.offsetWidth  || 120;
-        const ttH = tt.offsetHeight || 24;
-        const left = Math.min(x + pad, window.innerWidth  - ttW - 8);
-        const top  = Math.min(y + pad, window.innerHeight - ttH - 8);
-        tt.style.left = left + 'px';
-        tt.style.top  = top  + 'px';
-    }
-
-    function hideCustomTooltip() {
-        clearTimeout(_tooltipHideTimer);
-        _tooltipHideTimer = setTimeout(() => {
-            if (_customTooltip) _customTooltip.style.display = 'none';
-        }, 80);
-    }
-
-    // Walk composedPath() to find the nearest element with data-tooltip.
-    // composedPath() pierces all open shadow roots, so this works across
-    // the full x-eiconsetvirtualview → x-eiconview → .root shadow chain.
-    function findTooltipTarget(composedPath) {
-        for (const el of composedPath) {
-            if (el.nodeType === 1 && el.hasAttribute?.('data-tooltip')) return el;
-        }
-        return null;
-    }
-
-    // Attached once; tracks current hovered tooltip target for hide logic
-    let _currentTooltipTarget = null;
-
-    function initTooltipPatch() {
-        // Catch any x-popuphost elements that already exist (edge case on slow pages)
-        document.querySelectorAll('x-popuphost').forEach(host => {
-            if (!host.shadowRoot) return;
-            if (!host._xTooltipSuppressed) {
-                host._xTooltipSuppressed = true;
-                const s = document.createElement('style');
-                s.textContent = POPUPHOST_SUPPRESS_STYLE;
-                host.shadowRoot.appendChild(s);
-            }
-            host.shadowRoot.querySelectorAll('x-tooltippopup').forEach(suppressTooltipNode);
-        });
-
-        if (window._xTooltipHandlerBound) return;
-        window._xTooltipHandlerBound = true;
-
-        document.body.addEventListener('pointermove', (ev) => {
-            if ((ev.pointerType ?? 'mouse') !== 'mouse') return;
-            const target = findTooltipTarget(ev.composedPath());
-            if (target) {
-                _currentTooltipTarget = target;
-                showCustomTooltip(target.getAttribute('data-tooltip'), ev.clientX, ev.clientY);
-            } else {
-                if (_currentTooltipTarget) {
-                    _currentTooltipTarget = null;
-                    hideCustomTooltip();
-                }
-            }
-        }, { passive: true });
-
-        // Hide immediately when pointer leaves the window
-        document.body.addEventListener('pointerleave', hideCustomTooltip);
-    }
-
-
-
-    // --- 3. STORAGE ENGINE ---
-    // Sole source of truth is localStorage. Cookies are NOT used — they expire,
-    // have a hard 4 KB limit, and offer no real durability advantage over localStorage.
-
-    const getAllTags = () => JSON.parse(localStorage.getItem('x_tags') || '{}');
-
-    const saveFullLibrary = (data) => localStorage.setItem('x_tags', JSON.stringify(data));
-
-    const getStoredTags = (name) => getAllTags()[name] || '';
-
-    // Grid data is stored separately — it is positional metadata, not a searchable tag.
-    // Schema: { [iconName]: { spec: "2x2", pos: number | null } }
-    const getAllGridData  = () => JSON.parse(localStorage.getItem('x_grid_data') || '{}');
-    const saveAllGridData = (d) => localStorage.setItem('x_grid_data', JSON.stringify(d));
-    const getIconGrid = (name) => getAllGridData()[name] || null;
-    const saveIconGrid = (name, spec, pos) => {
-        const d = getAllGridData();
-        if (spec) d[name] = { spec, pos: pos ?? null };
-        else delete d[name];
-        saveAllGridData(d);
-    };
-
-    const getRecentTags = () => JSON.parse(localStorage.getItem('x_recent_tags') || '[]');
-
-    const saveRecentTag = (tag) => {
-        const recent = [tag, ...getRecentTags().filter(t => t !== tag)].slice(0, 16);
-        localStorage.setItem('x_recent_tags', JSON.stringify(recent));
-    };
-
-    // Tag-level merge: for each eicon in `imported`, union its tags with the existing
-    // tags for that eicon. Eicons only in `existing` are preserved untouched.
-    const mergeLibraries = (existing, imported) => {
-        const result = { ...existing };
-        for (const [eicon, tagStr] of Object.entries(imported)) {
-            if (!result[eicon]) {
-                result[eicon] = tagStr;
-            } else {
-                const existingSet = new Set(result[eicon].split(',').map(t => t.trim().toLowerCase()).filter(Boolean));
-                tagStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).forEach(t => existingSet.add(t));
-                result[eicon] = [...existingSet].join(', ');
-            }
-        }
-        return result;
-    };
-
-
-
-    // --- 4. UI STYLES ---
-
-    const style = document.createElement('style');
-    style.textContent = `
-        :root { --tag-h: 0px; }
-
-        #x-tag-manager {
-            position: relative; z-index: 999999; background: #1a1a1a;
-            border-bottom: 3px solid gold; color: #eee; font-family: sans-serif;
-            box-sizing: border-box; max-height: 50vh; overflow-y: auto; width: 100%;
-        }
-        #x-sticky-header {
-            position: sticky; top: 0; background: #1a1a1a; z-index: 10;
-            padding: 10px 15px; border-bottom: 1px solid #333;
-        }
-        #x-manager-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-
-        .data-btn { cursor: pointer; background: #333; border: 1px solid #555; border-radius: 4px; padding: 4px 8px; font-size: 14px; color: #ccc; }
-        #x-collapse-toggle { cursor: pointer; background: gold; color: black; font-weight: bold; padding: 4px 12px; border-radius: 4px; font-size: 11px; text-transform: uppercase; }
-
-        /* Layout */
-        x-mainapp, .app-root, #app { transition: transform 0.1s ease-out; }
-        .filter-input { width: 100%; padding: 10px; background: #000; border: 1px solid #444; color: gold; border-radius: 4px; outline: none; box-sizing: border-box; }
-        #x-explorer-body { padding: 0 15px 15px 15px; }
-        #x-explorer-body.hidden { display: none; }
-
-        /* Category Collapses */
-        .tag-container { margin-top: 8px; border: 1px solid #333; border-radius: 4px; background: #222; }
-        .tag-header { background: #2a2a2a; padding: 6px 10px; font-size: 12px; font-weight: bold; color: gold; cursor: pointer; display: flex; justify-content: space-between; }
-        .tag-header:hover { background: #333; }
-
-        /* Shared grid layout — square 85×85 cells so composites are never distorted.
-           grid-auto-flow: dense fills gaps before placing new rows. */
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, 85px);
-            grid-auto-rows: 85px;
-            grid-auto-flow: row dense;
-            gap: 4px;
-            padding: 10px;
-            background: #111;
-        }
-        .tag-content { display: none; }
-        .tag-content.open { display: grid;
-            grid-template-columns: repeat(auto-fill, 85px);
-            grid-auto-rows: 85px;
-            grid-auto-flow: row dense;
-            gap: 4px; padding: 10px; background: #111;
-        }
-
-        /* Ghost Eicons — square cell, name as bottom overlay */
-        .ghost-eicon {
-            width: 85px; height: 85px; background: #1a1a1a; border: 1px solid #333;
-            display: flex; align-items: center; justify-content: center;
-            position: relative; cursor: copy; overflow: hidden;
-        }
-        .ghost-eicon img { max-width: 65px; max-height: 65px; display: block; }
-        .ghost-eicon span.ghost-name {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            font-size: 9px; color: #ddd; text-align: center;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            background: rgba(0,0,0,0.65); padding: 2px 3px;
-            pointer-events: none;
-        }
-        .ghost-eicon .copy-flash {
-            position: absolute; inset: 0; background: rgba(255,215,0,0.25);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 11px; color: gold; font-weight: bold;
-            opacity: 0; pointer-events: none; transition: opacity 0.15s;
-        }
-        .ghost-eicon.flashing .copy-flash { opacity: 1; }
-
-        /* Best Matches — same grid, no height cap; manager's 50vh handles overflow */
-        #best-matches-container { margin: 10px 0; border: 1px solid gold; border-radius: 4px; background: #111; display: none; }
-        .best-matches-header { background: gold; color: black; padding: 3px 10px; font-weight: bold; font-size: 11px; }
-        .best-matches-content {
-            display: grid !important;
-            grid-template-columns: repeat(auto-fill, 85px) !important;
-            grid-auto-rows: 85px !important;
-            grid-auto-flow: row dense !important;
-            gap: 4px !important;
-            padding: 10px !important;
-        }
-
-        /* Grid Composites — span N cols × M rows; internal cells are 1fr so always square */
-        .grid-composite-wrap {
-            position: relative; cursor: copy; box-sizing: border-box;
-        }
-        .grid-composite-inner {
-            width: 100%; height: 100%; display: grid; gap: 2px;
-            background: #0d0d0d; border: 1px solid #444; border-radius: 3px;
-            padding: 2px; box-sizing: border-box;
-        }
-        .grid-composite-cell {
-            overflow: hidden; background: #1a1a1a; border: 1px solid #2a2a2a;
-            position: relative; display: flex; align-items: center; justify-content: center;
-            min-width: 0; min-height: 0;
-        }
-        .grid-composite-cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
-        .grid-composite-cell.empty { background: #111; border: 1px dashed #2a2a2a; }
-        .grid-composite-cell .cell-tag-btn {
-            position: absolute; bottom: 2px; left: 2px; z-index: 10;
-            background: rgba(0,0,0,0.8); color: white; border: 1px solid #444;
-            border-radius: 3px; padding: 1px; font-size: 10px; width: 16px; height: 16px;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.15s; cursor: pointer;
-        }
-        .grid-composite-cell:hover .cell-tag-btn { opacity: 1; }
-        .grid-composite-wrap .composite-copy-flash {
-            position: absolute; inset: 0; background: rgba(255,215,0,0.25);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 11px; color: gold; font-weight: bold;
-            opacity: 0; pointer-events: none; transition: opacity 0.15s; border-radius: 3px; z-index: 5;
-        }
-        .grid-composite-wrap.flashing .composite-copy-flash { opacity: 1; }
-
-        /* Modal */
-        #x-tag-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000001; display: none; align-items: center; justify-content: center; }
-
-        /* Tag Mode button — base state and active state */
-        /* NOTE: x-eiconview lives inside a shadow root so page CSS cannot pierce it.
-           Dimming is applied via inline styles in applyTagMode() instead. */
-        #x-tag-mode-toggle { cursor: pointer; font-weight: bold; padding: 4px 12px; border-radius: 4px; font-size: 11px; text-transform: uppercase; background: #333; color: #aaa; border: 1px solid #555; transition: background 0.2s, color 0.2s; }
-        #x-tag-mode-toggle.active { background: #e74c3c; color: white; border-color: #c0392b; box-shadow: 0 0 8px rgba(231,76,60,0.5); }
-        #x-tag-mode-banner { display: none; background: #2d0a0a; border-top: 1px solid #e74c3c; padding: 4px 15px; font-size: 11px; color: #e74c3c; letter-spacing: 0.3px; }
-        #x-tag-mode-banner.visible { display: block; }
-        #x-tag-modal { background: #1a1a1a; border: 2px solid gold; border-radius: 8px; width: 90%; max-width: 450px; padding: 20px; }
-        #x-modal-title { color: gold; font-size: 13px; font-weight: bold; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
-        #x-modal-title span { color: #fff; font-weight: normal; }
-
-        .chip-section-label { font-size: 10px; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .chip-container { display: flex; flex-wrap: wrap; gap: 6px; }
-        .chip { padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: bold; display: flex; align-items: center; gap: 5px; user-select: none; }
-        .chip.yellow { background: gold; color: #000; }
-        .chip.blue { background: #007bff; color: #fff; cursor: pointer; }
-        .chip.green { background: #28a745; color: #fff; cursor: pointer; }
-        .chip.red { background: #e74c3c; color: #fff; cursor: default; }
-
-        /* Grid tag widget */
-        #x-grid-area { margin-top: 10px; display: none; }
-        #x-input-row { display: flex; align-items: center; gap: 8px; }
-        #x-input-row #x-modal-input { flex: 1; }
-        #x-grid-chip-slot { display: flex; align-items: center; flex-shrink: 0; }
-        #x-grid-widget { display: inline-grid; gap: 4px; margin-top: 8px; }
-        .grid-cell {
-            width: 28px; height: 28px; background: #2a2a2a; border: 1px solid #555;
-            border-radius: 3px; cursor: pointer; transition: background 0.15s;
-        }
-        .grid-cell:hover { background: #444; }
-        .grid-cell.selected { background: #e74c3c; border-color: #c0392b; box-shadow: 0 0 4px rgba(231,76,60,0.6); }
-    `;
-    document.head.appendChild(style);
-
-
-
-    // --- 5. MODAL ENGINE ---
-
-    let currentIconName = '';
-    let activeTags = [];
-
-    // Stored reference to the search input so we never rely on a fragile class selector.
-    let searchInput = null;
-
-    // --- TAG MODE STATE ---
-    // When active, any x-eiconview whose icon already has tags is hidden.
-    let tagModeActive = false;
-
-    // --- GRID TAG STATE ---
-    // activeGridSpec: parsed grid tag e.g. { raw: "#2x2", rows: 2, cols: 2 } or null
-    // activeGridPos:  0-indexed flat cell index (row-major), or null if unset
-    let activeGridSpec = null;
-    let activeGridPos  = null;
-
-    // Tracks the last typed suggestion query so chip clicks can preserve visible suggestions
-    let suggestionQuery = '';
-
-    // Stores tags + gridSpec from the most recent save, for "copy from last" feature
-    let lastSavedEntry = null;
-
-    function updateSuggestions(q) {
-        const sBox = document.getElementById('x-suggestions');
-        const rBox = document.getElementById('x-recent-suggestions');
-        if (!sBox || !rBox) return;
-        sBox.innerHTML = '';
-        rBox.innerHTML = '';
-
-        // Recent tags — clicking clears the input but keeps current suggestions visible
-        getRecentTags()
-            .filter(t => !activeTags.includes(t) && (!q || t.includes(q)))
-            .forEach(tag => {
-                const c = document.createElement('div');
-                c.className = 'chip green';
-                c.innerHTML = `${tag} ↻`;
-                // Prevent mousedown from stealing focus away from the input
-                c.addEventListener('mousedown', e => e.preventDefault());
-                c.onclick = () => {
-                    activeTags.push(tag);
-                    renderModalChips();
-                    const input = document.getElementById('x-modal-input');
-                    if (input) { input.value = ''; input.focus(); }
-                    updateSuggestions(suggestionQuery);
-                };
-                rBox.appendChild(c);
-            });
-
-        // Tag library suggestions
-        if (q) {
-            const unique = new Set();
-            Object.values(getAllTags()).forEach(str => str.split(',').forEach(t => unique.add(t.trim().toLowerCase())));
-            Array.from(unique)
-                .filter(t => t.includes(q) && !activeTags.includes(t))
-                .slice(0, 8)
-                .forEach(tag => {
-                    const c = document.createElement('div');
-                    c.className = 'chip blue';
-                    c.innerHTML = `${tag} +`;
-                    // Prevent mousedown from stealing focus away from the input
-                    c.addEventListener('mousedown', e => e.preventDefault());
-                    c.onclick = () => {
-                        activeTags.push(tag);
-                        renderModalChips();
-                        const input = document.getElementById('x-modal-input');
-                        if (input) { input.value = ''; input.focus(); }
-                        updateSuggestions(suggestionQuery);
-                    };
-                    sBox.appendChild(c);
-                });
-        }
-    }
-
-    function renderModalChips() {
-        const container = document.getElementById('x-active-chips');
-        if (!container) return;
-        container.innerHTML = '';
-        activeTags.forEach(tag => {
-            const chip = document.createElement('div');
-            chip.className = 'chip yellow';
-            chip.innerHTML = `${tag} <span style="cursor:pointer">×</span>`;
-            chip.onclick = () => {
-                activeTags = activeTags.filter(t => t !== tag);
-                renderModalChips();
-                updateSuggestions(document.getElementById('x-modal-input').value.toLowerCase());
-            };
-            container.appendChild(chip);
-        });
-    }
-
-    // Parses a string like "#2x4" → { raw, rows, cols } or null if not a valid grid tag.
-    function parseGridTag(str) {
-        const m = str.trim().match(/^#(\d+)x(\d+)$/i);
-        if (!m) return null;
-        const rows = parseInt(m[1], 10);
-        const cols = parseInt(m[2], 10);
-        if (rows < 1 || cols < 1 || rows > 20 || cols > 20) return null;
-        return { raw: str.trim().toLowerCase(), rows, cols };
-    }
-
-    // Derives the group base name for an eicon by stripping a trailing suffix of up to
-    // 3 characters that looks like a position indicator (digits, or separator+digits,
-    // or trailing letters from a digit-ended name). The base must be ≥3 chars.
-    //
-    // Examples:  square1 → square   square-12 → square   squarea → square
-    //            hypno clock 2 → hypno clock   rune3b → rune
-    //            cat → cat (too short to strip)
-    function getGroupBase(name) {
-        const n = name.toLowerCase();
-        // Most common: trailing digits e.g. square1, square12, square123
-        let m = n.match(/^(.{3,}?[^0-9])(\d{1,3})$/);
-        if (m) return m[1].replace(/[-_ ]$/, '');
-        // Separator + digits e.g. square-1, frame_12
-        m = n.match(/^(.{3,})[-_ ]\d{1,3}$/);
-        if (m) return m[1];
-        // Trailing letters after a digit/separator e.g. rune3b, rune3ab
-        m = n.match(/^(.{3,}[0-9])([a-z]{1,2})$/);
-        if (m) return m[1];
-        return n;
-    }
-
-    function renderGridArea() {
-        const chipSlot  = document.getElementById('x-grid-chip-slot');
-        const gridArea  = document.getElementById('x-grid-area');
-        const gridWidget = document.getElementById('x-grid-widget');
-        if (!chipSlot || !gridArea || !gridWidget) return;
-
-        chipSlot.innerHTML  = '';
-        gridWidget.innerHTML = '';
-
-        if (!activeGridSpec) {
-            gridArea.style.display = 'none';
-            return;
-        }
-
-        // Red chip with remove button
-        const chip = document.createElement('div');
-        chip.className = 'chip red';
-        chip.innerHTML = `${activeGridSpec.raw} <span style="cursor:pointer; margin-left:2px;">×</span>`;
-        chip.querySelector('span').onclick = () => {
-            activeGridSpec = null;
-            activeGridPos  = null;
-            renderGridArea();
-            updateSuggestions(document.getElementById('x-modal-input')?.value.toLowerCase() || '');
-        };
-        chipSlot.appendChild(chip);
-
-        // Grid widget
-        const { rows, cols } = activeGridSpec;
-        gridWidget.style.gridTemplateColumns = `repeat(${cols}, 28px)`;
-        gridArea.style.display = 'block';
-
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const idx = r * cols + c;
-                const cell = document.createElement('div');
-                cell.className = 'grid-cell' + (activeGridPos === idx ? ' selected' : '');
-                cell.title = `Row ${r + 1}, Col ${c + 1}`;
-                cell.onclick = () => {
-                    // Clicking the already-selected cell deselects it
-                    activeGridPos = activeGridPos === idx ? null : idx;
-                    renderGridArea();
-                };
-                gridWidget.appendChild(cell);
-            }
-        }
-    }
-
-    function openTagModal(name) {
-        currentIconName = name;
-        const raw = getStoredTags(name);
-        activeTags = raw ? raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [];
-
-        // Load any existing grid data for this icon
-        const existingGrid = getIconGrid(name);
-        if (existingGrid) {
-            activeGridSpec = parseGridTag(existingGrid.spec.startsWith('#') ? existingGrid.spec : '#' + existingGrid.spec) || parseGridTag('#' + existingGrid.spec);
-            // Normalise: spec may have been stored without '#' historically
-            if (!activeGridSpec) activeGridSpec = null;
-            activeGridPos = existingGrid.pos ?? null;
-        } else {
-            activeGridSpec = null;
-            activeGridPos  = null;
-        }
-
-        if (!document.getElementById('x-tag-modal-overlay')) {
-            const overlay = document.createElement('div');
-            overlay.id = 'x-tag-modal-overlay';
-            overlay.innerHTML = `
-                <div id="x-tag-modal">
-                <div id="x-modal-title">
-                    🏷️ Tags for: <span id="x-modal-icon-name"></span>
-                    <button id="x-copy-last-btn" title="Copy all tags from last saved eicon"
-                        style="float:right; background:#2a2a2a; color:#aaa; border:1px solid #444; border-radius:4px; padding:3px 8px; font-size:10px; cursor:pointer; margin-left:8px; text-transform:uppercase; letter-spacing:0.4px;">
-                        ↩ Copy Last
-                    </button>
-                </div>
-
-                    <div class="chip-section-label">Recent</div>
-                    <div id="x-recent-suggestions" class="chip-container" style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px;"></div>
-
-                    <div class="chip-section-label">Suggestions</div>
-                    <div id="x-suggestions" class="chip-container" style="margin-bottom:10px;"></div>
-
-                    <div id="x-input-row">
-                        <input type="text" id="x-modal-input" placeholder="Search/Add tags… or #2x4 for a grid"
-                            style="padding:10px; background:#000; color:#fff; border:1px solid #444; border-radius:4px; box-sizing:border-box;">
-                        <div id="x-grid-chip-slot"></div>
-                    </div>
-
-                    <div id="x-grid-area">
-                        <div style="font-size:10px; color:#888; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Grid Position</div>
-                        <div id="x-grid-widget"></div>
-                    </div>
-
-                    <div id="x-active-chips" class="chip-container" style="margin-top:15px;"></div>
-
-                    <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
-                        <button id="x-modal-cancel" style="background:#444; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:4px;">Cancel</button>
-                        <button id="x-modal-save" style="background:gold; color:black; border:none; padding:8px 15px; font-weight:bold; cursor:pointer; border-radius:4px;">Save</button>
-                    </div>
-                </div>`;
-            document.body.appendChild(overlay);
-
-            const input = overlay.querySelector('#x-modal-input');
-            input.oninput = (e) => {
-                suggestionQuery = e.target.value.toLowerCase();
-                updateSuggestions(suggestionQuery);
-            };
-            input.onkeydown = (e) => {
-                if (e.key === ',' || e.key === 'Enter') {
-                    e.preventDefault();
-                    const v = input.value.trim().replace(/,/g, '').toLowerCase();
-                    if (!v) return;
-
-                    // Check for grid tag format #NxM
-                    const parsed = parseGridTag(v);
-                    if (parsed) {
-                        // Replace any existing grid tag — only one allowed
-                        activeGridSpec = parsed;
-                        activeGridPos  = null;
-                        input.value = '';
-                        renderGridArea();
-                        updateSuggestions('');
-                        return;
-                    }
-
-                    if (!activeTags.includes(v)) {
-                        activeTags.push(v);
-                        input.value = '';
-                        renderModalChips();
-                        updateSuggestions('');
-                    }
-                }
-            };
-
-            // Copy-from-last button
-            overlay.querySelector('#x-copy-last-btn').onclick = () => {
-                if (!lastSavedEntry) return;
-                activeTags = [...lastSavedEntry.tags];
-                if (lastSavedEntry.gridSpec) {
-                    activeGridSpec = parseGridTag(lastSavedEntry.gridSpec);
-                    activeGridPos  = null; // position is intentionally not copied
-                } else {
-                    activeGridSpec = null;
-                    activeGridPos  = null;
-                }
-                renderModalChips();
-                renderGridArea();
-                updateSuggestions(suggestionQuery);
-            };
-
-            overlay.querySelector('#x-modal-cancel').onclick = () => { overlay.style.display = 'none'; };
-
-            overlay.querySelector('#x-modal-save').onclick = () => {
-                const lib = getAllTags();
-                if (activeTags.length) {
-                    lib[currentIconName] = activeTags.join(', ');
-                    activeTags.forEach(saveRecentTag);
-                } else {
-                    delete lib[currentIconName];
-                }
-                saveFullLibrary(lib);
-
-                // Record this save for the "copy from last" feature
-                lastSavedEntry = {
-                    tags: [...activeTags],
-                    gridSpec: activeGridSpec ? activeGridSpec.raw : null
-                };
-
-                // Save grid tag data independently of searchable tags
-                saveIconGrid(currentIconName, activeGridSpec ? activeGridSpec.raw : null, activeGridPos);
-
-                overlay.style.display = 'none';
-                if (searchInput) renderAllSearch(searchInput.value);
-                if (tagModeActive) applyTagMode();
-            };
-        }
-
-        document.getElementById('x-modal-icon-name').textContent = name;
-        document.getElementById('x-tag-modal-overlay').style.display = 'flex';
-
-        // Show copy-last button only when there's a previous entry to copy from
-        const copyLastBtn = document.getElementById('x-copy-last-btn');
-        if (copyLastBtn) copyLastBtn.style.display = lastSavedEntry ? 'inline-block' : 'none';
-
-        suggestionQuery = '';
-        const input = document.getElementById('x-modal-input');
-        input.value = '';
-        input.focus();
-        updateSuggestions('');
-        renderModalChips();
-        renderGridArea();
-    }
-
-
-
-    // --- 6. RENDER ENGINE ---
-
-    function flashCopied(el) {
-        el.classList.add('flashing');
-        setTimeout(() => el.classList.remove('flashing'), 600);
-    }
-
-    // Builds a composite grid DOM element that spans N×M cells in the parent CSS grid.
-    // members: [{ name, spec, pos }]
-    // Returns null if no valid spec can be determined.
-    function buildGridComposite(members) {
-        const specSource = members.find(m => m.spec && m.pos !== null) || members.find(m => m.spec);
-        if (!specSource) return null;
-
-        const specStr = specSource.spec.startsWith('#') ? specSource.spec : '#' + specSource.spec;
-        const spec = parseGridTag(specStr);
-        if (!spec) return null;
-
-        const { rows, cols } = spec;
-
-        // Map flat index → icon name
-        const posMap = {};
-        members.forEach(m => { if (m.pos !== null && m.pos !== undefined) posMap[m.pos] = m.name; });
-
-        const wrap = document.createElement('div');
-        wrap.className = 'grid-composite-wrap';
-        wrap.style.cssText = `grid-column: span ${cols}; grid-row: span ${rows};`;
-
-        const inner = document.createElement('div');
-        inner.className = 'grid-composite-inner';
-        inner.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        inner.style.gridTemplateRows    = `repeat(${rows}, 1fr)`;
-        // Store grid dimensions on the container so the click handler can read them
-        inner.dataset.rows = String(rows);
-        inner.dataset.cols = String(cols);
-
-        for (let i = 0; i < rows * cols; i++) {
-            const eiconName = posMap[i] || '';
-            const cell = document.createElement('div');
-            cell.className = 'grid-composite-cell' + (eiconName ? '' : ' empty');
-            // Store the eicon name (or empty string for gaps) directly on the cell element
-            cell.dataset.eiconName = eiconName;
-
-            if (eiconName) {
-                const img = document.createElement('img');
-                img.src = `https://static.f-list.net/images/eicon/${eiconName}.gif`;
-                img.loading = 'lazy';
-                img.ondragstart = (e) => e.preventDefault();
-                cell.appendChild(img);
-
-                const tagBtn = document.createElement('button');
-                tagBtn.className = 'cell-tag-btn';
-                tagBtn.innerHTML = '🏷️';
-                tagBtn.title = `Edit tags for ${eiconName}`;
-                tagBtn.onclick = (e) => { e.stopPropagation(); openTagModal(eiconName); };
-                cell.appendChild(tagBtn);
-            }
-
-            // Build BBCode fresh from cell data attributes at click time.
-            // This avoids any closure, precomputed string, or dataset encoding issue.
-            cell.onclick = () => {
-                const r = parseInt(inner.dataset.rows, 10);
-                const c = parseInt(inner.dataset.cols, 10);
-                const allCells = inner.querySelectorAll('.grid-composite-cell');
-                const lines = [];
-                for (let row = 0; row < r; row++) {
-                    let line = '';
-                    for (let col = 0; col < c; col++) {
-                        const n = allCells[row * c + col]?.dataset.eiconName || '';
-                        line += n ? `[eicon]${n}[/eicon]` : '[eicon]none[/eicon]';
-                    }
-                    lines.push(line);
-                }
-                navigator.clipboard.writeText(lines.join('\n'));
-                wrap.classList.add('flashing');
-                setTimeout(() => wrap.classList.remove('flashing'), 600);
-            };
-
-            inner.appendChild(cell);
-        }
-
-        const flash = document.createElement('div');
-        flash.className = 'composite-copy-flash';
-        flash.textContent = '✓ Copied';
-
-        wrap.appendChild(inner);
-        wrap.appendChild(flash);
-
-        return wrap;
-    }
-
-    // Renders either a grid composite (if the eicon has grid data and its group hasn't
-    // been rendered yet in this section) or a plain ghost eicon.
-    // renderedBases is a Set local to the current render section — pass a fresh one
-    // per best-matches block and per tag category so composites aren't suppressed
-    // across different result sections.
-    function renderEiconOrComposite(name, renderedBases) {
-        const gridData = getAllGridData();
-        const gd = gridData[name];
-
-        if (gd) {
-            const base = getGroupBase(name);
-            if (renderedBases.has(base)) return null;
-            renderedBases.add(base);
-
-            // Collect ALL members of this group from the full grid data store
-            const members = Object.entries(gridData)
-                .filter(([n]) => getGroupBase(n) === base)
-                .map(([n, d]) => ({ name: n, ...d }));
-
-            const composite = buildGridComposite(members);
-            if (composite) return composite;
-        }
-
-        return createGhost(name);
-    }
-
-    function createGhost(name) {
-        const ghost = document.createElement('div');
-        ghost.className = 'ghost-eicon';
-        ghost.innerHTML = `
-            <img src="https://static.f-list.net/images/eicon/${name}.gif">
-            <span class="ghost-name">${name}</span>
-            <div class="copy-flash">✓ Copied</div>`;
-
-        const gBtn = document.createElement('button');
-        gBtn.className = 'tag-btn';
-        gBtn.innerHTML = '🏷️';
-        gBtn.style.cssText = `
-            position: absolute !important; bottom: 2px !important; left: 2px !important;
-            z-index: 1000 !important; background: rgba(0,0,0,0.8) !important; color: white !important;
-            border: 1px solid gold !important; border-radius: 4px !important; padding: 2px !important;
-            font-size: 12px !important; width: 20px !important; height: 20px !important;
-            display: flex !important; align-items: center !important; justify-content: center !important;
-            opacity: 0; transition: opacity 0.2s; cursor: pointer !important;`;
-        gBtn.onclick = (e) => { e.stopPropagation(); openTagModal(name); };
-
-        ghost.appendChild(gBtn);
-        ghost.onmouseenter = () => gBtn.style.opacity = '1';
-        ghost.onmouseleave = () => gBtn.style.opacity = '0';
-        ghost.onclick = () => {
-            navigator.clipboard.writeText(`[eicon]${name}[/eicon]`);
-            flashCopied(ghost);
-        };
-
-        return ghost;
-    }
-
-    function renderAllSearch(query) {
-        const bestAnchor = document.getElementById('best-matches-content');
-        const bestContainer = document.getElementById('best-matches-container');
-        const listAnchor = document.getElementById('tag-list-anchor');
-
-        listAnchor.innerHTML = '';
-        bestAnchor.innerHTML = '';
-        bestContainer.style.display = 'none';
-
-        if (!query || query.trim().length < 1) return;
-
-        // Split query into positive and negative keywords.
-        // A word prefixed with '-' is a negative (exclusion) term.
-        // Note: tags containing hyphens are unaffected — the '-' prefix only applies
-        // to the first character of a search word, not within a tag itself.
-        const allKeywords = query.toLowerCase().split(' ').filter(k => k.length > 0);
-        const positiveKws = allKeywords.filter(k => !k.startsWith('-'));
-        const negativeKws = allKeywords.filter(k => k.startsWith('-')).map(k => k.slice(1)).filter(k => k.length > 0);
-
-        // Bail out if there are no positive terms — negative-only queries return nothing
-        if (positiveKws.length === 0) return;
-
-        const lib = getAllTags();
-
-        // Returns true if an eicon's tags contain any negative keyword
-        const isExcluded = (tagStr) => {
-            if (negativeKws.length === 0) return false;
-            const iconTags = tagStr.toLowerCase().split(',').map(t => t.trim());
-            return negativeKws.some(nkw => iconTags.some(tag => tag.includes(nkw)));
-        };
-
-        // Score each eicon by how many positive keywords match any of its tags.
-        // Eicons matching any negative keyword are excluded entirely.
-        const scored = [];
-        for (const [name, tagStr] of Object.entries(lib)) {
-            if (isExcluded(tagStr)) continue;
-            const iconTags = tagStr.toLowerCase().split(',').map(t => t.trim());
-            let score = 0;
-            positiveKws.forEach(kw => { if (iconTags.some(tag => tag.includes(kw))) score++; });
-            if (score > 0) scored.push({ name, score });
-        }
-
-        if (scored.length > 0) {
-            bestContainer.style.display = 'block';
-            const bestRendered = new Set();
-            scored.sort((a, b) => b.score - a.score).slice(0, 30).forEach(res => {
-                const el = renderEiconOrComposite(res.name, bestRendered);
-                if (el) bestAnchor.appendChild(el);
-            });
-        }
-
-        // Build one category section per tag that matches any positive keyword.
-        // Each category only contains eicons not excluded by negative keywords.
-        const tagMap = {};
-        for (const [eicon, tagString] of Object.entries(lib)) {
-            if (isExcluded(tagString)) continue;
-            tagString.split(',').forEach(t => {
-                const tag = t.trim().toLowerCase();
-                if (positiveKws.some(kw => tag.includes(kw))) {
-                    if (!tagMap[tag]) tagMap[tag] = [];
-                    tagMap[tag].push(eicon);
-                }
-            });
-        }
-
-        Object.keys(tagMap).sort().forEach(tag => {
-            const cont = document.createElement('div');
-            cont.className = 'tag-container';
-            cont.innerHTML = `
-                <div class="tag-header"><span>${tag.toUpperCase()}</span><span>▸</span></div>
-                <div class="tag-content collapsed"></div>`;
-
-            const header = cont.querySelector('.tag-header');
-            const content = cont.querySelector('.tag-content');
-
-            header.onclick = () => {
-                const isCollapsed = !content.classList.contains('open');
-                content.classList.toggle('open', isCollapsed);
-                header.querySelector('span:last-child').textContent = isCollapsed ? '▾' : '▸';
-            };
-
-            const catRendered = new Set();
-            tagMap[tag].forEach(name => {
-                const el = renderEiconOrComposite(name, catRendered);
-                if (el) content.appendChild(el);
-            });
-
-            listAnchor.appendChild(cont);
-        });
-    }
-
-
-
-    // --- 7. EXPLORER PANEL ---
-
-    function initExplorer() {
-        if (document.getElementById('x-tag-manager')) return;
-
-        const manager = document.createElement('div');
-        manager.id = 'x-tag-manager';
-        manager.innerHTML = `
-            <div id="x-sticky-header">
-                <div id="x-manager-header">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <h3 style="color:gold; margin:0; font-size:14px;">🏷️ Tag Search</h3>
-                        <span style="font-size:10px; color:#555; font-family:monospace;">v${SCRIPT_VERSION}</span>
-                        <div id="x-collapse-toggle">Collapse</div>
-                        <div id="x-tag-mode-toggle" title="Hide already-tagged eicons">Tag Mode</div>
-                    </div>
-                    <div style="display:flex; gap:6px;">
-                        <button class="data-btn" id="x-export" title="Export tags">💾</button>
-                        <button class="data-btn" id="x-import" title="Import tags">📥</button>
-                    </div>
-                </div>
-                <input type="text" class="filter-input" placeholder="Search tags...">
-            </div>
-            <div id="x-tag-mode-banner">🔴 Tag Mode active — eicons with tags are hidden</div>
-            <div id="x-explorer-body">
-                <div id="best-matches-container">
-                    <div class="best-matches-header">✨ Best Matches</div>
-                    <div id="best-matches-content" class="best-matches-content"></div>
-                </div>
-                <div id="tag-list-anchor"></div>
-            </div>`;
-
-        document.body.prepend(manager);
-
-        // Push page content down by the exact height of our bar
-        const updateOffset = () => {
-            const h = manager.getBoundingClientRect().height;
-            document.documentElement.style.setProperty('--tag-h', h + 'px');
-            document.querySelectorAll('x-mainapp, .app-root, #app').forEach(el => el.style.transform = `translateY(${h}px)`);
-        };
-        new ResizeObserver(updateOffset).observe(manager);
-
-        // Tag Mode toggle
-        const tagModeBtn = manager.querySelector('#x-tag-mode-toggle');
-        const tagModeBanner = manager.querySelector('#x-tag-mode-banner');
-        tagModeBtn.onclick = () => {
-            tagModeActive = !tagModeActive;
-            tagModeBtn.classList.toggle('active', tagModeActive);
-            tagModeBtn.textContent = tagModeActive ? 'Tag Mode ON' : 'Tag Mode';
-            tagModeBanner.classList.toggle('visible', tagModeActive);
-            applyTagMode();
-        };
-
-        // Collapse / expand
-        const toggle = manager.querySelector('#x-collapse-toggle');
-        const body = manager.querySelector('#x-explorer-body');
-        toggle.onclick = () => {
-            const isHidden = body.classList.toggle('hidden');
-            toggle.textContent = isHidden ? 'Expand' : 'Collapse';
-            toggle.style.background = isHidden ? '#444' : 'gold';
-            toggle.style.color = isHidden ? 'white' : 'black';
-        };
-
-        // Export
-        manager.querySelector('#x-export').onclick = () => {
-            const b = new Blob([localStorage.getItem('x_tags') || '{}'], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(b);
-            a.download = 'xariah_tags.txt';
-            a.click();
-        };
-
-        // Import — uses a custom dialog instead of prompt() for cleaner UX
-        manager.querySelector('#x-import').onclick = () => {
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = '.txt,application/json';
-            fileInput.onchange = (e) => {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    let imported;
-                    try { imported = JSON.parse(ev.target.result); }
-                    catch { alert('Invalid tag file — could not parse JSON.'); return; }
-
-                    showImportDialog(imported);
-                };
-                reader.readAsText(e.target.files[0]);
-            };
-            fileInput.click();
-        };
-
-        // Store reference to search input so modal save can refresh results safely
-        searchInput = manager.querySelector('.filter-input');
-        searchInput.oninput = (e) => renderAllSearch(e.target.value);
-    }
-
-    // Inline import dialog — avoids prompt() and gives clear Merge / Replace choice
-    function showImportDialog(imported) {
-        if (document.getElementById('x-import-dialog')) return;
-
-        const importCount = Object.keys(imported).length;
-        const existingCount = Object.keys(getAllTags()).length;
-
-        const dialog = document.createElement('div');
-        dialog.id = 'x-import-dialog';
-        dialog.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000002; display:flex; align-items:center; justify-content:center;`;
-        dialog.innerHTML = `
-            <div style="background:#1a1a1a; border:2px solid gold; border-radius:8px; width:90%; max-width:400px; padding:20px; color:#eee; font-family:sans-serif;">
-                <div style="color:gold; font-weight:bold; margin-bottom:12px;">📥 Import Tags</div>
-                <div style="font-size:13px; color:#aaa; margin-bottom:16px; line-height:1.6;">
-                    Importing <strong style="color:#eee;">${importCount}</strong> eicons.<br>
-                    You currently have <strong style="color:#eee;">${existingCount}</strong> eicons tagged.<br><br>
-                    <strong style="color:gold;">Merge</strong> — combine tags for shared eicons, add new ones.<br>
-                    <strong style="color:#ff6b6b;">Replace</strong> — discard all existing tags entirely.
-                </div>
-                <div style="display:flex; justify-content:flex-end; gap:10px;">
-                    <button id="x-import-cancel" style="background:#444; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:4px;">Cancel</button>
-                    <button id="x-import-replace" style="background:#c0392b; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:4px; font-weight:bold;">Replace</button>
-                    <button id="x-import-merge" style="background:gold; color:black; border:none; padding:8px 15px; cursor:pointer; border-radius:4px; font-weight:bold;">Merge</button>
-                </div>
-            </div>`;
-
-        document.body.appendChild(dialog);
-        dialog.querySelector('#x-import-cancel').onclick  = () => dialog.remove();
-        dialog.querySelector('#x-import-replace').onclick = () => { saveFullLibrary(imported); dialog.remove(); location.reload(); };
-        dialog.querySelector('#x-import-merge').onclick   = () => { saveFullLibrary(mergeLibraries(getAllTags(), imported)); dialog.remove(); location.reload(); };
-    }
-
-
-
-    // --- 8. TAG MODE ENGINE ---
-    // x-eiconview lives inside shadow roots, so page CSS cannot reach it.
-    // We apply dimming via inline styles and wire hover with JS listeners.
-
-    function getIconNameFromElement(el) {
-        const shadow = el.shadowRoot;
-        if (!shadow) return null;
-        const rootDiv = shadow.querySelector('.root');
-        return rootDiv ? rootDiv.getAttribute('data-tooltip') : null;
-    }
-
-    function applyTagMode() {
-        const lib = getAllTags();
-        findDeep(document, 'x-eiconview').forEach(el => {
-            const name = getIconNameFromElement(el);
-            const shouldDim = tagModeActive && !!(name && lib[name]);
-
-            if (shouldDim && !el._xTagDimmed) {
-                // First time dimming this element — set styles and attach hover handlers
-                el._xTagDimmed = true;
-                el.style.opacity    = '0.28';
-                el.style.outline    = '1px solid rgba(255, 215, 0, 0.35)';
-                el.style.transition = 'opacity 0.2s';
-                el._xTagHoverIn  = () => { el.style.opacity = '1'; };
-                el._xTagHoverOut = () => { el.style.opacity = '0.28'; };
-                el.addEventListener('mouseenter', el._xTagHoverIn);
-                el.addEventListener('mouseleave', el._xTagHoverOut);
-
-            } else if (!shouldDim && el._xTagDimmed) {
-                // Restore element
-                el._xTagDimmed = false;
-                el.style.opacity    = '';
-                el.style.outline    = '';
-                el.style.transition = '';
-                if (el._xTagHoverIn)  el.removeEventListener('mouseenter', el._xTagHoverIn);
-                if (el._xTagHoverOut) el.removeEventListener('mouseleave', el._xTagHoverOut);
-                el._xTagHoverIn  = null;
-                el._xTagHoverOut = null;
-            }
-        });
-    }
-
-
-
-    // --- 9. LIVE EICON BUTTONS ---
-    // Injects a tag button into each eicon's shadow root
-
-    const processIcon = (el) => {
-        const shadow = el.shadowRoot;
-        if (!shadow || shadow.querySelector('.tag-btn')) return;
-
-        const rootDiv = shadow.querySelector('.root');
-        if (!rootDiv) return;
-
-        const iconName = rootDiv.getAttribute('data-tooltip');
-        if (!iconName) return;
-
-        rootDiv.style.position = 'relative';
-
-        const hasTags = getStoredTags(iconName);
-        const btn = document.createElement('button');
-        btn.className = 'tag-btn';
-        btn.innerHTML = '🏷️';
-        btn.style.cssText = `
-            position: absolute !important; bottom: 2px !important; left: 2px !important;
-            z-index: 1000 !important; background: rgba(0,0,0,0.8) !important; color: white !important;
-            border: 1px solid ${hasTags ? 'gold' : '#444'} !important; border-radius: 4px !important;
-            padding: 2px !important; cursor: pointer !important; font-size: 12px !important;
-            width: 20px !important; height: 20px !important; display: flex !important;
-            align-items: center !important; justify-content: center !important;
-            opacity: 0; transition: opacity 0.2s; pointer-events: auto !important;
-            box-shadow: ${hasTags ? '0 0 5px gold' : 'none'} !important;`;
-
-        // stopPropagation() called from inside a shadow root prevents the event from
-        // crossing the shadow boundary — the site's click/copy handler on x-eiconview
-        // (in the outer shadow context) never fires. No capture listener needed.
-        btn.onclick = (e) => { e.stopPropagation(); openTagModal(iconName); };
-
-        const shadowStyle = document.createElement('style');
-        shadowStyle.textContent = `.root:hover .tag-btn { opacity: 1 !important; } .tag-btn:hover { transform: scale(1.1); }`;
-        shadow.appendChild(shadowStyle);
-        rootDiv.appendChild(btn);
-    };
-
-
-
-    // --- 9. DEEP SHADOW QUERY ---
-
-    function findDeep(root, selector, results = []) {
-        if (!root) return results;
-        results.push(...Array.from(root.querySelectorAll(selector)));
-        Array.from(root.querySelectorAll('*')).filter(el => el.shadowRoot).forEach(host => findDeep(host.shadowRoot, selector, results));
-        return results;
-    }
-
-
-
-    // --- 10. BOOT LOOP ---
-
-    setInterval(() => {
-        initExplorer();
-        initTooltipPatch();
-        findDeep(document, 'x-eiconview').forEach(processIcon);
-        if (tagModeActive) applyTagMode();
-    }, 1000);
-
-})();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XariahTagger — User Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0e0e10;
+    --surface:   #17171a;
+    --surface2:  #1f1f24;
+    --border:    #2a2a32;
+    --gold:      #f5c842;
+    --gold-dim:  #7a6115;
+    --teal:      #3ecfb2;
+    --red:       #e8524a;
+    --blue:      #4a9eff;
+    --green:     #52c97a;
+    --purple:    #9d7ef5;
+    --text:      #e8e8ec;
+    --text-dim:  #8888a0;
+    --text-faint:#444458;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Noise texture overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Layout ── */
+  .page { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 72px 0 56px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '🏷️';
+    position: absolute;
+    font-size: 220px;
+    right: -30px; top: -20px;
+    opacity: 0.04;
+    pointer-events: none;
+    transform: rotate(-12deg);
+  }
+  .hero-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: clamp(36px, 6vw, 58px);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    color: var(--text);
+    margin-bottom: 20px;
+  }
+  .hero h1 span { color: var(--gold); }
+  .hero-sub {
+    font-size: 18px;
+    color: var(--text-dim);
+    max-width: 560px;
+    font-weight: 300;
+  }
+  .version-badge {
+    display: inline-block;
+    margin-top: 28px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--teal);
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    border-radius: 8px;
+    padding: 28px 32px;
+    margin: 48px 0;
+  }
+  .toc-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+  .toc ol { list-style: none; counter-reset: toc-counter; }
+  .toc ol li { counter-increment: toc-counter; display: flex; align-items: baseline; gap: 10px; padding: 5px 0; }
+  .toc ol li::before {
+    content: counter(toc-counter, decimal-leading-zero);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .toc a { color: var(--text-dim); text-decoration: none; transition: color 0.15s; font-size: 15px; }
+  .toc a:hover { color: var(--gold); }
+
+  /* ── Sections ── */
+  .section { margin-top: 64px; }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 10px;
+  }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2 .icon {
+    font-size: 22px;
+    width: 42px; height: 42px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 32px 0 10px;
+  }
+  h3::before {
+    content: '▸ ';
+    color: var(--gold);
+    font-size: 14px;
+  }
+
+  p { color: var(--text-dim); margin-bottom: 14px; }
+  p strong { color: var(--text); font-weight: 500; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .card.gold   { border-left: 3px solid var(--gold); }
+  .card.teal   { border-left: 3px solid var(--teal); }
+  .card.red    { border-left: 3px solid var(--red); }
+  .card.blue   { border-left: 3px solid var(--blue); }
+  .card.green  { border-left: 3px solid var(--green); }
+  .card.purple { border-left: 3px solid var(--purple); }
+
+  .card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .card.gold   .card-title { color: var(--gold); }
+  .card.teal   .card-title { color: var(--teal); }
+  .card.red    .card-title { color: var(--red); }
+  .card.blue   .card-title { color: var(--blue); }
+  .card.green  .card-title { color: var(--green); }
+  .card.purple .card-title { color: var(--purple); }
+
+  /* ── Step list ── */
+  .steps { list-style: none; counter-reset: step-counter; margin: 16px 0; }
+  .steps li {
+    counter-increment: step-counter;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--surface2);
+    color: var(--text-dim);
+  }
+  .steps li:last-child { border-bottom: none; }
+  .steps li::before {
+    content: counter(step-counter);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 28px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .steps li > span { min-width: 0; flex: 1; }
+
+  kbd {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  /* ── Chips (visual reference) ── */
+  .chip-demo { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .chip.yellow { background: var(--gold);    color: #000; }
+  .chip.green  { background: var(--green);   color: #000; }
+  .chip.blue   { background: var(--blue);    color: #fff; }
+  .chip.red    { background: var(--red);     color: #fff; }
+
+  /* ── BBCode block ── */
+  .bbcode {
+    background: #0a0a0d;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--teal);
+    margin: 12px 0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .bbcode .eicon-tag { color: var(--text-dim); }
+  .bbcode .eicon-name { color: var(--gold); }
+  .bbcode .eicon-none { color: #445; }
+
+  /* ── Key combo ── */
+  kbd {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* ── Grid demo ── */
+  .grid-demo {
+    display: inline-grid;
+    gap: 3px;
+    background: #0d0d0d;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+    margin: 12px 0;
+  }
+  .grid-cell {
+    width: 48px; height: 48px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .grid-cell.filled { background: #1a2a1a; border-color: var(--green); }
+  .grid-cell.empty  { background: #1a1a1a; border: 1px dashed #333; }
+  .grid-cell.selected { background: #2a1a1a; border-color: var(--red); }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+  /* ── Callout ── */
+  .callout {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+  .callout-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .callout p { margin: 0; font-size: 14px; }
+
+  /* ── Feature grid ── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .feature-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+  .feature-tile:hover { border-color: var(--gold-dim); }
+  .feature-tile .ft-icon { font-size: 26px; margin-bottom: 10px; }
+  .feature-tile .ft-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .feature-tile .ft-desc { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+
+  /* ── Inline tag bar mockup ── */
+  .ui-mockup {
+    background: #1a1a1a;
+    border: 3px solid var(--gold);
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin: 16px 0;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .ui-badge {
+    background: var(--gold);
+    color: #000;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .ui-badge.teal   { background: var(--teal); }
+  .ui-badge.red    { background: var(--red); color: #fff; }
+  .ui-badge.subtle { background: #333; color: #aaa; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-faint);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 2;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ HERO ══════════════════════════════════════════════ -->
+  <div class="hero">
+    <div class="hero-eyebrow">Tampermonkey Script · xariah.net</div>
+    <h1>Xariah<span>Tagger</span><br>User Guide</h1>
+    <p class="hero-sub">A complete guide to tagging, searching, and organising eicons on Xariah — for first-time users and veterans alike.</p>
+    <div class="version-badge">v0.0.06 — Alpha</div>
+  </div>
+
+  <!-- ══ WHAT IS THIS ══════════════════════════════════════ -->
+  <div class="section" id="what-is-this">
+    <div class="section-label">Introduction</div>
+    <h2><span class="icon">❓</span>What is XariahTagger?</h2>
+    <p><strong>Xariah.net</strong> is a database for searching and browsing the eicons used on the roleplaying platform F-List. Eicons can only be searched by their exact name — which is fine if you know the name, but hopeless if you just want to find "that blue sparkly one".</p>
+    <p>XariahTagger is a <strong>Tampermonkey browser script</strong> that layers a personal tagging system on top of Xariah. You give eicons searchable tags in plain English. You can then search those tags to instantly find what you're looking for.</p>
+
+    <div class="feature-grid">
+      <div class="feature-tile">
+        <div class="ft-icon">🏷️</div>
+        <div class="ft-name">Tag Eicons</div>
+        <div class="ft-desc">Add plain-English tags to any eicon directly on the page.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">🔍</div>
+        <div class="ft-name">Tag Search</div>
+        <div class="ft-desc">Search your tags to find eicons instantly by description.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">📋</div>
+        <div class="ft-name">One-Click Copy</div>
+        <div class="ft-desc">Click any result to copy its BBCode directly to your clipboard.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">🔲</div>
+        <div class="ft-name">Grid Sets</div>
+        <div class="ft-desc">Group multi-tile eicon sets and copy them as a complete block.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">💾</div>
+        <div class="ft-name">Import / Export</div>
+        <div class="ft-desc">Back up your tag library or share it with others.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">👁️</div>
+        <div class="ft-name">Tag Mode</div>
+        <div class="ft-desc">Dim already-tagged eicons to focus on what still needs work.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">💡</div>
+      <p>All your tags are stored <strong>locally in your browser</strong> (localStorage). Nothing is sent to any server. Your data is yours.</p>
+    </div>
+  </div>
+
+  <!-- ══ INSTALLATION ══════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="installation">
+    <div class="section-label">Getting Started</div>
+    <h2><span class="icon">⚙️</span>Installation</h2>
+    <p>XariahTagger requires <strong>Tampermonkey</strong> — a free browser extension that lets you run custom scripts on websites.</p>
+
+    <ol class="steps">
+      <li><span>Install the <strong>Tampermonkey</strong> extension for your browser (available for Chrome, Firefox, Edge, and Safari).</span></li>
+      <li><span>Open the Tampermonkey dashboard and click <strong>Create a new script</strong>.</span></li>
+      <li><span>Delete the default content and paste in the full XariahTagger script.</span></li>
+      <li><span>Press <kbd>Ctrl</kbd>&thinsp;+&thinsp;<kbd>S</kbd> to save.</span></li>
+      <li><span>Navigate to <strong>xariah.net</strong> — the gold tag bar should appear at the very top of the page.</span></li>
+    </ol>
+
+    <div class="card gold">
+      <div class="card-title">Confirming the version</div>
+      <p style="margin:0; color: var(--text-dim); font-size: 14px;">The tag bar shows a small version number in the top-left (e.g. <strong style="color:var(--text); font-family:'Space Mono',monospace;">v0.0.07</strong>). If you update the script and the version number doesn't change, Tampermonkey may be running a cached version — check that only one copy of the script exists in your dashboard.</p>
+    </div>
+  </div>
+
+  <!-- ══ THE TAG BAR ════════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="tag-bar">
+    <div class="section-label">The Interface</div>
+    <h2><span class="icon">🔍</span>The Tag Search Bar</h2>
+    <p>When you load Xariah, a dark panel appears pinned to the very top of the page. This is the <strong>Tag Search Bar</strong> — your command centre.</p>
+
+    <div class="ui-mockup">
+      <div>🏷️ <strong style="color:var(--gold)">Tag Search</strong></div>
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:#555;">v0.0.06</div>
+      <div class="ui-badge">Collapse</div>
+      <div class="ui-badge red">Tag Mode</div>
+      <div style="flex:1; min-width:120px; background:#000; border:1px solid #444; border-radius:4px; padding:6px 12px; color:#888; font-size:13px;">Search tags…</div>
+      <div class="ui-badge subtle">💾</div>
+      <div class="ui-badge subtle">📥</div>
+    </div>
+
+    <h3>The Search Input</h3>
+    <p>Type any word into the search box. Results appear instantly as you type — no need to press Enter. The search checks every tag you've ever assigned across your entire library.</p>
+
+    <h3>Best Matches</h3>
+    <p>Above the category results, a gold-bordered <strong>✨ Best Matches</strong> row appears. These are the eicons that match the most keywords in your search, ranked by relevance. Click any eicon to copy its BBCode immediately.</p>
+
+    <h3>Category Results</h3>
+    <p>Below Best Matches, each matching tag gets its own <strong>collapsible section</strong>. Click the section header to expand it and see all eicons tagged with that word. Each result can be clicked to copy its BBCode.</p>
+
+    <h3>Collapse / Expand</h3>
+    <p>The <strong>Collapse</strong> button hides the search results area, leaving only the slim header bar visible. This is useful when the bar is taking up too much vertical space. Click <strong>Expand</strong> to bring it back.</p>
+  </div>
+
+  <!-- ══ TAGGING AN EICON ═══════════════════════════════════ -->
+  <hr>
+  <div class="section" id="tagging">
+    <div class="section-label">Core Feature</div>
+    <h2><span class="icon">✏️</span>Tagging an Eicon</h2>
+    <p>Every eicon on Xariah shows a small <strong>🏷️ tag button</strong> in the bottom-left corner when you hover over it. This is how you add and edit tags.</p>
+
+    <ol class="steps">
+      <li><span>Hover over any eicon on the Xariah browse page. A small tag button appears in the bottom-left corner.</span></li>
+      <li><span>Click the <strong>🏷️</strong> button. The tag modal opens, showing the eicon's name at the top.</span></li>
+      <li><span>Type a tag into the text field (e.g. <em>nature</em>, <em>blue</em>, <em>sparkle</em>).</span></li>
+      <li><span>Press <kbd>Enter</kbd> or <kbd>,</kbd> to confirm the tag. It appears as a chip below.</span></li>
+      <li><span>Repeat to add as many tags as you like.</span></li>
+      <li><span>Click <strong>Save</strong> when done. The tag button on the eicon will glow gold to show it has been tagged.</span></li>
+    </ol>
+
+    <h3>Tag Chips</h3>
+    <p>Confirmed tags appear as <strong>yellow chips</strong>. Click the <strong>×</strong> on any chip to remove that tag.</p>
+    <div class="chip-demo">
+      <div class="chip yellow">nature ×</div>
+      <div class="chip yellow">blue ×</div>
+      <div class="chip yellow">sparkle ×</div>
+    </div>
+
+    <h3>Suggestions</h3>
+    <p>As you type, two kinds of suggestion chips appear above the text field:</p>
+    <div class="chip-demo">
+      <div class="chip green">water ↻</div>
+      <div class="chip green">nature ↻</div>
+    </div>
+    <p><strong style="color:var(--green)">Green chips</strong> are your <strong>recently used tags</strong> — the last 16 tags you've saved. Click one to add it instantly. Your cursor stays in the text field so you can keep typing or click more suggestions.</p>
+    <div class="chip-demo">
+      <div class="chip blue">sparkle +</div>
+      <div class="chip blue">spark +</div>
+    </div>
+    <p><strong style="color:var(--blue)">Blue chips</strong> are <strong>library suggestions</strong> — tags you've used on other eicons that match what you're currently typing. Handy for maintaining consistent tag names.</p>
+
+    <h3>Copy Last</h3>
+    <p>Once you've saved at least one eicon, a small <strong>↩ Copy Last</strong> button appears in the top corner of the modal. Clicking it copies all tags from the most recently saved eicon into the current one — a fast way to tag multiple similar eicons in a row.</p>
+
+    <div class="callout">
+      <div class="callout-icon">⚡</div>
+      <p>Tags are <strong>case-insensitive</strong> and stored in lowercase. "Nature", "NATURE", and "nature" all become the same tag.</p>
+    </div>
+  </div>
+
+  <!-- ══ GRID TAGS ══════════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="grid-tags">
+    <div class="section-label">Advanced Feature</div>
+    <h2><span class="icon">🔲</span>Grid Tags &amp; Eicon Sets</h2>
+    <p>Some eicons are designed as <strong>tiles in a larger image</strong> — a background scene or full-width banner made up of many 100×100px eicons placed side by side. XariahTagger can recognise these sets and copy the whole thing as correctly-formatted BBCode in one click.</p>
+
+    <h3>Creating a Grid Tag</h3>
+    <p>In the tag modal, type a grid tag in the format <strong>#rows×cols</strong> and press <kbd>Enter</kbd>. For example, a 2-row, 3-column set:</p>
+
+    <div class="card teal">
+      <div class="card-title">Grid tag format</div>
+      <p style="font-family:'Space Mono',monospace; font-size:18px; color:var(--teal); margin:0;">#2x3</p>
+      <p style="font-size:14px; margin:8px 0 0; color:var(--text-dim)">2 rows tall, 3 columns wide.</p>
+    </div>
+
+    <p>The grid tag appears as a <strong style="color:var(--red)">red chip</strong> to the right of the text field:</p>
+    <div class="chip-demo">
+      <div class="chip red">#2x3 ×</div>
+    </div>
+    <p>A small grid appears below it. Click one of the squares to mark the <strong>position this eicon occupies</strong> in the set. The selected cell turns red.</p>
+
+    <div class="grid-demo" style="grid-template-columns: repeat(3, 48px);">
+      <div class="grid-cell selected">●</div>
+      <div class="grid-cell"></div>
+      <div class="grid-cell"></div>
+      <div class="grid-cell"></div>
+      <div class="grid-cell"></div>
+      <div class="grid-cell"></div>
+    </div>
+    <p style="font-size:13px; color:var(--text-faint); margin-top:0;">Above: a 2×3 grid with the top-left position selected (row 1, col 1).</p>
+
+    <p>Do the same for every eicon in the set — assign each one its position. XariahTagger identifies which eicons belong together using their names (e.g. <code style="font-family:'Space Mono',monospace;font-size:13px;color:var(--teal)">naturebg1</code>, <code style="font-family:'Space Mono',monospace;font-size:13px;color:var(--teal)">naturebg2</code>, …).</p>
+
+    <h3>Viewing the Set in Search Results</h3>
+    <p>When any eicon from a tagged set appears in search results, XariahTagger automatically assembles the <strong>entire set as a composite preview</strong> — all tiles shown together in their correct positions. Empty positions are shown as dashed cells.</p>
+
+    <h3>Copying the Set</h3>
+    <p>Click anywhere on the composite preview to copy the full BBCode to your clipboard. Each row becomes one line, with empty positions filled using <code style="font-family:'Space Mono',monospace;font-size:13px;color:#445">[eicon]none[/eicon]</code> as a spacer so the layout stays correct:</p>
+
+    <div class="bbcode"><span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg1</span><span class="eicon-tag">[/eicon]</span><span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg2</span><span class="eicon-tag">[/eicon]</span><span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg3</span><span class="eicon-tag">[/eicon]</span>
+<span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg4</span><span class="eicon-tag">[/eicon]</span><span class="eicon-none">[eicon]none[/eicon]</span><span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg6</span><span class="eicon-tag">[/eicon]</span></div>
+
+    <p>You can also hover over individual cells in the composite and click the <strong>🏷️</strong> button on any cell to edit that specific eicon's tags.</p>
+
+    <div class="callout">
+      <div class="callout-icon">📐</div>
+      <p>Only one grid tag per eicon is allowed. Adding a second <code style="font-family:'Space Mono',monospace;font-size:13px;">#NxM</code> replaces the first. Clicking an already-selected cell deselects it.</p>
+    </div>
+  </div>
+
+  <!-- ══ TAG MODE ═══════════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="tag-mode">
+    <div class="section-label">Productivity Feature</div>
+    <h2><span class="icon">👁️</span>Tag Mode</h2>
+    <p>When you're on a tagging session and want to focus only on eicons you haven't touched yet, <strong>Tag Mode</strong> is your friend.</p>
+    <p>Click the <strong style="color:var(--red)">Tag Mode</strong> button in the header bar to activate it. Every eicon that already has tags attached becomes <strong>semi-transparent</strong> with a faint gold outline — visually pushed to the background.</p>
+    <p>Untagged eicons remain fully visible. As you tag them and save, they fade out immediately, leaving you a clear view of what still needs attention.</p>
+
+    <div class="card red">
+      <div class="card-title">When Tag Mode is active</div>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">A red banner appears under the search bar reading <em>"🔴 Tag Mode active — eicons with tags are hidden"</em>. Hover over any dimmed eicon to temporarily restore it to full opacity, and the tag button remains clickable.</p>
+    </div>
+
+    <p>Click <strong>Tag Mode ON</strong> again to deactivate — all eicons return to full visibility instantly.</p>
+  </div>
+
+  <!-- ══ IMPORT / EXPORT ════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="import-export">
+    <div class="section-label">Data Management</div>
+    <h2><span class="icon">💾</span>Import &amp; Export</h2>
+    <p>Your tags are stored in your browser's localStorage. To back them up, transfer them to another browser, or share them with someone else, use the Import and Export buttons in the top-right of the tag bar.</p>
+
+    <h3>Exporting — 💾</h3>
+    <p>Click the <strong>💾</strong> button. A file named <code style="font-family:'Space Mono',monospace;font-size:13px;color:var(--teal)">xariah_tags.txt</code> downloads immediately. This is a plain JSON file containing all your tags. Keep it somewhere safe as your backup.</p>
+
+    <h3>Importing — 📥</h3>
+    <p>Click the <strong>📥</strong> button and select a previously exported <code style="font-family:'Space Mono',monospace;font-size:13px;color:var(--teal)">.txt</code> file. A dialog appears asking how to handle the import:</p>
+
+    <div class="card green">
+      <div class="card-title">Merge</div>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">Combines the imported tags with your existing ones. For eicons that appear in <em>both</em> files, the tag lists are <strong>unioned</strong> — new tags are added, existing tags are kept. Eicons only in your existing library are untouched. <strong>Recommended for most cases.</strong></p>
+    </div>
+
+    <div class="card red">
+      <div class="card-title">Replace</div>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">Completely discards your existing tags and replaces them with the imported file. Use with caution — this cannot be undone without a backup.</p>
+    </div>
+
+    <p>After either operation, the page reloads to apply the changes.</p>
+  </div>
+
+  <!-- ══ NEGATIVE SEARCH ═══════════════════════════════════ -->
+  <hr>
+  <div class="section" id="negative-search">
+    <div class="section-label">Search Feature</div>
+    <h2><span class="icon">🚫</span>Negative Search Terms</h2>
+    <p>You can <strong>exclude</strong> results from your search by prefixing any word with a minus sign (<strong>-</strong>). Any eicon tagged with that word will be removed from all results — both Best Matches and category sections.</p>
+
+    <div class="card teal">
+      <div class="card-title">Example</div>
+      <p style="font-family:'Space Mono',monospace; font-size:15px; color:var(--teal); margin:0 0 8px;">nature -animated</p>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">Returns all eicons tagged with <strong style="color:var(--text)">nature</strong>, but excludes any that are also tagged with <strong style="color:var(--text)">animated</strong>.</p>
+    </div>
+
+    <p>You can chain multiple negative terms:</p>
+    <div class="card teal">
+      <div class="card-title">Multiple exclusions</div>
+      <p style="font-family:'Space Mono',monospace; font-size:15px; color:var(--teal); margin:0 0 8px;">blue -dark -sparkle</p>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">Returns eicons tagged <strong style="color:var(--text)">blue</strong> that are <em>not</em> tagged <strong style="color:var(--text)">dark</strong> and <em>not</em> tagged <strong style="color:var(--text)">sparkle</strong>.</p>
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">⚠️</div>
+      <p><strong>Hyphens in tag names:</strong> the minus-prefix only applies when <strong>-</strong> is the very first character of a search word. A hyphen <em>within</em> a tag name (e.g. a tag called <code style="font-family:'Space Mono',monospace;font-size:13px;">sci-fi</code>) is unaffected. However, avoid starting a tag name with a hyphen — searching for it would be interpreted as an exclusion. If you have existing tags beginning with hyphens, rename them.</p>
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">💡</div>
+      <p>A search of <em>only</em> negative terms (e.g. <code style="font-family:'Space Mono',monospace;font-size:13px;">-animated -dark</code>) returns no results — at least one positive word is required.</p>
+    </div>
+  </div>
+
+  <!-- ══ TIPS ═══════════════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="tips">
+    <div class="section-label">Best Practices</div>
+    <h2><span class="icon">💡</span>Tips &amp; Tricks</h2>
+
+    <h3>Consistent tag vocabulary</h3>
+    <p>The blue suggestion chips help with this — they show tags you've already used that match what you're typing. Try to use the same words for the same concepts (e.g. always <strong>nature</strong> instead of mixing <strong>nature</strong>, <strong>natural</strong>, and <strong>outdoors</strong>), so your search results stay clean.</p>
+
+    <h3>Use multi-word searches</h3>
+    <p>The Best Matches section scores eicons by how many of your search words appear in their tags. Searching <strong>blue sparkle magic</strong> will surface eicons tagged with all three before ones tagged with just one of them.</p>
+
+    <h3>Tag first, search later</h3>
+    <p>The more eicons you tag, the more useful the search becomes. A good tagging session with Tag Mode active — working through one category at a time — pays off immediately in search quality.</p>
+
+    <h3>Export regularly</h3>
+    <p>localStorage can be cleared by browser maintenance, privacy extensions, or clearing your browser data. Export your tags periodically so you never lose your work.</p>
+
+    <h3>Gold glow = tagged</h3>
+    <p>The 🏷️ button on each eicon glows <strong style="color:var(--gold)">gold</strong> if that eicon has tags. No glow means it's untagged. A quick way to spot what needs attention without turning on Tag Mode.</p>
+  </div>
+
+  <!-- ══ QUICK REFERENCE ════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="reference">
+    <div class="section-label">Quick Reference</div>
+    <h2><span class="icon">📋</span>Quick Reference</h2>
+
+    <div class="card blue">
+      <div class="card-title">Keyboard shortcuts in the tag modal</div>
+      <p style="font-size:14px; margin:4px 0; color:var(--text-dim);"><kbd>Enter</kbd> or <kbd>,</kbd> — confirm a typed tag</p>
+      <p style="font-size:14px; margin:4px 0; color:var(--text-dim);"><kbd>Enter</kbd> on <code style="font-family:'Space Mono',monospace;">#2x3</code> — create a grid tag</p>
+    </div>
+
+    <div class="card purple">
+      <div class="card-title">Chip colour guide</div>
+      <div class="chip-demo" style="margin-top:10px;">
+        <div class="chip yellow">active tag ×</div>
+        <div class="chip green">recent tag ↻</div>
+        <div class="chip blue">suggestion +</div>
+        <div class="chip red">#2x3 ×</div>
+      </div>
+      <p style="font-size:13px; margin:10px 0 0; color:var(--text-dim);">
+        <strong style="color:var(--gold)">Yellow</strong> — tags currently assigned to this eicon<br>
+        <strong style="color:var(--green)">Green</strong> — recently used tags (click to add)<br>
+        <strong style="color:var(--blue)">Blue</strong> — library suggestions matching your typed query (click to add)<br>
+        <strong style="color:var(--red)">Red</strong> — active grid tag for this eicon
+      </p>
+    </div>
+  </div>
+
+  <div class="footer">
+    XariahTagger · Alpha · For use on xariah.net<br>
+    Tags stored locally in your browser · No data leaves your machine<br><br>
+    <span style="color: var(--text-faint)">Built with 🏷️ and a lot of shadow-root wrangling</span>
+  </div>
+
+</div>
+</body>
+</html>
