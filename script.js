@@ -7,6 +7,7 @@
 // @downloadURL  https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
 // @grant        none
 // @run-at       document-start
+// @author       Jobix
 // ==/UserScript==
 
 (function() {
