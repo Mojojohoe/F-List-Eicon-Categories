@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Xariah Tagger
-// @version      0.0.09
+// @version      0.0.10
 // @description  Alpha version of the tagging & search system for xariah eicon database
 // @match        *://xariah.net/*
 // @updateURL    https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
@@ -12,7 +12,7 @@
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '0.0.09';
+    const SCRIPT_VERSION = '0.0.10';
 
     // Injected into every x-popuphost shadow root to hide the native tooltip.
     // Defined early because the attachShadow hook below references it at call time.
@@ -198,7 +198,22 @@
     let _uniqueTagsCache = null;  // Set<string> — all distinct tags across the library
 
     const getAllTags = () => {
-        if (_tagCache === null) _tagCache = JSON.parse(localStorage.getItem('x_tags') || '{}');
+        if (_tagCache === null) {
+            const raw = JSON.parse(localStorage.getItem('x_tags') || '{}');
+            // Guard: detect a store corrupted by importing a versioned file into old code.
+            // A valid tag library has string values. The versioned file format has a
+            // 'tags' key whose value is an object. If we find that, unwrap it.
+            if (raw.version === 1 && raw.tags && typeof raw.tags === 'object') {
+                console.warn('[XariahTagger] Detected corrupted x_tags (versioned file stored as library). Auto-recovering.');
+                _tagCache = raw.tags;
+                _gridCache = raw.grid || null;
+                // Persist the corrected data immediately
+                localStorage.setItem('x_tags', JSON.stringify(_tagCache));
+                if (_gridCache) localStorage.setItem('x_grid_data', JSON.stringify(_gridCache));
+            } else {
+                _tagCache = raw;
+            }
+        }
         return _tagCache;
     };
 
