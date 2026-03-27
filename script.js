@@ -1,51 +1,189 @@
 // ==UserScript==
 // @name         Xariah Tagger
+// @version      0.0.06
+// @description  Alpha version of the tagging & search system for xariah eicon database
 // @match        *://xariah.net/*
-// @grant        none
-// @run-at       document-start
 // @updateURL    https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
 // @downloadURL  https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
-// @version      0.0.04
-// @description  Alpha version of the tagging & search system for xariah eicon database
+// @grant        none
+// @run-at       document-start
 // @author       Jobix
 // ==/UserScript==
 
 (function() {
     'use strict';
 
+    const SCRIPT_VERSION = '0.0.06';
+
+    // Injected into every x-popuphost shadow root to hide the native tooltip.
+    // Defined early because the attachShadow hook below references it at call time.
+    const POPUPHOST_SUPPRESS_STYLE = 'x-tooltippopup { display: none !important; }';
 
 
-    // --- 1. SHADOW-ROOT OPENER ---
+
+    // --- 1. SHADOW-ROOT OPENER + TOOLTIP SUPPRESSOR ---
     // Forces all shadow roots into open mode so we can read/write into them.
+    // When x-popuphost creates its shadow root, we immediately:
+    //   a) inject a CSS rule (belt)
+    //   b) watch for x-tooltippopup being added and force inline display:none (braces)
+    //   c) watch x-tooltippopup's style attribute — Xariah writes `top` and `left`
+    //      inline on every mouse move, which can resurrect visibility. We reassert
+    //      display:none as an inline !important each time to keep it dead.
 
     const _origAttachShadow = Element.prototype.attachShadow;
     Element.prototype.attachShadow = function(init) {
         if (init) init.mode = 'open';
-        return _origAttachShadow.call(this, init);
-    };
+        const shadow = _origAttachShadow.call(this, init);
+        if (this.tagName === 'X-POPUPHOST') {
+            // Belt: CSS rule inside this shadow scope
+            const s = document.createElement('style');
+            s.textContent = POPUPHOST_SUPPRESS_STYLE;
+            shadow.appendChild(s);
 
-
-
-    // --- 2. TOOLTIP COORDINATE PATCH ---
-    // Xariah positions tooltips by setting `top` via inline style on <x-tooltippopup>.
-    // Because our tag manager bar pushes the page down, every tooltip drifts downward
-    // by exactly the height of the bar. We intercept the setProperty call and subtract
-    // that height so the tooltip lands where the cursor actually is.
-    //
-    // NOTE: The `parentRule?.selectorText` branch is intentionally removed — inline style
-    // mutations never have a parentRule, so that condition was always false.
-
-    const _origSetProperty = CSSStyleDeclaration.prototype.setProperty;
-    CSSStyleDeclaration.prototype.setProperty = function(prop, val, priority) {
-        if (prop === 'top' && this.parentElement?.tagName === 'X-TOOLTIPPOPUP') {
-            const manager = document.getElementById('x-tag-manager');
-            if (manager) {
-                const numeric = parseFloat(val);
-                if (!isNaN(numeric)) val = (numeric - manager.getBoundingClientRect().height) + 'px';
-            }
+            // Braces: catch x-tooltippopup the moment it's inserted and keep it hidden
+            const childObs = new MutationObserver((mutations) => {
+                for (const mut of mutations) {
+                    for (const node of mut.addedNodes) {
+                        if (node.nodeType !== 1) continue;
+                        suppressTooltipNode(node);
+                        // Also scan descendants in case it's wrapped
+                        node.querySelectorAll?.('x-tooltippopup').forEach(suppressTooltipNode);
+                    }
+                }
+            });
+            childObs.observe(shadow, { childList: true, subtree: true });
         }
-        return _origSetProperty.call(this, prop, val, priority);
+        return shadow;
     };
+
+    function suppressTooltipNode(node) {
+        if (node.tagName !== 'X-TOOLTIPPOPUP') return;
+        // Force inline display:none with !important — beats any stylesheet or JS assignment
+        node.style.setProperty('display', 'none', 'important');
+
+        // Watch for Xariah re-writing the style attribute (it does this on every pointermove)
+        // and reassert display:none each time, unless WE were the one who wrote it.
+        const styleObs = new MutationObserver(() => {
+            const p = node.style.getPropertyPriority('display');
+            const v = node.style.getPropertyValue('display');
+            if (v !== 'none' || p !== 'important') {
+                node.style.setProperty('display', 'none', 'important');
+            }
+        });
+        styleObs.observe(node, { attributes: true, attributeFilter: ['style'] });
+    }
+
+
+
+    // --- 2. TOOLTIP PATCH ---
+    // The native x-tooltippopup lives inside x-popuphost's shadow root, which lives
+    // inside x-popuplayer's shadow root, inside x-mainapp's shadow root.
+    // x-mainapp is translated down by our tag manager bar height, which shifts its entire
+    // coordinate space — so the native tooltip's clientY-based `top` value always renders
+    // too low by exactly that height. No CSS can reach it from outside.
+    //
+    // Solution A (chosen): suppress the native tooltip entirely by injecting
+    // `x-tooltippopup { display:none }` into x-popuphost's shadow root the moment it
+    // is created (via our already-running attachShadow hook). Then show our own
+    // position:fixed tooltip appended to document.body — completely outside x-mainapp,
+    // immune to translateY, positioned using raw clientX/clientY.
+
+    // Our custom tooltip element — created once, reused
+    let _customTooltip = null;
+    let _tooltipHideTimer = null;
+
+    function getCustomTooltip() {
+        if (_customTooltip) return _customTooltip;
+        _customTooltip = document.createElement('div');
+        _customTooltip.id = 'x-custom-tooltip';
+        _customTooltip.style.cssText = `
+            position: fixed;
+            z-index: 2147483647;
+            background: #1a1a1a;
+            color: #eee;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-family: sans-serif;
+            pointer-events: none;
+            white-space: pre;
+            max-width: 300px;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        `;
+        document.body.appendChild(_customTooltip);
+        return _customTooltip;
+    }
+
+    function showCustomTooltip(text, x, y) {
+        clearTimeout(_tooltipHideTimer);
+        const tt = getCustomTooltip();
+        tt.textContent = text;
+        tt.style.display = 'block';
+        // Position 12px right and below the cursor, clamp to viewport
+        const pad = 12;
+        const ttW = tt.offsetWidth  || 120;
+        const ttH = tt.offsetHeight || 24;
+        const left = Math.min(x + pad, window.innerWidth  - ttW - 8);
+        const top  = Math.min(y + pad, window.innerHeight - ttH - 8);
+        tt.style.left = left + 'px';
+        tt.style.top  = top  + 'px';
+    }
+
+    function hideCustomTooltip() {
+        clearTimeout(_tooltipHideTimer);
+        _tooltipHideTimer = setTimeout(() => {
+            if (_customTooltip) _customTooltip.style.display = 'none';
+        }, 80);
+    }
+
+    // Walk composedPath() to find the nearest element with data-tooltip.
+    // composedPath() pierces all open shadow roots, so this works across
+    // the full x-eiconsetvirtualview → x-eiconview → .root shadow chain.
+    function findTooltipTarget(composedPath) {
+        for (const el of composedPath) {
+            if (el.nodeType === 1 && el.hasAttribute?.('data-tooltip')) return el;
+        }
+        return null;
+    }
+
+    // Attached once; tracks current hovered tooltip target for hide logic
+    let _currentTooltipTarget = null;
+
+    function initTooltipPatch() {
+        // Catch any x-popuphost elements that already exist (edge case on slow pages)
+        document.querySelectorAll('x-popuphost').forEach(host => {
+            if (!host.shadowRoot) return;
+            if (!host._xTooltipSuppressed) {
+                host._xTooltipSuppressed = true;
+                const s = document.createElement('style');
+                s.textContent = POPUPHOST_SUPPRESS_STYLE;
+                host.shadowRoot.appendChild(s);
+            }
+            host.shadowRoot.querySelectorAll('x-tooltippopup').forEach(suppressTooltipNode);
+        });
+
+        if (window._xTooltipHandlerBound) return;
+        window._xTooltipHandlerBound = true;
+
+        document.body.addEventListener('pointermove', (ev) => {
+            if ((ev.pointerType ?? 'mouse') !== 'mouse') return;
+            const target = findTooltipTarget(ev.composedPath());
+            if (target) {
+                _currentTooltipTarget = target;
+                showCustomTooltip(target.getAttribute('data-tooltip'), ev.clientX, ev.clientY);
+            } else {
+                if (_currentTooltipTarget) {
+                    _currentTooltipTarget = null;
+                    hideCustomTooltip();
+                }
+            }
+        }, { passive: true });
+
+        // Hide immediately when pointer leaves the window
+        document.body.addEventListener('pointerleave', hideCustomTooltip);
+    }
 
 
 
@@ -289,12 +427,13 @@
                 const c = document.createElement('div');
                 c.className = 'chip green';
                 c.innerHTML = `${tag} ↻`;
+                // Prevent mousedown from stealing focus away from the input
+                c.addEventListener('mousedown', e => e.preventDefault());
                 c.onclick = () => {
                     activeTags.push(tag);
                     renderModalChips();
                     const input = document.getElementById('x-modal-input');
-                    if (input) input.value = '';
-                    // Re-render suggestions with the preserved query (not the now-cleared input)
+                    if (input) { input.value = ''; input.focus(); }
                     updateSuggestions(suggestionQuery);
                 };
                 rBox.appendChild(c);
@@ -311,11 +450,13 @@
                     const c = document.createElement('div');
                     c.className = 'chip blue';
                     c.innerHTML = `${tag} +`;
+                    // Prevent mousedown from stealing focus away from the input
+                    c.addEventListener('mousedown', e => e.preventDefault());
                     c.onclick = () => {
                         activeTags.push(tag);
                         renderModalChips();
                         const input = document.getElementById('x-modal-input');
-                        if (input) input.value = '';
+                        if (input) { input.value = ''; input.focus(); }
                         updateSuggestions(suggestionQuery);
                     };
                     sBox.appendChild(c);
@@ -591,42 +732,32 @@
         const posMap = {};
         members.forEach(m => { if (m.pos !== null && m.pos !== undefined) posMap[m.pos] = m.name; });
 
-        // Build BBCode: one line per row, cells within a row concatenated
-        const copyBBCode = () => {
-            const lines = [];
-            for (let r = 0; r < rows; r++) {
-                let line = '';
-                for (let c = 0; c < cols; c++) {
-                    const n = posMap[r * cols + c];
-                    if (n) line += `[eicon]${n}[/eicon]`;
-                }
-                if (line) lines.push(line);
-            }
-            return lines.join('\n');
-        };
-
         const wrap = document.createElement('div');
         wrap.className = 'grid-composite-wrap';
-        // span N columns and M rows in the parent 85px-cell / 4px-gap grid
         wrap.style.cssText = `grid-column: span ${cols}; grid-row: span ${rows};`;
 
         const inner = document.createElement('div');
         inner.className = 'grid-composite-inner';
         inner.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         inner.style.gridTemplateRows    = `repeat(${rows}, 1fr)`;
+        // Store grid dimensions on the container so the click handler can read them
+        inner.dataset.rows = String(rows);
+        inner.dataset.cols = String(cols);
 
         for (let i = 0; i < rows * cols; i++) {
-            const eiconName = posMap[i];
+            const eiconName = posMap[i] || '';
             const cell = document.createElement('div');
             cell.className = 'grid-composite-cell' + (eiconName ? '' : ' empty');
+            // Store the eicon name (or empty string for gaps) directly on the cell element
+            cell.dataset.eiconName = eiconName;
 
             if (eiconName) {
                 const img = document.createElement('img');
                 img.src = `https://static.f-list.net/images/eicon/${eiconName}.gif`;
                 img.loading = 'lazy';
+                img.ondragstart = (e) => e.preventDefault();
                 cell.appendChild(img);
 
-                // Per-cell tag edit button
                 const tagBtn = document.createElement('button');
                 tagBtn.className = 'cell-tag-btn';
                 tagBtn.innerHTML = '🏷️';
@@ -635,25 +766,35 @@
                 cell.appendChild(tagBtn);
             }
 
+            // Build BBCode fresh from cell data attributes at click time.
+            // This avoids any closure, precomputed string, or dataset encoding issue.
+            cell.onclick = () => {
+                const r = parseInt(inner.dataset.rows, 10);
+                const c = parseInt(inner.dataset.cols, 10);
+                const allCells = inner.querySelectorAll('.grid-composite-cell');
+                const lines = [];
+                for (let row = 0; row < r; row++) {
+                    let line = '';
+                    for (let col = 0; col < c; col++) {
+                        const n = allCells[row * c + col]?.dataset.eiconName || '';
+                        line += n ? `[eicon]${n}[/eicon]` : '[eicon]none[/eicon]';
+                    }
+                    lines.push(line);
+                }
+                navigator.clipboard.writeText(lines.join('\n'));
+                wrap.classList.add('flashing');
+                setTimeout(() => wrap.classList.remove('flashing'), 600);
+            };
+
             inner.appendChild(cell);
         }
 
-        // Copy flash overlay on the whole composite
         const flash = document.createElement('div');
         flash.className = 'composite-copy-flash';
         flash.textContent = '✓ Copied';
 
         wrap.appendChild(inner);
         wrap.appendChild(flash);
-
-        // Click the composite = copy all BBCode rows
-        wrap.onclick = () => {
-            const code = copyBBCode();
-            if (!code) return;
-            navigator.clipboard.writeText(code);
-            wrap.classList.add('flashing');
-            setTimeout(() => wrap.classList.remove('flashing'), 600);
-        };
 
         return wrap;
     }
@@ -802,6 +943,7 @@
                 <div id="x-manager-header">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <h3 style="color:gold; margin:0; font-size:14px;">🏷️ Tag Search</h3>
+                        <span style="font-size:10px; color:#555; font-family:monospace;">v${SCRIPT_VERSION}</span>
                         <div id="x-collapse-toggle">Collapse</div>
                         <div id="x-tag-mode-toggle" title="Hide already-tagged eicons">Tag Mode</div>
                     </div>
@@ -1020,6 +1162,7 @@
 
     setInterval(() => {
         initExplorer();
+        initTooltipPatch();
         findDeep(document, 'x-eiconview').forEach(processIcon);
         if (tagModeActive) applyTagMode();
     }, 1000);
