@@ -1,19 +1,18 @@
 // ==UserScript==
 // @name         Xariah Tagger
-// @version      0.0.06
+// @version      0.0.07
 // @description  Alpha version of the tagging & search system for xariah eicon database
 // @match        *://xariah.net/*
 // @updateURL    https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
 // @downloadURL  https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
 // @grant        none
 // @run-at       document-start
-// @author       Jobix
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '0.0.06';
+    const SCRIPT_VERSION = '0.0.07';
 
     // Injected into every x-popuphost shadow root to hide the native tooltip.
     // Defined early because the attachShadow hook below references it at call time.
@@ -867,21 +866,39 @@
 
         if (!query || query.trim().length < 1) return;
 
-        const lib = getAllTags();
-        const keywords = query.toLowerCase().split(' ').filter(k => k.length > 0);
+        // Split query into positive and negative keywords.
+        // A word prefixed with '-' is a negative (exclusion) term.
+        // Note: tags containing hyphens are unaffected — the '-' prefix only applies
+        // to the first character of a search word, not within a tag itself.
+        const allKeywords = query.toLowerCase().split(' ').filter(k => k.length > 0);
+        const positiveKws = allKeywords.filter(k => !k.startsWith('-'));
+        const negativeKws = allKeywords.filter(k => k.startsWith('-')).map(k => k.slice(1)).filter(k => k.length > 0);
 
-        // Score each eicon by how many search keywords match any of its tags
+        // Bail out if there are no positive terms — negative-only queries return nothing
+        if (positiveKws.length === 0) return;
+
+        const lib = getAllTags();
+
+        // Returns true if an eicon's tags contain any negative keyword
+        const isExcluded = (tagStr) => {
+            if (negativeKws.length === 0) return false;
+            const iconTags = tagStr.toLowerCase().split(',').map(t => t.trim());
+            return negativeKws.some(nkw => iconTags.some(tag => tag.includes(nkw)));
+        };
+
+        // Score each eicon by how many positive keywords match any of its tags.
+        // Eicons matching any negative keyword are excluded entirely.
         const scored = [];
         for (const [name, tagStr] of Object.entries(lib)) {
+            if (isExcluded(tagStr)) continue;
             const iconTags = tagStr.toLowerCase().split(',').map(t => t.trim());
             let score = 0;
-            keywords.forEach(kw => { if (iconTags.some(tag => tag.includes(kw))) score++; });
+            positiveKws.forEach(kw => { if (iconTags.some(tag => tag.includes(kw))) score++; });
             if (score > 0) scored.push({ name, score });
         }
 
         if (scored.length > 0) {
             bestContainer.style.display = 'block';
-            // Fresh Set — deduplicates composites only within the best-matches row
             const bestRendered = new Set();
             scored.sort((a, b) => b.score - a.score).slice(0, 30).forEach(res => {
                 const el = renderEiconOrComposite(res.name, bestRendered);
@@ -889,12 +906,14 @@
             });
         }
 
-        // Group eicons by which of their tags match the query, one collapsible box per tag
+        // Build one category section per tag that matches any positive keyword.
+        // Each category only contains eicons not excluded by negative keywords.
         const tagMap = {};
         for (const [eicon, tagString] of Object.entries(lib)) {
+            if (isExcluded(tagString)) continue;
             tagString.split(',').forEach(t => {
                 const tag = t.trim().toLowerCase();
-                if (tag.includes(query.toLowerCase())) {
+                if (positiveKws.some(kw => tag.includes(kw))) {
                     if (!tagMap[tag]) tagMap[tag] = [];
                     tagMap[tag].push(eicon);
                 }
@@ -917,8 +936,6 @@
                 header.querySelector('span:last-child').textContent = isCollapsed ? '▾' : '▸';
             };
 
-            // Each category gets a fresh Set — the same composite CAN appear in
-            // multiple category collapses if it's tagged with multiple matching tags.
             const catRendered = new Set();
             tagMap[tag].forEach(name => {
                 const el = renderEiconOrComposite(name, catRendered);
