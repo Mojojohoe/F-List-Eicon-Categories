@@ -1,11 +1,739 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XariahTagger — User Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0e0e10;
+    --surface:   #17171a;
+    --surface2:  #1f1f24;
+    --border:    #2a2a32;
+    --gold:      #f5c842;
+    --gold-dim:  #7a6115;
+    --teal:      #3ecfb2;
+    --red:       #e8524a;
+    --blue:      #4a9eff;
+    --green:     #52c97a;
+    --purple:    #9d7ef5;
+    --text:      #e8e8ec;
+    --text-dim:  #8888a0;
+    --text-faint:#444458;
+  }
 
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Noise texture overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Layout ── */
+  .page { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 72px 0 56px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '🏷️';
+    position: absolute;
+    font-size: 220px;
+    right: -30px; top: -20px;
+    opacity: 0.04;
+    pointer-events: none;
+    transform: rotate(-12deg);
+  }
+  .hero-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: clamp(36px, 6vw, 58px);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    color: var(--text);
+    margin-bottom: 20px;
+  }
+  .hero h1 span { color: var(--gold); }
+  .hero-sub {
+    font-size: 18px;
+    color: var(--text-dim);
+    max-width: 560px;
+    font-weight: 300;
+  }
+  .version-badge {
+    display: inline-block;
+    margin-top: 28px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--teal);
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    border-radius: 8px;
+    padding: 28px 32px;
+    margin: 48px 0;
+  }
+  .toc-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+  .toc ol { list-style: none; counter-reset: toc-counter; }
+  .toc ol li { counter-increment: toc-counter; display: flex; align-items: baseline; gap: 10px; padding: 5px 0; }
+  .toc ol li::before {
+    content: counter(toc-counter, decimal-leading-zero);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .toc a { color: var(--text-dim); text-decoration: none; transition: color 0.15s; font-size: 15px; }
+  .toc a:hover { color: var(--gold); }
+
+  /* ── Sections ── */
+  .section { margin-top: 64px; }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 10px;
+  }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2 .icon {
+    font-size: 22px;
+    width: 42px; height: 42px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 32px 0 10px;
+  }
+  h3::before {
+    content: '▸ ';
+    color: var(--gold);
+    font-size: 14px;
+  }
+
+  p { color: var(--text-dim); margin-bottom: 14px; }
+  p strong { color: var(--text); font-weight: 500; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .card.gold   { border-left: 3px solid var(--gold); }
+  .card.teal   { border-left: 3px solid var(--teal); }
+  .card.red    { border-left: 3px solid var(--red); }
+  .card.blue   { border-left: 3px solid var(--blue); }
+  .card.green  { border-left: 3px solid var(--green); }
+  .card.purple { border-left: 3px solid var(--purple); }
+
+  .card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .card.gold   .card-title { color: var(--gold); }
+  .card.teal   .card-title { color: var(--teal); }
+  .card.red    .card-title { color: var(--red); }
+  .card.blue   .card-title { color: var(--blue); }
+  .card.green  .card-title { color: var(--green); }
+  .card.purple .card-title { color: var(--purple); }
+
+  /* ── Step list ── */
+  .steps { list-style: none; counter-reset: step-counter; margin: 16px 0; }
+  .steps li {
+    counter-increment: step-counter;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--surface2);
+    color: var(--text-dim);
+  }
+  .steps li:last-child { border-bottom: none; }
+  .steps li::before {
+    content: counter(step-counter);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 28px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .steps li > span { min-width: 0; flex: 1; }
+
+  kbd {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  /* ── Chips (visual reference) ── */
+  .chip-demo { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .chip.yellow { background: var(--gold);    color: #000; }
+  .chip.green  { background: var(--green);   color: #000; }
+  .chip.blue   { background: var(--blue);    color: #fff; }
+  .chip.red    { background: var(--red);     color: #fff; }
+
+  /* ── BBCode block ── */
+  .bbcode {
+    background: #0a0a0d;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--teal);
+    margin: 12px 0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .bbcode .eicon-tag { color: var(--text-dim); }
+  .bbcode .eicon-name { color: var(--gold); }
+  .bbcode .eicon-none { color: #445; }
+
+  /* ── Key combo ── */
+  kbd {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* ── Grid demo ── */
+  .grid-demo {
+    display: inline-grid;
+    gap: 3px;
+    background: #0d0d0d;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+    margin: 12px 0;
+  }
+  .grid-cell {
+    width: 48px; height: 48px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .grid-cell.filled { background: #1a2a1a; border-color: var(--green); }
+  .grid-cell.empty  { background: #1a1a1a; border: 1px dashed #333; }
+  .grid-cell.selected { background: #2a1a1a; border-color: var(--red); }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+  /* ── Callout ── */
+  .callout {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+  .callout-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .callout p { margin: 0; font-size: 14px; }
+
+  /* ── Feature grid ── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .feature-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+  .feature-tile:hover { border-color: var(--gold-dim); }
+  .feature-tile .ft-icon { font-size: 26px; margin-bottom: 10px; }
+  .feature-tile .ft-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .feature-tile .ft-desc { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+
+  /* ── Inline tag bar mockup ── */
+  .ui-mockup {
+    background: #1a1a1a;
+    border: 3px solid var(--gold);
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin: 16px 0;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .ui-badge {
+    background: var(--gold);
+    color: #000;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .ui-badge.teal   { background: var(--teal); }
+  .ui-badge.red    { background: var(--red); color: #fff; }
+  .ui-badge.subtle { background: #333; color: #aaa; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-faint);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 2;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
 </head>
 <body>
+<div class="page">
 
-    <h2>You may leave now, if you so desire.</h2>
- 
+  <!-- ══ HERO ══════════════════════════════════════════════ -->
+  <div class="hero">
+    <div class="hero-eyebrow">Tampermonkey Script · xariah.net</div>
+    <h1>Xariah<span>Tagger</span><br>User Guide</h1>
+    <p class="hero-sub">A complete guide to tagging, searching, and organising eicons on Xariah — for first-time users and veterans alike.</p>
+    <div class="version-badge">v0.0.06 — Alpha</div>
+  </div>
+
+  <!-- ══ WHAT IS THIS ══════════════════════════════════════ -->
+  <div class="section" id="what-is-this">
+    <div class="section-label">Introduction</div>
+    <h2><span class="icon">❓</span>What is XariahTagger?</h2>
+    <p><strong>Xariah.net</strong> is a database for searching and browsing the eicons used on the roleplaying platform F-List. Eicons can only be searched by their exact name — which is fine if you know the name, but hopeless if you just want to find "that blue sparkly one".</p>
+    <p>XariahTagger is a <strong>Tampermonkey browser script</strong> that layers a personal tagging system on top of Xariah. You give eicons searchable tags in plain English. You can then search those tags to instantly find what you're looking for.</p>
+
+    <div class="feature-grid">
+      <div class="feature-tile">
+        <div class="ft-icon">🏷️</div>
+        <div class="ft-name">Tag Eicons</div>
+        <div class="ft-desc">Add plain-English tags to any eicon directly on the page.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">🔍</div>
+        <div class="ft-name">Tag Search</div>
+        <div class="ft-desc">Search your tags to find eicons instantly by description.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">📋</div>
+        <div class="ft-name">One-Click Copy</div>
+        <div class="ft-desc">Click any result to copy its BBCode directly to your clipboard.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">🔲</div>
+        <div class="ft-name">Grid Sets</div>
+        <div class="ft-desc">Group multi-tile eicon sets and copy them as a complete block.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">💾</div>
+        <div class="ft-name">Import / Export</div>
+        <div class="ft-desc">Back up your tag library or share it with others.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="ft-icon">👁️</div>
+        <div class="ft-name">Tag Mode</div>
+        <div class="ft-desc">Dim already-tagged eicons to focus on what still needs work.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">💡</div>
+      <p>All your tags are stored <strong>locally in your browser</strong> (localStorage). Nothing is sent to any server. Your data is yours.</p>
+    </div>
+  </div>
+
+  <!-- ══ INSTALLATION ══════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="installation">
+    <div class="section-label">Getting Started</div>
+    <h2><span class="icon">⚙️</span>Installation</h2>
+    <p>XariahTagger requires <strong>Tampermonkey</strong> — a free browser extension that lets you run custom scripts on websites.</p>
+
+    <ol class="steps">
+      <li><span>Install the <strong>Tampermonkey</strong> extension for your browser (available for Chrome, Firefox, Edge, and Safari).</span></li>
+      <li><span>Open the Tampermonkey dashboard and click <strong>Create a new script</strong>.</span></li>
+      <li><span>Delete the default content and paste in the full XariahTagger script.</span></li>
+      <li><span>Press <kbd>Ctrl</kbd>&thinsp;+&thinsp;<kbd>S</kbd> to save.</span></li>
+      <li><span>Navigate to <strong>xariah.net</strong> — the gold tag bar should appear at the very top of the page.</span></li>
+    </ol>
+
+    <div class="card gold">
+      <div class="card-title">Confirming the version</div>
+      <p style="margin:0; color: var(--text-dim); font-size: 14px;">The tag bar shows a small version number in the top-left (e.g. <strong style="color:var(--text); font-family:'Space Mono',monospace;">v0.0.07</strong>). If you update the script and the version number doesn't change, Tampermonkey may be running a cached version — check that only one copy of the script exists in your dashboard.</p>
+    </div>
+  </div>
+
+  <!-- ══ THE TAG BAR ════════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="tag-bar">
+    <div class="section-label">The Interface</div>
+    <h2><span class="icon">🔍</span>The Tag Search Bar</h2>
+    <p>When you load Xariah, a dark panel appears pinned to the very top of the page. This is the <strong>Tag Search Bar</strong> — your command centre.</p>
+
+    <div class="ui-mockup">
+      <div>🏷️ <strong style="color:var(--gold)">Tag Search</strong></div>
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:#555;">v0.0.06</div>
+      <div class="ui-badge">Collapse</div>
+      <div class="ui-badge red">Tag Mode</div>
+      <div style="flex:1; min-width:120px; background:#000; border:1px solid #444; border-radius:4px; padding:6px 12px; color:#888; font-size:13px;">Search tags…</div>
+      <div class="ui-badge subtle">💾</div>
+      <div class="ui-badge subtle">📥</div>
+    </div>
+
+    <h3>The Search Input</h3>
+    <p>Type any word into the search box. Results appear instantly as you type — no need to press Enter. The search checks every tag you've ever assigned across your entire library.</p>
+
+    <h3>Best Matches</h3>
+    <p>Above the category results, a gold-bordered <strong>✨ Best Matches</strong> row appears. These are the eicons that match the most keywords in your search, ranked by relevance. Click any eicon to copy its BBCode immediately.</p>
+
+    <h3>Category Results</h3>
+    <p>Below Best Matches, each matching tag gets its own <strong>collapsible section</strong>. Click the section header to expand it and see all eicons tagged with that word. Each result can be clicked to copy its BBCode.</p>
+
+    <h3>Collapse / Expand</h3>
+    <p>The <strong>Collapse</strong> button hides the search results area, leaving only the slim header bar visible. This is useful when the bar is taking up too much vertical space. Click <strong>Expand</strong> to bring it back.</p>
+  </div>
+
+  <!-- ══ TAGGING AN EICON ═══════════════════════════════════ -->
+  <hr>
+  <div class="section" id="tagging">
+    <div class="section-label">Core Feature</div>
+    <h2><span class="icon">✏️</span>Tagging an Eicon</h2>
+    <p>Every eicon on Xariah shows a small <strong>🏷️ tag button</strong> in the bottom-left corner when you hover over it. This is how you add and edit tags.</p>
+
+    <ol class="steps">
+      <li><span>Hover over any eicon on the Xariah browse page. A small tag button appears in the bottom-left corner.</span></li>
+      <li><span>Click the <strong>🏷️</strong> button. The tag modal opens, showing the eicon's name at the top.</span></li>
+      <li><span>Type a tag into the text field (e.g. <em>nature</em>, <em>blue</em>, <em>sparkle</em>).</span></li>
+      <li><span>Press <kbd>Enter</kbd> or <kbd>,</kbd> to confirm the tag. It appears as a chip below.</span></li>
+      <li><span>Repeat to add as many tags as you like.</span></li>
+      <li><span>Click <strong>Save</strong> when done. The tag button on the eicon will glow gold to show it has been tagged.</span></li>
+    </ol>
+
+    <h3>Tag Chips</h3>
+    <p>Confirmed tags appear as <strong>yellow chips</strong>. Click the <strong>×</strong> on any chip to remove that tag.</p>
+    <div class="chip-demo">
+      <div class="chip yellow">nature ×</div>
+      <div class="chip yellow">blue ×</div>
+      <div class="chip yellow">sparkle ×</div>
+    </div>
+
+    <h3>Suggestions</h3>
+    <p>As you type, two kinds of suggestion chips appear above the text field:</p>
+    <div class="chip-demo">
+      <div class="chip green">water ↻</div>
+      <div class="chip green">nature ↻</div>
+    </div>
+    <p><strong style="color:var(--green)">Green chips</strong> are your <strong>recently used tags</strong> — the last 16 tags you've saved. Click one to add it instantly. Your cursor stays in the text field so you can keep typing or click more suggestions.</p>
+    <div class="chip-demo">
+      <div class="chip blue">sparkle +</div>
+      <div class="chip blue">spark +</div>
+    </div>
+    <p><strong style="color:var(--blue)">Blue chips</strong> are <strong>library suggestions</strong> — tags you've used on other eicons that match what you're currently typing. Handy for maintaining consistent tag names.</p>
+
+    <h3>Copy Last</h3>
+    <p>Once you've saved at least one eicon, a small <strong>↩ Copy Last</strong> button appears in the top corner of the modal. Clicking it copies all tags from the most recently saved eicon into the current one — a fast way to tag multiple similar eicons in a row.</p>
+
+    <div class="callout">
+      <div class="callout-icon">⚡</div>
+      <p>Tags are <strong>case-insensitive</strong> and stored in lowercase. "Nature", "NATURE", and "nature" all become the same tag.</p>
+    </div>
+  </div>
+
+  <!-- ══ GRID TAGS ══════════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="grid-tags">
+    <div class="section-label">Advanced Feature</div>
+    <h2><span class="icon">🔲</span>Grid Tags &amp; Eicon Sets</h2>
+    <p>Some eicons are designed as <strong>tiles in a larger image</strong> — a background scene or full-width banner made up of many 100×100px eicons placed side by side. XariahTagger can recognise these sets and copy the whole thing as correctly-formatted BBCode in one click.</p>
+
+    <h3>Creating a Grid Tag</h3>
+    <p>In the tag modal, type a grid tag in the format <strong>#rows×cols</strong> and press <kbd>Enter</kbd>. For example, a 2-row, 3-column set:</p>
+
+    <div class="card teal">
+      <div class="card-title">Grid tag format</div>
+      <p style="font-family:'Space Mono',monospace; font-size:18px; color:var(--teal); margin:0;">#2x3</p>
+      <p style="font-size:14px; margin:8px 0 0; color:var(--text-dim)">2 rows tall, 3 columns wide.</p>
+    </div>
+
+    <p>The grid tag appears as a <strong style="color:var(--red)">red chip</strong> to the right of the text field:</p>
+    <div class="chip-demo">
+      <div class="chip red">#2x3 ×</div>
+    </div>
+    <p>A small grid appears below it. Click one of the squares to mark the <strong>position this eicon occupies</strong> in the set. The selected cell turns red.</p>
+
+    <div class="grid-demo" style="grid-template-columns: repeat(3, 48px);">
+      <div class="grid-cell selected">●</div>
+      <div class="grid-cell"></div>
+      <div class="grid-cell"></div>
+      <div class="grid-cell"></div>
+      <div class="grid-cell"></div>
+      <div class="grid-cell"></div>
+    </div>
+    <p style="font-size:13px; color:var(--text-faint); margin-top:0;">Above: a 2×3 grid with the top-left position selected (row 1, col 1).</p>
+
+    <p>Do the same for every eicon in the set — assign each one its position. XariahTagger identifies which eicons belong together using their names (e.g. <code style="font-family:'Space Mono',monospace;font-size:13px;color:var(--teal)">naturebg1</code>, <code style="font-family:'Space Mono',monospace;font-size:13px;color:var(--teal)">naturebg2</code>, …).</p>
+
+    <h3>Viewing the Set in Search Results</h3>
+    <p>When any eicon from a tagged set appears in search results, XariahTagger automatically assembles the <strong>entire set as a composite preview</strong> — all tiles shown together in their correct positions. Empty positions are shown as dashed cells.</p>
+
+    <h3>Copying the Set</h3>
+    <p>Click anywhere on the composite preview to copy the full BBCode to your clipboard. Each row becomes one line, with empty positions filled using <code style="font-family:'Space Mono',monospace;font-size:13px;color:#445">[eicon]none[/eicon]</code> as a spacer so the layout stays correct:</p>
+
+    <div class="bbcode"><span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg1</span><span class="eicon-tag">[/eicon]</span><span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg2</span><span class="eicon-tag">[/eicon]</span><span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg3</span><span class="eicon-tag">[/eicon]</span>
+<span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg4</span><span class="eicon-tag">[/eicon]</span><span class="eicon-none">[eicon]none[/eicon]</span><span class="eicon-tag">[eicon]</span><span class="eicon-name">naturebg6</span><span class="eicon-tag">[/eicon]</span></div>
+
+    <p>You can also hover over individual cells in the composite and click the <strong>🏷️</strong> button on any cell to edit that specific eicon's tags.</p>
+
+    <div class="callout">
+      <div class="callout-icon">📐</div>
+      <p>Only one grid tag per eicon is allowed. Adding a second <code style="font-family:'Space Mono',monospace;font-size:13px;">#NxM</code> replaces the first. Clicking an already-selected cell deselects it.</p>
+    </div>
+  </div>
+
+  <!-- ══ TAG MODE ═══════════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="tag-mode">
+    <div class="section-label">Productivity Feature</div>
+    <h2><span class="icon">👁️</span>Tag Mode</h2>
+    <p>When you're on a tagging session and want to focus only on eicons you haven't touched yet, <strong>Tag Mode</strong> is your friend.</p>
+    <p>Click the <strong style="color:var(--red)">Tag Mode</strong> button in the header bar to activate it. Every eicon that already has tags attached becomes <strong>semi-transparent</strong> with a faint gold outline — visually pushed to the background.</p>
+    <p>Untagged eicons remain fully visible. As you tag them and save, they fade out immediately, leaving you a clear view of what still needs attention.</p>
+
+    <div class="card red">
+      <div class="card-title">When Tag Mode is active</div>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">A red banner appears under the search bar reading <em>"🔴 Tag Mode active — eicons with tags are hidden"</em>. Hover over any dimmed eicon to temporarily restore it to full opacity, and the tag button remains clickable.</p>
+    </div>
+
+    <p>Click <strong>Tag Mode ON</strong> again to deactivate — all eicons return to full visibility instantly.</p>
+  </div>
+
+  <!-- ══ IMPORT / EXPORT ════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="import-export">
+    <div class="section-label">Data Management</div>
+    <h2><span class="icon">💾</span>Import &amp; Export</h2>
+    <p>Your tags are stored in your browser's localStorage. To back them up, transfer them to another browser, or share them with someone else, use the Import and Export buttons in the top-right of the tag bar.</p>
+
+    <h3>Exporting — 💾</h3>
+    <p>Click the <strong>💾</strong> button. A file named <code style="font-family:'Space Mono',monospace;font-size:13px;color:var(--teal)">xariah_tags.txt</code> downloads immediately. This is a plain JSON file containing all your tags. Keep it somewhere safe as your backup.</p>
+
+    <h3>Importing — 📥</h3>
+    <p>Click the <strong>📥</strong> button and select a previously exported <code style="font-family:'Space Mono',monospace;font-size:13px;color:var(--teal)">.txt</code> file. A dialog appears asking how to handle the import:</p>
+
+    <div class="card green">
+      <div class="card-title">Merge</div>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">Combines the imported tags with your existing ones. For eicons that appear in <em>both</em> files, the tag lists are <strong>unioned</strong> — new tags are added, existing tags are kept. Eicons only in your existing library are untouched. <strong>Recommended for most cases.</strong></p>
+    </div>
+
+    <div class="card red">
+      <div class="card-title">Replace</div>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">Completely discards your existing tags and replaces them with the imported file. Use with caution — this cannot be undone without a backup.</p>
+    </div>
+
+    <p>After either operation, the page reloads to apply the changes.</p>
+  </div>
+
+  <!-- ══ NEGATIVE SEARCH ═══════════════════════════════════ -->
+  <hr>
+  <div class="section" id="negative-search">
+    <div class="section-label">Search Feature</div>
+    <h2><span class="icon">🚫</span>Negative Search Terms</h2>
+    <p>You can <strong>exclude</strong> results from your search by prefixing any word with a minus sign (<strong>-</strong>). Any eicon tagged with that word will be removed from all results — both Best Matches and category sections.</p>
+
+    <div class="card teal">
+      <div class="card-title">Example</div>
+      <p style="font-family:'Space Mono',monospace; font-size:15px; color:var(--teal); margin:0 0 8px;">nature -animated</p>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">Returns all eicons tagged with <strong style="color:var(--text)">nature</strong>, but excludes any that are also tagged with <strong style="color:var(--text)">animated</strong>.</p>
+    </div>
+
+    <p>You can chain multiple negative terms:</p>
+    <div class="card teal">
+      <div class="card-title">Multiple exclusions</div>
+      <p style="font-family:'Space Mono',monospace; font-size:15px; color:var(--teal); margin:0 0 8px;">blue -dark -sparkle</p>
+      <p style="font-size:14px; margin:0; color:var(--text-dim)">Returns eicons tagged <strong style="color:var(--text)">blue</strong> that are <em>not</em> tagged <strong style="color:var(--text)">dark</strong> and <em>not</em> tagged <strong style="color:var(--text)">sparkle</strong>.</p>
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">⚠️</div>
+      <p><strong>Hyphens in tag names:</strong> the minus-prefix only applies when <strong>-</strong> is the very first character of a search word. A hyphen <em>within</em> a tag name (e.g. a tag called <code style="font-family:'Space Mono',monospace;font-size:13px;">sci-fi</code>) is unaffected. However, avoid starting a tag name with a hyphen — searching for it would be interpreted as an exclusion. If you have existing tags beginning with hyphens, rename them.</p>
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">💡</div>
+      <p>A search of <em>only</em> negative terms (e.g. <code style="font-family:'Space Mono',monospace;font-size:13px;">-animated -dark</code>) returns no results — at least one positive word is required.</p>
+    </div>
+  </div>
+
+  <!-- ══ TIPS ═══════════════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="tips">
+    <div class="section-label">Best Practices</div>
+    <h2><span class="icon">💡</span>Tips &amp; Tricks</h2>
+
+    <h3>Consistent tag vocabulary</h3>
+    <p>The blue suggestion chips help with this — they show tags you've already used that match what you're typing. Try to use the same words for the same concepts (e.g. always <strong>nature</strong> instead of mixing <strong>nature</strong>, <strong>natural</strong>, and <strong>outdoors</strong>), so your search results stay clean.</p>
+
+    <h3>Use multi-word searches</h3>
+    <p>The Best Matches section scores eicons by how many of your search words appear in their tags. Searching <strong>blue sparkle magic</strong> will surface eicons tagged with all three before ones tagged with just one of them.</p>
+
+    <h3>Tag first, search later</h3>
+    <p>The more eicons you tag, the more useful the search becomes. A good tagging session with Tag Mode active — working through one category at a time — pays off immediately in search quality.</p>
+
+    <h3>Export regularly</h3>
+    <p>localStorage can be cleared by browser maintenance, privacy extensions, or clearing your browser data. Export your tags periodically so you never lose your work.</p>
+
+    <h3>Gold glow = tagged</h3>
+    <p>The 🏷️ button on each eicon glows <strong style="color:var(--gold)">gold</strong> if that eicon has tags. No glow means it's untagged. A quick way to spot what needs attention without turning on Tag Mode.</p>
+  </div>
+
+  <!-- ══ QUICK REFERENCE ════════════════════════════════════ -->
+  <hr>
+  <div class="section" id="reference">
+    <div class="section-label">Quick Reference</div>
+    <h2><span class="icon">📋</span>Quick Reference</h2>
+
+    <div class="card blue">
+      <div class="card-title">Keyboard shortcuts in the tag modal</div>
+      <p style="font-size:14px; margin:4px 0; color:var(--text-dim);"><kbd>Enter</kbd> or <kbd>,</kbd> — confirm a typed tag</p>
+      <p style="font-size:14px; margin:4px 0; color:var(--text-dim);"><kbd>Enter</kbd> on <code style="font-family:'Space Mono',monospace;">#2x3</code> — create a grid tag</p>
+    </div>
+
+    <div class="card purple">
+      <div class="card-title">Chip colour guide</div>
+      <div class="chip-demo" style="margin-top:10px;">
+        <div class="chip yellow">active tag ×</div>
+        <div class="chip green">recent tag ↻</div>
+        <div class="chip blue">suggestion +</div>
+        <div class="chip red">#2x3 ×</div>
+      </div>
+      <p style="font-size:13px; margin:10px 0 0; color:var(--text-dim);">
+        <strong style="color:var(--gold)">Yellow</strong> — tags currently assigned to this eicon<br>
+        <strong style="color:var(--green)">Green</strong> — recently used tags (click to add)<br>
+        <strong style="color:var(--blue)">Blue</strong> — library suggestions matching your typed query (click to add)<br>
+        <strong style="color:var(--red)">Red</strong> — active grid tag for this eicon
+      </p>
+    </div>
+  </div>
+
+  <div class="footer">
+    XariahTagger · Alpha · For use on xariah.net<br>
+    Tags stored locally in your browser · No data leaves your machine<br><br>
+    <span style="color: var(--text-faint)">Built with 🏷️ and a lot of shadow-root wrangling</span>
+  </div>
+
+</div>
 </body>
 </html>
