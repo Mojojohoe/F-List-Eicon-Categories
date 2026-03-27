@@ -1,19 +1,18 @@
 // ==UserScript==
 // @name         Xariah Tagger
-// @version      0.0.07
+// @version      0.0.09
 // @description  Alpha version of the tagging & search system for xariah eicon database
 // @match        *://xariah.net/*
 // @updateURL    https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
 // @downloadURL  https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
 // @grant        none
 // @run-at       document-start
-// @author       Jobix
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '0.0.07';
+    const SCRIPT_VERSION = '0.0.09';
 
     // Injected into every x-popuphost shadow root to hide the native tooltip.
     // Defined early because the attachShadow hook below references it at call time.
@@ -188,20 +187,42 @@
 
 
     // --- 3. STORAGE ENGINE ---
-    // Sole source of truth is localStorage. Cookies are NOT used — they expire,
-    // have a hard 4 KB limit, and offer no real durability advantage over localStorage.
+    // Sole source of truth is localStorage.
+    // All three stores use in-memory caches to avoid repeated JSON.parse on every call.
+    // Caches are invalidated (set to null) whenever the corresponding store is written.
+    // The unique-tag-set cache is derived from the tag library and rebuilt only on write.
 
-    const getAllTags = () => JSON.parse(localStorage.getItem('x_tags') || '{}');
+    let _tagCache        = null;  // { [eiconName]: "tag1, tag2" }
+    let _gridCache       = null;  // { [eiconName]: { spec, pos } }
+    let _recentCache     = null;  // string[]
+    let _uniqueTagsCache = null;  // Set<string> — all distinct tags across the library
 
-    const saveFullLibrary = (data) => localStorage.setItem('x_tags', JSON.stringify(data));
+    const getAllTags = () => {
+        if (_tagCache === null) _tagCache = JSON.parse(localStorage.getItem('x_tags') || '{}');
+        return _tagCache;
+    };
+
+    const saveFullLibrary = (data) => {
+        _tagCache = data;
+        _uniqueTagsCache = null; // tag set must be rebuilt after any library change
+        localStorage.setItem('x_tags', JSON.stringify(data));
+    };
 
     const getStoredTags = (name) => getAllTags()[name] || '';
 
     // Grid data is stored separately — it is positional metadata, not a searchable tag.
     // Schema: { [iconName]: { spec: "2x2", pos: number | null } }
-    const getAllGridData  = () => JSON.parse(localStorage.getItem('x_grid_data') || '{}');
-    const saveAllGridData = (d) => localStorage.setItem('x_grid_data', JSON.stringify(d));
-    const getIconGrid = (name) => getAllGridData()[name] || null;
+    const getAllGridData = () => {
+        if (_gridCache === null) _gridCache = JSON.parse(localStorage.getItem('x_grid_data') || '{}');
+        return _gridCache;
+    };
+
+    const saveAllGridData = (d) => {
+        _gridCache = d;
+        localStorage.setItem('x_grid_data', JSON.stringify(d));
+    };
+
+    const getIconGrid  = (name) => getAllGridData()[name] || null;
     const saveIconGrid = (name, spec, pos) => {
         const d = getAllGridData();
         if (spec) d[name] = { spec, pos: pos ?? null };
@@ -209,11 +230,30 @@
         saveAllGridData(d);
     };
 
-    const getRecentTags = () => JSON.parse(localStorage.getItem('x_recent_tags') || '[]');
+    const getRecentTags = () => {
+        if (_recentCache === null) _recentCache = JSON.parse(localStorage.getItem('x_recent_tags') || '[]');
+        return _recentCache;
+    };
 
     const saveRecentTag = (tag) => {
         const recent = [tag, ...getRecentTags().filter(t => t !== tag)].slice(0, 16);
+        _recentCache = recent;
         localStorage.setItem('x_recent_tags', JSON.stringify(recent));
+    };
+
+    // Returns a cached Set of every distinct tag string across the whole library.
+    // Rebuilt lazily after any saveFullLibrary call.
+    const getUniqueTagSet = () => {
+        if (_uniqueTagsCache === null) {
+            _uniqueTagsCache = new Set();
+            Object.values(getAllTags()).forEach(str =>
+                str.split(',').forEach(t => {
+                    const trimmed = t.trim().toLowerCase();
+                    if (trimmed) _uniqueTagsCache.add(trimmed);
+                })
+            );
+        }
+        return _uniqueTagsCache;
     };
 
     // Tag-level merge: for each eicon in `imported`, union its tags with the existing
@@ -439,11 +479,9 @@
                 rBox.appendChild(c);
             });
 
-        // Tag library suggestions
+        // Tag library suggestions — uses cached unique tag set, rebuilt only on save
         if (q) {
-            const unique = new Set();
-            Object.values(getAllTags()).forEach(str => str.split(',').forEach(t => unique.add(t.trim().toLowerCase())));
-            Array.from(unique)
+            Array.from(getUniqueTagSet())
                 .filter(t => t.includes(q) && !activeTags.includes(t))
                 .slice(0, 8)
                 .forEach(tag => {
@@ -1012,16 +1050,24 @@
             toggle.style.color = isHidden ? 'white' : 'black';
         };
 
-        // Export
+        // Export — bundles tags AND grid data into a single versioned file.
+        // Format: { version: 1, tags: {...}, grid: {...} }
+        // Old single-store files (plain tag object) are still importable.
         manager.querySelector('#x-export').onclick = () => {
-            const b = new Blob([localStorage.getItem('x_tags') || '{}'], { type: 'text/plain' });
+            const payload = JSON.stringify({
+                version: 1,
+                tags: getAllTags(),
+                grid: getAllGridData()
+            }, null, 2);
+            const b = new Blob([payload], { type: 'text/plain' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(b);
             a.download = 'xariah_tags.txt';
             a.click();
         };
 
-        // Import — uses a custom dialog instead of prompt() for cleaner UX
+        // Import — handles both the new versioned format { version, tags, grid }
+        // and old single-store files (plain tag object) for backward compatibility.
         manager.querySelector('#x-import').onclick = () => {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -1029,28 +1075,48 @@
             fileInput.onchange = (e) => {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
-                    let imported;
-                    try { imported = JSON.parse(ev.target.result); }
+                    let parsed;
+                    try { parsed = JSON.parse(ev.target.result); }
                     catch { alert('Invalid tag file — could not parse JSON.'); return; }
 
-                    showImportDialog(imported);
+                    let importedTags, importedGrid;
+                    if (parsed.version === 1 && parsed.tags) {
+                        // New combined format
+                        importedTags = parsed.tags;
+                        importedGrid = parsed.grid || {};
+                    } else {
+                        // Old format — plain tag object, no grid data
+                        importedTags = parsed;
+                        importedGrid = {};
+                    }
+
+                    showImportDialog(importedTags, importedGrid);
                 };
                 reader.readAsText(e.target.files[0]);
             };
             fileInput.click();
         };
 
-        // Store reference to search input so modal save can refresh results safely
+        // Debounced search — waits 200ms after the user stops typing before rendering.
+        // Prevents a full DOM rebuild on every single keystroke with a large library.
+        let _searchDebounce = null;
         searchInput = manager.querySelector('.filter-input');
-        searchInput.oninput = (e) => renderAllSearch(e.target.value);
+        searchInput.oninput = (e) => {
+            clearTimeout(_searchDebounce);
+            _searchDebounce = setTimeout(() => renderAllSearch(e.target.value), 200);
+        };
     }
 
-    // Inline import dialog — avoids prompt() and gives clear Merge / Replace choice
-    function showImportDialog(imported) {
+    // Inline import dialog — handles both tags and grid data
+    function showImportDialog(importedTags, importedGrid) {
         if (document.getElementById('x-import-dialog')) return;
 
-        const importCount = Object.keys(imported).length;
-        const existingCount = Object.keys(getAllTags()).length;
+        const importTagCount  = Object.keys(importedTags).length;
+        const importGridCount = Object.keys(importedGrid).length;
+        const existingCount   = Object.keys(getAllTags()).length;
+        const gridNote = importGridCount > 0
+            ? `<br>Includes <strong style="color:#eee;">${importGridCount}</strong> eicon grid positions.`
+            : '<br><em style="color:#555;">No grid data in this file.</em>';
 
         const dialog = document.createElement('div');
         dialog.id = 'x-import-dialog';
@@ -1059,22 +1125,37 @@
             <div style="background:#1a1a1a; border:2px solid gold; border-radius:8px; width:90%; max-width:400px; padding:20px; color:#eee; font-family:sans-serif;">
                 <div style="color:gold; font-weight:bold; margin-bottom:12px;">📥 Import Tags</div>
                 <div style="font-size:13px; color:#aaa; margin-bottom:16px; line-height:1.6;">
-                    Importing <strong style="color:#eee;">${importCount}</strong> eicons.<br>
+                    Importing <strong style="color:#eee;">${importTagCount}</strong> tagged eicons.${gridNote}<br>
                     You currently have <strong style="color:#eee;">${existingCount}</strong> eicons tagged.<br><br>
                     <strong style="color:gold;">Merge</strong> — combine tags for shared eicons, add new ones.<br>
-                    <strong style="color:#ff6b6b;">Replace</strong> — discard all existing tags entirely.
+                    <strong style="color:#ff6b6b;">Replace</strong> — discard all existing data entirely.
                 </div>
                 <div style="display:flex; justify-content:flex-end; gap:10px;">
-                    <button id="x-import-cancel" style="background:#444; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:4px;">Cancel</button>
+                    <button id="x-import-cancel"  style="background:#444; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:4px;">Cancel</button>
                     <button id="x-import-replace" style="background:#c0392b; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:4px; font-weight:bold;">Replace</button>
-                    <button id="x-import-merge" style="background:gold; color:black; border:none; padding:8px 15px; cursor:pointer; border-radius:4px; font-weight:bold;">Merge</button>
+                    <button id="x-import-merge"   style="background:gold; color:black; border:none; padding:8px 15px; cursor:pointer; border-radius:4px; font-weight:bold;">Merge</button>
                 </div>
             </div>`;
 
         document.body.appendChild(dialog);
-        dialog.querySelector('#x-import-cancel').onclick  = () => dialog.remove();
-        dialog.querySelector('#x-import-replace').onclick = () => { saveFullLibrary(imported); dialog.remove(); location.reload(); };
-        dialog.querySelector('#x-import-merge').onclick   = () => { saveFullLibrary(mergeLibraries(getAllTags(), imported)); dialog.remove(); location.reload(); };
+
+        dialog.querySelector('#x-import-cancel').onclick = () => dialog.remove();
+
+        dialog.querySelector('#x-import-replace').onclick = () => {
+            saveFullLibrary(importedTags);
+            saveAllGridData(importedGrid);
+            dialog.remove();
+            location.reload();
+        };
+
+        dialog.querySelector('#x-import-merge').onclick = () => {
+            saveFullLibrary(mergeLibraries(getAllTags(), importedTags));
+            // Grid merge: imported positions fill in gaps; existing positions win on conflict
+            const mergedGrid = { ...importedGrid, ...getAllGridData() };
+            saveAllGridData(mergedGrid);
+            dialog.remove();
+            location.reload();
+        };
     }
 
 
@@ -1177,11 +1258,35 @@
 
 
     // --- 10. BOOT LOOP ---
+    // initExplorer and initTooltipPatch only need to run until they succeed once.
+    // processIcon is guarded by a WeakSet — O(1) lookup per element vs querying
+    // the shadow DOM every tick. The interval is kept (rather than replaced with
+    // MutationObserver) because the virtual scroll creates eicons dynamically and
+    // Xariah's internal component lifecycle timing is not observable from outside.
+
+    const _processedIcons = new WeakSet();
+    let _explorerReady    = false;
+    let _tooltipReady     = false;
+
+    const _processIcon_guarded = (el) => {
+        if (_processedIcons.has(el)) return;
+        // Only add to the WeakSet after successful injection
+        const shadow = el.shadowRoot;
+        if (!shadow || !shadow.querySelector('.root')) return;
+        processIcon(el);
+        _processedIcons.add(el);
+    };
 
     setInterval(() => {
-        initExplorer();
-        initTooltipPatch();
-        findDeep(document, 'x-eiconview').forEach(processIcon);
+        if (!_explorerReady) {
+            initExplorer();
+            if (document.getElementById('x-tag-manager')) _explorerReady = true;
+        }
+        if (!_tooltipReady) {
+            initTooltipPatch();
+            if (window._xTooltipHandlerBound) _tooltipReady = true;
+        }
+        findDeep(document, 'x-eiconview').forEach(_processIcon_guarded);
         if (tagModeActive) applyTagMode();
     }, 1000);
 
