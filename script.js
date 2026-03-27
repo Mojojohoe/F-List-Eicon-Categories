@@ -4,7 +4,10 @@
 // @grant        none
 // @run-at       document-start
 // @updateURL    https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
-// @downloadURL   https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
+// @downloadURL  https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
+// @version      0.0.04
+// @description  Alpha version of the tagging & search system for xariah eicon database
+// @author       Jobix
 // ==/UserScript==
 
 (function() {
@@ -56,10 +59,22 @@
 
     const getStoredTags = (name) => getAllTags()[name] || '';
 
+    // Grid data is stored separately — it is positional metadata, not a searchable tag.
+    // Schema: { [iconName]: { spec: "2x2", pos: number | null } }
+    const getAllGridData  = () => JSON.parse(localStorage.getItem('x_grid_data') || '{}');
+    const saveAllGridData = (d) => localStorage.setItem('x_grid_data', JSON.stringify(d));
+    const getIconGrid = (name) => getAllGridData()[name] || null;
+    const saveIconGrid = (name, spec, pos) => {
+        const d = getAllGridData();
+        if (spec) d[name] = { spec, pos: pos ?? null };
+        else delete d[name];
+        saveAllGridData(d);
+    };
+
     const getRecentTags = () => JSON.parse(localStorage.getItem('x_recent_tags') || '[]');
 
     const saveRecentTag = (tag) => {
-        const recent = [tag, ...getRecentTags().filter(t => t !== tag)].slice(0, 10);
+        const recent = [tag, ...getRecentTags().filter(t => t !== tag)].slice(0, 16);
         localStorage.setItem('x_recent_tags', JSON.stringify(recent));
     };
 
@@ -107,29 +122,102 @@
         #x-explorer-body { padding: 0 15px 15px 15px; }
         #x-explorer-body.hidden { display: none; }
 
-        /* Best Matches */
-        #best-matches-container { margin: 10px 0; border: 1px solid gold; border-radius: 4px; background: #111; display: none; }
-        .best-matches-header { background: gold; color: black; padding: 3px 10px; font-weight: bold; font-size: 11px; }
-        .best-matches-content { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 8px; padding: 10px; }
-
         /* Category Collapses */
         .tag-container { margin-top: 8px; border: 1px solid #333; border-radius: 4px; background: #222; }
         .tag-header { background: #2a2a2a; padding: 6px 10px; font-size: 12px; font-weight: bold; color: gold; cursor: pointer; display: flex; justify-content: space-between; }
         .tag-header:hover { background: #333; }
-        .tag-content { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; padding: 10px; background: #111; }
-        .tag-content.collapsed { display: none; }
 
-        /* Ghost Eicons */
-        .ghost-eicon { width: 85px; height: 105px; background: #1a1a1a; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: copy; }
-        .ghost-eicon img { max-width: 65px; max-height: 65px; }
-        .ghost-eicon span.ghost-name { font-size: 9px; color: #aaa; margin-top: 4px; text-align: center; overflow: hidden; width: 100%; white-space: nowrap; }
-        .ghost-eicon .copy-flash { position: absolute; inset: 0; background: rgba(255,215,0,0.25); display: flex; align-items: center; justify-content: center; font-size: 11px; color: gold; font-weight: bold; opacity: 0; pointer-events: none; transition: opacity 0.15s; border-radius: 2px; }
+        /* Shared grid layout — square 85×85 cells so composites are never distorted.
+           grid-auto-flow: dense fills gaps before placing new rows. */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 85px);
+            grid-auto-rows: 85px;
+            grid-auto-flow: row dense;
+            gap: 4px;
+            padding: 10px;
+            background: #111;
+        }
+        .tag-content { display: none; }
+        .tag-content.open { display: grid;
+            grid-template-columns: repeat(auto-fill, 85px);
+            grid-auto-rows: 85px;
+            grid-auto-flow: row dense;
+            gap: 4px; padding: 10px; background: #111;
+        }
+
+        /* Ghost Eicons — square cell, name as bottom overlay */
+        .ghost-eicon {
+            width: 85px; height: 85px; background: #1a1a1a; border: 1px solid #333;
+            display: flex; align-items: center; justify-content: center;
+            position: relative; cursor: copy; overflow: hidden;
+        }
+        .ghost-eicon img { max-width: 65px; max-height: 65px; display: block; }
+        .ghost-eicon span.ghost-name {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            font-size: 9px; color: #ddd; text-align: center;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            background: rgba(0,0,0,0.65); padding: 2px 3px;
+            pointer-events: none;
+        }
+        .ghost-eicon .copy-flash {
+            position: absolute; inset: 0; background: rgba(255,215,0,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; color: gold; font-weight: bold;
+            opacity: 0; pointer-events: none; transition: opacity 0.15s;
+        }
         .ghost-eicon.flashing .copy-flash { opacity: 1; }
+
+        /* Best Matches — same grid, no height cap; manager's 50vh handles overflow */
+        #best-matches-container { margin: 10px 0; border: 1px solid gold; border-radius: 4px; background: #111; display: none; }
+        .best-matches-header { background: gold; color: black; padding: 3px 10px; font-weight: bold; font-size: 11px; }
+        .best-matches-content {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, 85px) !important;
+            grid-auto-rows: 85px !important;
+            grid-auto-flow: row dense !important;
+            gap: 4px !important;
+            padding: 10px !important;
+        }
+
+        /* Grid Composites — span N cols × M rows; internal cells are 1fr so always square */
+        .grid-composite-wrap {
+            position: relative; cursor: copy; box-sizing: border-box;
+        }
+        .grid-composite-inner {
+            width: 100%; height: 100%; display: grid; gap: 2px;
+            background: #0d0d0d; border: 1px solid #444; border-radius: 3px;
+            padding: 2px; box-sizing: border-box;
+        }
+        .grid-composite-cell {
+            overflow: hidden; background: #1a1a1a; border: 1px solid #2a2a2a;
+            position: relative; display: flex; align-items: center; justify-content: center;
+            min-width: 0; min-height: 0;
+        }
+        .grid-composite-cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .grid-composite-cell.empty { background: #111; border: 1px dashed #2a2a2a; }
+        .grid-composite-cell .cell-tag-btn {
+            position: absolute; bottom: 2px; left: 2px; z-index: 10;
+            background: rgba(0,0,0,0.8); color: white; border: 1px solid #444;
+            border-radius: 3px; padding: 1px; font-size: 10px; width: 16px; height: 16px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.15s; cursor: pointer;
+        }
+        .grid-composite-cell:hover .cell-tag-btn { opacity: 1; }
+        .grid-composite-wrap .composite-copy-flash {
+            position: absolute; inset: 0; background: rgba(255,215,0,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; color: gold; font-weight: bold;
+            opacity: 0; pointer-events: none; transition: opacity 0.15s; border-radius: 3px; z-index: 5;
+        }
+        .grid-composite-wrap.flashing .composite-copy-flash { opacity: 1; }
 
         /* Modal */
         #x-tag-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000001; display: none; align-items: center; justify-content: center; }
 
-        /* Tag Mode */
+        /* Tag Mode button — base state and active state */
+        /* NOTE: x-eiconview lives inside a shadow root so page CSS cannot pierce it.
+           Dimming is applied via inline styles in applyTagMode() instead. */
         #x-tag-mode-toggle { cursor: pointer; font-weight: bold; padding: 4px 12px; border-radius: 4px; font-size: 11px; text-transform: uppercase; background: #333; color: #aaa; border: 1px solid #555; transition: background 0.2s, color 0.2s; }
         #x-tag-mode-toggle.active { background: #e74c3c; color: white; border-color: #c0392b; box-shadow: 0 0 8px rgba(231,76,60,0.5); }
         #x-tag-mode-banner { display: none; background: #2d0a0a; border-top: 1px solid #e74c3c; padding: 4px 15px; font-size: 11px; color: #e74c3c; letter-spacing: 0.3px; }
@@ -144,6 +232,20 @@
         .chip.yellow { background: gold; color: #000; }
         .chip.blue { background: #007bff; color: #fff; cursor: pointer; }
         .chip.green { background: #28a745; color: #fff; cursor: pointer; }
+        .chip.red { background: #e74c3c; color: #fff; cursor: default; }
+
+        /* Grid tag widget */
+        #x-grid-area { margin-top: 10px; display: none; }
+        #x-input-row { display: flex; align-items: center; gap: 8px; }
+        #x-input-row #x-modal-input { flex: 1; }
+        #x-grid-chip-slot { display: flex; align-items: center; flex-shrink: 0; }
+        #x-grid-widget { display: inline-grid; gap: 4px; margin-top: 8px; }
+        .grid-cell {
+            width: 28px; height: 28px; background: #2a2a2a; border: 1px solid #555;
+            border-radius: 3px; cursor: pointer; transition: background 0.15s;
+        }
+        .grid-cell:hover { background: #444; }
+        .grid-cell.selected { background: #e74c3c; border-color: #c0392b; box-shadow: 0 0 4px rgba(231,76,60,0.6); }
     `;
     document.head.appendChild(style);
 
@@ -161,6 +263,18 @@
     // When active, any x-eiconview whose icon already has tags is hidden.
     let tagModeActive = false;
 
+    // --- GRID TAG STATE ---
+    // activeGridSpec: parsed grid tag e.g. { raw: "#2x2", rows: 2, cols: 2 } or null
+    // activeGridPos:  0-indexed flat cell index (row-major), or null if unset
+    let activeGridSpec = null;
+    let activeGridPos  = null;
+
+    // Tracks the last typed suggestion query so chip clicks can preserve visible suggestions
+    let suggestionQuery = '';
+
+    // Stores tags + gridSpec from the most recent save, for "copy from last" feature
+    let lastSavedEntry = null;
+
     function updateSuggestions(q) {
         const sBox = document.getElementById('x-suggestions');
         const rBox = document.getElementById('x-recent-suggestions');
@@ -168,14 +282,21 @@
         sBox.innerHTML = '';
         rBox.innerHTML = '';
 
-        // Recent tags
+        // Recent tags — clicking clears the input but keeps current suggestions visible
         getRecentTags()
             .filter(t => !activeTags.includes(t) && (!q || t.includes(q)))
             .forEach(tag => {
                 const c = document.createElement('div');
                 c.className = 'chip green';
                 c.innerHTML = `${tag} ↻`;
-                c.onclick = () => { activeTags.push(tag); renderModalChips(); updateSuggestions(q); };
+                c.onclick = () => {
+                    activeTags.push(tag);
+                    renderModalChips();
+                    const input = document.getElementById('x-modal-input');
+                    if (input) input.value = '';
+                    // Re-render suggestions with the preserved query (not the now-cleared input)
+                    updateSuggestions(suggestionQuery);
+                };
                 rBox.appendChild(c);
             });
 
@@ -190,7 +311,13 @@
                     const c = document.createElement('div');
                     c.className = 'chip blue';
                     c.innerHTML = `${tag} +`;
-                    c.onclick = () => { activeTags.push(tag); renderModalChips(); updateSuggestions(q); };
+                    c.onclick = () => {
+                        activeTags.push(tag);
+                        renderModalChips();
+                        const input = document.getElementById('x-modal-input');
+                        if (input) input.value = '';
+                        updateSuggestions(suggestionQuery);
+                    };
                     sBox.appendChild(c);
                 });
         }
@@ -213,17 +340,113 @@
         });
     }
 
+    // Parses a string like "#2x4" → { raw, rows, cols } or null if not a valid grid tag.
+    function parseGridTag(str) {
+        const m = str.trim().match(/^#(\d+)x(\d+)$/i);
+        if (!m) return null;
+        const rows = parseInt(m[1], 10);
+        const cols = parseInt(m[2], 10);
+        if (rows < 1 || cols < 1 || rows > 20 || cols > 20) return null;
+        return { raw: str.trim().toLowerCase(), rows, cols };
+    }
+
+    // Derives the group base name for an eicon by stripping a trailing suffix of up to
+    // 3 characters that looks like a position indicator (digits, or separator+digits,
+    // or trailing letters from a digit-ended name). The base must be ≥3 chars.
+    //
+    // Examples:  square1 → square   square-12 → square   squarea → square
+    //            hypno clock 2 → hypno clock   rune3b → rune
+    //            cat → cat (too short to strip)
+    function getGroupBase(name) {
+        const n = name.toLowerCase();
+        // Most common: trailing digits e.g. square1, square12, square123
+        let m = n.match(/^(.{3,}?[^0-9])(\d{1,3})$/);
+        if (m) return m[1].replace(/[-_ ]$/, '');
+        // Separator + digits e.g. square-1, frame_12
+        m = n.match(/^(.{3,})[-_ ]\d{1,3}$/);
+        if (m) return m[1];
+        // Trailing letters after a digit/separator e.g. rune3b, rune3ab
+        m = n.match(/^(.{3,}[0-9])([a-z]{1,2})$/);
+        if (m) return m[1];
+        return n;
+    }
+
+    function renderGridArea() {
+        const chipSlot  = document.getElementById('x-grid-chip-slot');
+        const gridArea  = document.getElementById('x-grid-area');
+        const gridWidget = document.getElementById('x-grid-widget');
+        if (!chipSlot || !gridArea || !gridWidget) return;
+
+        chipSlot.innerHTML  = '';
+        gridWidget.innerHTML = '';
+
+        if (!activeGridSpec) {
+            gridArea.style.display = 'none';
+            return;
+        }
+
+        // Red chip with remove button
+        const chip = document.createElement('div');
+        chip.className = 'chip red';
+        chip.innerHTML = `${activeGridSpec.raw} <span style="cursor:pointer; margin-left:2px;">×</span>`;
+        chip.querySelector('span').onclick = () => {
+            activeGridSpec = null;
+            activeGridPos  = null;
+            renderGridArea();
+            updateSuggestions(document.getElementById('x-modal-input')?.value.toLowerCase() || '');
+        };
+        chipSlot.appendChild(chip);
+
+        // Grid widget
+        const { rows, cols } = activeGridSpec;
+        gridWidget.style.gridTemplateColumns = `repeat(${cols}, 28px)`;
+        gridArea.style.display = 'block';
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const idx = r * cols + c;
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell' + (activeGridPos === idx ? ' selected' : '');
+                cell.title = `Row ${r + 1}, Col ${c + 1}`;
+                cell.onclick = () => {
+                    // Clicking the already-selected cell deselects it
+                    activeGridPos = activeGridPos === idx ? null : idx;
+                    renderGridArea();
+                };
+                gridWidget.appendChild(cell);
+            }
+        }
+    }
+
     function openTagModal(name) {
         currentIconName = name;
         const raw = getStoredTags(name);
         activeTags = raw ? raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [];
+
+        // Load any existing grid data for this icon
+        const existingGrid = getIconGrid(name);
+        if (existingGrid) {
+            activeGridSpec = parseGridTag(existingGrid.spec.startsWith('#') ? existingGrid.spec : '#' + existingGrid.spec) || parseGridTag('#' + existingGrid.spec);
+            // Normalise: spec may have been stored without '#' historically
+            if (!activeGridSpec) activeGridSpec = null;
+            activeGridPos = existingGrid.pos ?? null;
+        } else {
+            activeGridSpec = null;
+            activeGridPos  = null;
+        }
 
         if (!document.getElementById('x-tag-modal-overlay')) {
             const overlay = document.createElement('div');
             overlay.id = 'x-tag-modal-overlay';
             overlay.innerHTML = `
                 <div id="x-tag-modal">
-                    <div id="x-modal-title">🏷️ Tags for: <span id="x-modal-icon-name"></span></div>
+                <div id="x-modal-title">
+                    🏷️ Tags for: <span id="x-modal-icon-name"></span>
+                    <button id="x-copy-last-btn" title="Copy all tags from last saved eicon"
+                        style="float:right; background:#2a2a2a; color:#aaa; border:1px solid #444; border-radius:4px; padding:3px 8px; font-size:10px; cursor:pointer; margin-left:8px; text-transform:uppercase; letter-spacing:0.4px;">
+                        ↩ Copy Last
+                    </button>
+                </div>
 
                     <div class="chip-section-label">Recent</div>
                     <div id="x-recent-suggestions" class="chip-container" style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px;"></div>
@@ -231,8 +454,16 @@
                     <div class="chip-section-label">Suggestions</div>
                     <div id="x-suggestions" class="chip-container" style="margin-bottom:10px;"></div>
 
-                    <input type="text" id="x-modal-input" placeholder="Search/Add tags..."
-                        style="width:100%; padding:10px; background:#000; color:#fff; border:1px solid #444; border-radius:4px; box-sizing:border-box;">
+                    <div id="x-input-row">
+                        <input type="text" id="x-modal-input" placeholder="Search/Add tags… or #2x4 for a grid"
+                            style="padding:10px; background:#000; color:#fff; border:1px solid #444; border-radius:4px; box-sizing:border-box;">
+                        <div id="x-grid-chip-slot"></div>
+                    </div>
+
+                    <div id="x-grid-area">
+                        <div style="font-size:10px; color:#888; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Grid Position</div>
+                        <div id="x-grid-widget"></div>
+                    </div>
 
                     <div id="x-active-chips" class="chip-container" style="margin-top:15px;"></div>
 
@@ -244,18 +475,51 @@
             document.body.appendChild(overlay);
 
             const input = overlay.querySelector('#x-modal-input');
-            input.oninput = (e) => updateSuggestions(e.target.value.toLowerCase());
+            input.oninput = (e) => {
+                suggestionQuery = e.target.value.toLowerCase();
+                updateSuggestions(suggestionQuery);
+            };
             input.onkeydown = (e) => {
                 if (e.key === ',' || e.key === 'Enter') {
                     e.preventDefault();
                     const v = input.value.trim().replace(/,/g, '').toLowerCase();
-                    if (v && !activeTags.includes(v)) {
+                    if (!v) return;
+
+                    // Check for grid tag format #NxM
+                    const parsed = parseGridTag(v);
+                    if (parsed) {
+                        // Replace any existing grid tag — only one allowed
+                        activeGridSpec = parsed;
+                        activeGridPos  = null;
+                        input.value = '';
+                        renderGridArea();
+                        updateSuggestions('');
+                        return;
+                    }
+
+                    if (!activeTags.includes(v)) {
                         activeTags.push(v);
                         input.value = '';
                         renderModalChips();
                         updateSuggestions('');
                     }
                 }
+            };
+
+            // Copy-from-last button
+            overlay.querySelector('#x-copy-last-btn').onclick = () => {
+                if (!lastSavedEntry) return;
+                activeTags = [...lastSavedEntry.tags];
+                if (lastSavedEntry.gridSpec) {
+                    activeGridSpec = parseGridTag(lastSavedEntry.gridSpec);
+                    activeGridPos  = null; // position is intentionally not copied
+                } else {
+                    activeGridSpec = null;
+                    activeGridPos  = null;
+                }
+                renderModalChips();
+                renderGridArea();
+                updateSuggestions(suggestionQuery);
             };
 
             overlay.querySelector('#x-modal-cancel').onclick = () => { overlay.style.display = 'none'; };
@@ -269,6 +533,16 @@
                     delete lib[currentIconName];
                 }
                 saveFullLibrary(lib);
+
+                // Record this save for the "copy from last" feature
+                lastSavedEntry = {
+                    tags: [...activeTags],
+                    gridSpec: activeGridSpec ? activeGridSpec.raw : null
+                };
+
+                // Save grid tag data independently of searchable tags
+                saveIconGrid(currentIconName, activeGridSpec ? activeGridSpec.raw : null, activeGridPos);
+
                 overlay.style.display = 'none';
                 if (searchInput) renderAllSearch(searchInput.value);
                 if (tagModeActive) applyTagMode();
@@ -277,11 +551,18 @@
 
         document.getElementById('x-modal-icon-name').textContent = name;
         document.getElementById('x-tag-modal-overlay').style.display = 'flex';
+
+        // Show copy-last button only when there's a previous entry to copy from
+        const copyLastBtn = document.getElementById('x-copy-last-btn');
+        if (copyLastBtn) copyLastBtn.style.display = lastSavedEntry ? 'inline-block' : 'none';
+
+        suggestionQuery = '';
         const input = document.getElementById('x-modal-input');
         input.value = '';
         input.focus();
         updateSuggestions('');
         renderModalChips();
+        renderGridArea();
     }
 
 
@@ -291,6 +572,116 @@
     function flashCopied(el) {
         el.classList.add('flashing');
         setTimeout(() => el.classList.remove('flashing'), 600);
+    }
+
+    // Builds a composite grid DOM element that spans N×M cells in the parent CSS grid.
+    // members: [{ name, spec, pos }]
+    // Returns null if no valid spec can be determined.
+    function buildGridComposite(members) {
+        const specSource = members.find(m => m.spec && m.pos !== null) || members.find(m => m.spec);
+        if (!specSource) return null;
+
+        const specStr = specSource.spec.startsWith('#') ? specSource.spec : '#' + specSource.spec;
+        const spec = parseGridTag(specStr);
+        if (!spec) return null;
+
+        const { rows, cols } = spec;
+
+        // Map flat index → icon name
+        const posMap = {};
+        members.forEach(m => { if (m.pos !== null && m.pos !== undefined) posMap[m.pos] = m.name; });
+
+        // Build BBCode: one line per row, cells within a row concatenated
+        const copyBBCode = () => {
+            const lines = [];
+            for (let r = 0; r < rows; r++) {
+                let line = '';
+                for (let c = 0; c < cols; c++) {
+                    const n = posMap[r * cols + c];
+                    if (n) line += `[eicon]${n}[/eicon]`;
+                }
+                if (line) lines.push(line);
+            }
+            return lines.join('\n');
+        };
+
+        const wrap = document.createElement('div');
+        wrap.className = 'grid-composite-wrap';
+        // span N columns and M rows in the parent 85px-cell / 4px-gap grid
+        wrap.style.cssText = `grid-column: span ${cols}; grid-row: span ${rows};`;
+
+        const inner = document.createElement('div');
+        inner.className = 'grid-composite-inner';
+        inner.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        inner.style.gridTemplateRows    = `repeat(${rows}, 1fr)`;
+
+        for (let i = 0; i < rows * cols; i++) {
+            const eiconName = posMap[i];
+            const cell = document.createElement('div');
+            cell.className = 'grid-composite-cell' + (eiconName ? '' : ' empty');
+
+            if (eiconName) {
+                const img = document.createElement('img');
+                img.src = `https://static.f-list.net/images/eicon/${eiconName}.gif`;
+                img.loading = 'lazy';
+                cell.appendChild(img);
+
+                // Per-cell tag edit button
+                const tagBtn = document.createElement('button');
+                tagBtn.className = 'cell-tag-btn';
+                tagBtn.innerHTML = '🏷️';
+                tagBtn.title = `Edit tags for ${eiconName}`;
+                tagBtn.onclick = (e) => { e.stopPropagation(); openTagModal(eiconName); };
+                cell.appendChild(tagBtn);
+            }
+
+            inner.appendChild(cell);
+        }
+
+        // Copy flash overlay on the whole composite
+        const flash = document.createElement('div');
+        flash.className = 'composite-copy-flash';
+        flash.textContent = '✓ Copied';
+
+        wrap.appendChild(inner);
+        wrap.appendChild(flash);
+
+        // Click the composite = copy all BBCode rows
+        wrap.onclick = () => {
+            const code = copyBBCode();
+            if (!code) return;
+            navigator.clipboard.writeText(code);
+            wrap.classList.add('flashing');
+            setTimeout(() => wrap.classList.remove('flashing'), 600);
+        };
+
+        return wrap;
+    }
+
+    // Renders either a grid composite (if the eicon has grid data and its group hasn't
+    // been rendered yet in this section) or a plain ghost eicon.
+    // renderedBases is a Set local to the current render section — pass a fresh one
+    // per best-matches block and per tag category so composites aren't suppressed
+    // across different result sections.
+    function renderEiconOrComposite(name, renderedBases) {
+        const gridData = getAllGridData();
+        const gd = gridData[name];
+
+        if (gd) {
+            const base = getGroupBase(name);
+            if (renderedBases.has(base)) return null;
+            renderedBases.add(base);
+
+            // Collect ALL members of this group from the full grid data store
+            const members = Object.entries(gridData)
+                .filter(([n]) => getGroupBase(n) === base)
+                .map(([n, d]) => ({ name: n, ...d }));
+
+            const composite = buildGridComposite(members);
+            if (composite) return composite;
+        }
+
+        return createGhost(name);
     }
 
     function createGhost(name) {
@@ -349,7 +740,12 @@
 
         if (scored.length > 0) {
             bestContainer.style.display = 'block';
-            scored.sort((a, b) => b.score - a.score).slice(0, 10).forEach(res => bestAnchor.appendChild(createGhost(res.name)));
+            // Fresh Set — deduplicates composites only within the best-matches row
+            const bestRendered = new Set();
+            scored.sort((a, b) => b.score - a.score).slice(0, 30).forEach(res => {
+                const el = renderEiconOrComposite(res.name, bestRendered);
+                if (el) bestAnchor.appendChild(el);
+            });
         }
 
         // Group eicons by which of their tags match the query, one collapsible box per tag
@@ -373,12 +769,21 @@
 
             const header = cont.querySelector('.tag-header');
             const content = cont.querySelector('.tag-content');
+
             header.onclick = () => {
-                const isCollapsed = content.classList.toggle('collapsed');
-                header.querySelector('span:last-child').textContent = isCollapsed ? '▸' : '▾';
+                const isCollapsed = !content.classList.contains('open');
+                content.classList.toggle('open', isCollapsed);
+                header.querySelector('span:last-child').textContent = isCollapsed ? '▾' : '▸';
             };
 
-            tagMap[tag].forEach(name => content.appendChild(createGhost(name)));
+            // Each category gets a fresh Set — the same composite CAN appear in
+            // multiple category collapses if it's tagged with multiple matching tags.
+            const catRendered = new Set();
+            tagMap[tag].forEach(name => {
+                const el = renderEiconOrComposite(name, catRendered);
+                if (el) content.appendChild(el);
+            });
+
             listAnchor.appendChild(cont);
         });
     }
@@ -515,8 +920,8 @@
 
 
     // --- 8. TAG MODE ENGINE ---
-    // Hides/shows x-eiconview elements based on whether their icon has tags stored.
-    // Called on toggle and on every interval tick (so newly scrolled-in eicons are caught).
+    // x-eiconview lives inside shadow roots, so page CSS cannot reach it.
+    // We apply dimming via inline styles and wire hover with JS listeners.
 
     function getIconNameFromElement(el) {
         const shadow = el.shadowRoot;
@@ -528,15 +933,30 @@
     function applyTagMode() {
         const lib = getAllTags();
         findDeep(document, 'x-eiconview').forEach(el => {
-            if (!tagModeActive) {
-                el.style.display = '';
-                return;
-            }
             const name = getIconNameFromElement(el);
-            if (name && lib[name]) {
-                el.style.display = 'none';
-            } else {
-                el.style.display = '';
+            const shouldDim = tagModeActive && !!(name && lib[name]);
+
+            if (shouldDim && !el._xTagDimmed) {
+                // First time dimming this element — set styles and attach hover handlers
+                el._xTagDimmed = true;
+                el.style.opacity    = '0.28';
+                el.style.outline    = '1px solid rgba(255, 215, 0, 0.35)';
+                el.style.transition = 'opacity 0.2s';
+                el._xTagHoverIn  = () => { el.style.opacity = '1'; };
+                el._xTagHoverOut = () => { el.style.opacity = '0.28'; };
+                el.addEventListener('mouseenter', el._xTagHoverIn);
+                el.addEventListener('mouseleave', el._xTagHoverOut);
+
+            } else if (!shouldDim && el._xTagDimmed) {
+                // Restore element
+                el._xTagDimmed = false;
+                el.style.opacity    = '';
+                el.style.outline    = '';
+                el.style.transition = '';
+                if (el._xTagHoverIn)  el.removeEventListener('mouseenter', el._xTagHoverIn);
+                if (el._xTagHoverOut) el.removeEventListener('mouseleave', el._xTagHoverOut);
+                el._xTagHoverIn  = null;
+                el._xTagHoverOut = null;
             }
         });
     }
@@ -571,7 +991,11 @@
             align-items: center !important; justify-content: center !important;
             opacity: 0; transition: opacity 0.2s; pointer-events: auto !important;
             box-shadow: ${hasTags ? '0 0 5px gold' : 'none'} !important;`;
-        btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openTagModal(iconName); };
+
+        // stopPropagation() called from inside a shadow root prevents the event from
+        // crossing the shadow boundary — the site's click/copy handler on x-eiconview
+        // (in the outer shadow context) never fires. No capture listener needed.
+        btn.onclick = (e) => { e.stopPropagation(); openTagModal(iconName); };
 
         const shadowStyle = document.createElement('style');
         shadowStyle.textContent = `.root:hover .tag-btn { opacity: 1 !important; } .tag-btn:hover { transform: scale(1.1); }`;
