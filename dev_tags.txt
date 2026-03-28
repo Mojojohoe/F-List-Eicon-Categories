@@ -367,7 +367,7 @@
     "donutvore": "anal vore, pov, anus",
     "dvaheart": "green, heart, symbol",
     "emi-love1": "heart eyes, lust, eyes",
-    "emi-love2": "eyes, lust, heart eyes",
+    "emi-love2": "heart eyes, lust, eyes",
     "elishosscum1": "horsecock, cum, cumshot",
     "elishosscum2": "cum, horsecock, cumshot",
     "elishosscum3": "horsecock, cum, cumshot",
@@ -2045,7 +2045,60 @@
     "vhearts": "hearts",
     "yellowhearts": "hearts, yellow",
     "yorange hearts": "hearts, yellow",
-    "whitehearts": "hearts, white"
+    "whitehearts": "hearts, white",
+    "spoiler alert": "spoiler, alert, warning, red, text, octagon",
+    "rediamond": "red, diamond, gem, spin",
+    "proud lesbian 1": "green, text, rape, bait, arrow, right, right arrow",
+    "proud lesbian 2": "rape, her, green, text, left arrow, left, arrow",
+    "embelch1": "belch, burp, green, onomatopoeia, skull, bubbles",
+    "embelch2": "belch, burp, green, onomatopoeia, skull, bubbles",
+    "embelch3": "belch, burp, green, onomatopoeia, skull, bubbles",
+    "embelch4": "belch, burp, green, onomatopoeia, skull, bubbles",
+    "embelch5": "belch, burp, green, onomatopoeia, skull, bubbles",
+    "embelch6": "belch, burp, green, onomatopoeia, skull, bubbles",
+    "nuralips": "lipstick, mark, blue, kiss",
+    "ravenonahole": "grey, pussy, cunt, fleshlight, sex toy, toy",
+    "mwahkiss": "pink, text, mwah",
+    "newbap": "emoji, newspaper, bap, bop, hit, stop",
+    "the letter a2": "letter, a, brown",
+    "phone": "phone, call, vibrate",
+    "skeptic": "emoji, sus, skeptic, suspicious, narrow, eyes",
+    "adeptirune": "sigil, teal, magic",
+    "gold ring": "gold, ring, crown, jewelry",
+    "ffhearticon": "pink, heart",
+    "angry eyes": "angry, eyes, emoji",
+    "shy blush": "shy, bluch, emoji, cute, blank",
+    "left arroww": "black, arrow, left arrow, left",
+    "twitterweary": "emoji, weary",
+    "typedog1": "type, pokemon, dog",
+    "topayrespects": "keyboard, key, f, letter",
+    "fiorellagulp": "vore, gulp, onomatopoeia, swallow, fear",
+    "dd_bleed": "bleed, bleeding, red, drop, drip",
+    "leveluph": "pink, strength, flex, arm, muscle, bicep, level, up, arrow",
+    "honry": "white, text, honry",
+    "sainted1": "femboy, yellow, penis",
+    "sainted2": "femboy, yellow, penis",
+    "sainted3": "femboy, yellow, penis",
+    "sainted4": "femboy, yellow, penis",
+    "hearteyes01": "heart eyes, stare, gaze, lust",
+    "hearteyes02": "heart eyes, stare, gaze, lust",
+    "hearteyes1_1": "heart eyes, stare, gaze, lust",
+    "hearteyes1_2": "heart eyes, stare, gaze, lust",
+    "hearteyes1_3": "heart eyes, stare, gaze, lust",
+    "hearteyes4_3": "heart eyes, stare, gaze, lust",
+    "hearteyes4_2": "heart eyes, stare, gaze, lust",
+    "hearteyes4_1": "heart eyes, stare, gaze, lust",
+    "hearteyes2_3": "heart eyes, stare, gaze, lust",
+    "hearteyes2_2": "heart eyes, stare, gaze, lust",
+    "hearteyes2_1": "heart eyes, stare, gaze, lust",
+    "hearteyes6_1": "heart eyes, stare, gaze, lust",
+    "hearteyes6_2": "heart eyes, stare, gaze, lust",
+    "hearteyes6_3": "heart eyes, stare, gaze, lust",
+    "hearteyes mfer": "heart eyes, stare, gaze, lust, mad, love",
+    "hearteyed": "heart eyes, stare, gaze, lust, mad, love, pulse, heart",
+    "ablobhearteyes": "emoji, heart eyes, love, lust, wow, blob",
+    "jobixpeek": "peek, purple, reaction, hide, hidden",
+    "jobixwarble": "lenny, face, warble, intensify, silly, horny, suggestive, excited, purple"
   },
   "grid": {
     "bambiruby1": {
@@ -3483,6 +3536,110 @@
     "nelsucc4": {
       "spec": "#2x2",
       "pos": 3
+    },
+    "embelch1": {
+      "spec": "#1x6",
+      "pos": 0
+    },
+    "embelch2": {
+      "spec": "#1x6",
+      "pos": 1
+    },
+    "embelch3": {
+      "spec": "#1x6",
+      "pos": 2
+    },
+    "embelch4": {
+      "spec": "#1x6",
+      "pos": 3
+    },
+    "embelch5": {
+      "spec": "#1x6",
+      "pos": 4
+    },
+    "embelch6": {
+      "spec": "#1x6",
+      "pos": 5
+    },
+    "sainted1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "sainted2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "sainted3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "sainted4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "emi-love1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "emi-love2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "hearteyes1_1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "hearteyes1_2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "hearteyes1_3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "hearteyes2_1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "hearteyes2_2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "hearteyes2_3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "hearteyes6_1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "hearteyes6_2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "hearteyes6_3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "hearteyes01": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "hearteyes02": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "hearteyes4_1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "hearteyes4_2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "hearteyes4_3": {
+      "spec": "#1x3",
+      "pos": 2
     }
   },
   "synonyms": [
@@ -3605,6 +3762,11 @@
     [
       "hearts1",
       "kaluhearts"
+    ],
+    [
+      "phone",
+      "xmsg",
+      "you got mail"
     ]
   ]
 }
