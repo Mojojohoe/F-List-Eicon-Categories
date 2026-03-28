@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Xariah Tagger
-// @version      0.0.27
+// @version      0.0.28
 // @description  Alpha version of the tagging & search system for xariah eicon database
 // @author       Jobix
 // @match        *://xariah.net/eicons*
@@ -14,7 +14,7 @@
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '0.0.27';
+    const SCRIPT_VERSION = '0.0.28';
 
     // URL of the developer-maintained tag library on GitHub Pages.
     // Update this file in the repo to push new tags to all users.
@@ -29,17 +29,38 @@
 
     // --- 1. SHADOW-ROOT OPENER + TOOLTIP SUPPRESSOR ---
     // Forces all shadow roots into open mode so we can read/write into them.
-    // When x-popuphost creates its shadow root, we immediately:
-    //   a) inject a CSS rule (belt)
-    //   b) watch for x-tooltippopup being added and force inline display:none (braces)
-    //   c) watch x-tooltippopup's style attribute — Xariah writes `top` and `left`
-    //      inline on every mouse move, which can resurrect visibility. We reassert
-    //      display:none as an inline !important each time to keep it dead.
+    // Also detects whether the shadow hook is actually running (requires Tampermonkey
+    // user-script permissions to be fully enabled). The page favicon changes to the
+    // XariahTagger icon the first time we successfully intercept a Xariah shadow root —
+    // giving a clear visual signal that the script is fully operational.
+
+    let _shadowHookConfirmed = false;
+
+    const _setTagFavicon = () => {
+        if (_shadowHookConfirmed) return;
+        _shadowHookConfirmed = true;
+        // Wait for document.head to exist (we run at document-start)
+        const applyFavicon = () => {
+            if (!document.head) { setTimeout(applyFavicon, 50); return; }
+            // Remove any existing favicon links
+            document.head.querySelectorAll('link[rel~="icon"]').forEach(l => l.remove());
+            const link = document.createElement('link');
+            link.rel  = 'icon';
+            link.type = 'image/png';
+            link.href = 'https://mojojohoe.github.io/F-List-Eicon-Categories/Tag.png';
+            document.head.appendChild(link);
+        };
+        applyFavicon();
+    };
 
     const _origAttachShadow = Element.prototype.attachShadow;
     Element.prototype.attachShadow = function(init) {
         if (init) init.mode = 'open';
         const shadow = _origAttachShadow.call(this, init);
+        // First x-* element confirms the hook is alive — set the favicon
+        if (this.tagName && this.tagName.startsWith('X-') && !_shadowHookConfirmed) {
+            _setTagFavicon();
+        }
         if (this.tagName === 'X-POPUPHOST') {
             // Belt: CSS rule inside this shadow scope
             const s = document.createElement('style');
