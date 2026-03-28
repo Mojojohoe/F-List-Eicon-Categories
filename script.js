@@ -1,19 +1,20 @@
 // ==UserScript==
 // @name         Xariah Tagger
-// @version      0.0.19
+// @version      0.0.27
 // @description  Alpha version of the tagging & search system for xariah eicon database
-// @match        *://xariah.net/*
+// @author       Jobix
+// @match        *://xariah.net/eicons*
+// @icon         https://mojojohoe.github.io/F-List-Eicon-Categories/Tag.png
 // @updateURL    https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
 // @downloadURL  https://mojojohoe.github.io/F-List-Eicon-Categories/script.js
 // @grant        none
 // @run-at       document-start
-// @author       Jobix
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '0.0.19';
+    const SCRIPT_VERSION = '0.0.27';
 
     // URL of the developer-maintained tag library on GitHub Pages.
     // Update this file in the repo to push new tags to all users.
@@ -202,6 +203,7 @@
     let _gridCache       = null;  // { [eiconName]: { spec, pos } }
     let _recentCache     = null;  // string[]
     let _uniqueTagsCache = null;  // Set<string> — all distinct tags across the library
+    let _blockedCache    = null;  // string[] — blocked tags, NEVER exported
 
     const getAllTags = () => {
         if (_tagCache === null) {
@@ -260,6 +262,50 @@
         const recent = [tag, ...getRecentTags().filter(t => t !== tag)].slice(0, 16);
         _recentCache = recent;
         localStorage.setItem('x_recent_tags', JSON.stringify(recent));
+    };
+
+    // --- BLOCKED TAGS STORAGE ---
+    // Blocked tags are intentionally personal and never included in export/import.
+    // Any eicon whose tags contain a blocked tag is censored everywhere it appears.
+    const getAllBlockedTags = () => {
+        if (_blockedCache === null) _blockedCache = JSON.parse(localStorage.getItem('x_blocked_tags') || '[]');
+        return _blockedCache;
+    };
+
+    const saveBlockedTags = (tags) => {
+        _blockedCache = tags;
+        localStorage.setItem('x_blocked_tags', JSON.stringify(tags));
+    };
+
+    const addBlockedTag = (tag) => {
+        const tags = getAllBlockedTags();
+        if (!tags.includes(tag)) { tags.push(tag); saveBlockedTags(tags); }
+    };
+
+    const removeBlockedTag = (tag) => {
+        saveBlockedTags(getAllBlockedTags().filter(t => t !== tag));
+    };
+
+    // Returns true if this eicon's tags (or any synonym of them) intersect the blocked tag set.
+    // Synonym expansion means blocking "explicit" also catches eicons tagged with its synonyms.
+    const isEiconCensored = (name) => {
+        const blocked = getAllBlockedTags();
+        if (blocked.length === 0) return false;
+        const raw = getStoredTags(name);
+        if (!raw) return false;
+        const eiconTags = raw.split(',').map(t => t.trim().toLowerCase());
+        // Build expanded set: each stored tag plus all its synonyms
+        const expandedTags = new Set(eiconTags);
+        eiconTags.forEach(t => {
+            const related = getSynonymMap().get(t);
+            if (related) related.forEach(r => expandedTags.add(r));
+        });
+        // Also expand each blocked tag through synonyms so blocking a master catches slaves
+        return blocked.some(b => {
+            if (expandedTags.has(b)) return true;
+            const bRelated = getSynonymMap().get(b);
+            return bRelated ? [...bRelated].some(r => expandedTags.has(r)) : false;
+        });
     };
 
     // Returns a cached Set of every distinct tag string across the whole library.
@@ -412,7 +458,44 @@
 
         /* Layout */
         x-mainapp, .app-root, #app { transition: transform 0.1s ease-out; }
-        .filter-input { width: 100%; padding: 10px; background: #000; border: 1px solid #444; color: gold; border-radius: 4px; outline: none; box-sizing: border-box; }
+        .filter-input { padding: 8px 12px; background: transparent; border: none; color: gold; outline: none; box-sizing: border-box; flex: 1; min-width: 80px; font-size: 14px; }
+        .filter-input::placeholder { color: #555; }
+        /* Composite search bar wrapping ghost chips + the text input */
+        #x-search-wrap {
+            display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+            background: #000; border: 1px solid #444; border-radius: 4px;
+            padding: 4px 8px; cursor: text; min-height: 40px;
+        }
+        #x-search-wrap:focus-within { border-color: gold; }
+        /* Ghost chips — quoted phrase chips inside the search bar */
+        .search-ghost-chip {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: transparent; border: 1px dashed #666;
+            border-radius: 100px; padding: 3px 10px;
+            font-size: 12px; color: #aaa; cursor: pointer;
+            user-select: none; white-space: nowrap;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .search-ghost-chip:hover { border-color: gold; color: gold; }
+        .search-ghost-chip.negative { border-color: #a33; color: #e87; }
+        .search-ghost-chip.negative:hover { border-color: var(--red); color: var(--red); }
+        .search-ghost-chip .ghost-quote { color: #555; font-size: 10px; margin: 0 1px; }
+        .search-ghost-chip.negative .ghost-quote { color: #833; }
+        /* Top tags row above Best Matches */
+        #x-top-tags {
+            display: none; flex-wrap: wrap; gap: 6px;
+            padding: 8px 10px 2px 10px;
+        }
+        #x-top-tags.visible { display: flex; }
+        #x-top-tags-label { font-size: 10px; color: #555; letter-spacing: 1.5px; text-transform: uppercase; display: flex; align-items: center; margin-right: 2px; }
+        .top-tag-chip {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #1a1a1a; border: 1px solid #333;
+            border-radius: 100px; padding: 3px 10px;
+            font-size: 12px; color: #aaa; cursor: pointer;
+            transition: border-color 0.15s, color 0.15s, background 0.15s;
+        }
+        .top-tag-chip:hover { border-color: gold; color: gold; background: #1f1a00; }
         #x-explorer-body { padding: 0 15px 15px 15px; }
         #x-explorer-body.hidden { display: none; }
 
@@ -506,13 +589,53 @@
         }
         .grid-composite-wrap.flashing .composite-copy-flash { opacity: 1; }
 
-        /* Modal */
+        /* Welcome modal */
+        #x-welcome-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.90); z-index: 3000000;
+            display: flex; align-items: center; justify-content: center; font-family: sans-serif;
+        }
+        #x-welcome-box {
+            background: #111; border: 2px solid gold; border-radius: 12px;
+            width: 92%; max-width: 520px; padding: 32px 36px; color: #eee; position: relative;
+        }
+        #x-welcome-box h2 { color: gold; font-size: 22px; margin: 0 0 6px; }
+        #x-welcome-box .sub { color: #888; font-size: 12px; font-family: monospace; letter-spacing: 1px; margin-bottom: 20px; text-transform: uppercase; }
+        #x-welcome-box p { font-size: 14px; color: #aaa; line-height: 1.7; margin-bottom: 14px; }
+        #x-welcome-box p strong { color: #eee; }
+        #x-welcome-box a { color: gold; text-decoration: none; border-bottom: 1px solid #7a6115; }
+        #x-welcome-box a:hover { border-bottom-color: gold; }
+        #x-welcome-btn {
+            display: block; width: 100%; margin-top: 24px;
+            background: gold; color: #000; border: none; border-radius: 6px;
+            padding: 12px; font-size: 15px; font-weight: bold; cursor: pointer;
+        }
+        #x-welcome-btn:hover { background: #ffe066; }
+
+        /* Censored eicons — hazard tape border, blurred image, grey overlay with red X */
+        .ghost-eicon.x-censored {
+            border: 4px solid transparent !important;
+            border-image: repeating-linear-gradient(
+                45deg,
+                #111 0px, #111 8px,
+                #f5c842 8px, #f5c842 16px
+            ) 4 !important;
+        }
+        .ghost-eicon.x-censored img { filter: blur(9px) !important; }
+        .censor-overlay {
+            position: absolute; inset: 0;
+            background: rgba(30,30,30,0.88);
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none; z-index: 5;
+            flex-direction: column; gap: 2px;
+        }
+        .censor-overlay .cx { font-size: 22px; line-height: 1; color: #e74c3c; font-weight: 900; }
+        .censor-overlay .cl { font-size: 8px; color: #aaa; font-family: monospace; letter-spacing: 0.5px; text-transform: uppercase; }
         #x-tag-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000001; display: none; align-items: center; justify-content: center; }
 
         /* Batch Selection floating bar */
         #x-selection-bar {
             position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-            z-index: 1000000; display: none;
+            z-index: 2500000; display: none;
             background: #1a1a1a; border: 2px solid gold;
             border-radius: 100px; padding: 10px 20px 10px 16px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,215,0,0.15);
@@ -568,14 +691,21 @@
         .grid-cell:hover { background: #444; }
         .grid-cell.selected { background: #e74c3c; border-color: #c0392b; box-shadow: 0 0 4px rgba(231,76,60,0.6); }
         /* Dev Tools tabs */
-        #x-devtools-tabs { display: flex; gap: 2px; padding: 0 16px; background: #111; border-bottom: 1px solid #222; flex-shrink: 0; }
-        .dt-tab {
-            padding: 8px 18px; font-size: 13px; cursor: pointer; color: #666;
-            border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
-            user-select: none;
+        #x-devtools-tabs {
+            display: flex; gap: 4px; padding: 8px 12px;
+            background: #0a0a0a; border-bottom: 2px solid #1a1a1a; flex-shrink: 0;
         }
-        .dt-tab:hover { color: #aaa; }
-        .dt-tab.active { color: gold; border-bottom-color: gold; }
+        .dt-tab {
+            padding: 9px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+            color: #555; background: #111; border: 1px solid #222;
+            border-radius: 6px; transition: all 0.15s; user-select: none;
+            letter-spacing: 0.2px;
+        }
+        .dt-tab:hover { color: #aaa; background: #1a1a1a; border-color: #333; }
+        .dt-tab.active {
+            color: #000; background: gold; border-color: gold;
+            box-shadow: 0 0 10px rgba(245,200,66,0.25);
+        }
         .dt-tab-panel { display: none; flex: 1; overflow: hidden; }
         .dt-tab-panel.active { display: flex; }
 
@@ -616,6 +746,23 @@
         }
         .syn-delete-btn:hover { border-color: #e74c3c; color: #e74c3c; }
         #x-dup-list { max-width: 860px; }
+
+        /* Blocked tags panel */
+        #x-blocked-panel { flex-direction: column; overflow-y: auto; padding: 20px; gap: 16px; width: 100%; }
+        #x-blocked-form { background: #1a1a1a; border: 1px solid #e74c3c44; border-radius: 8px; padding: 18px; display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; max-width: 860px; }
+        #x-blocked-form h3 { margin: 0; font-size: 14px; color: #e74c3c; }
+        #x-blocked-input-row { display: flex; gap: 8px; }
+        #x-blocked-input { flex: 1; background: #000; border: 1px solid #e74c3c66; border-radius: 4px; padding: 8px 12px; color: #eee; font-size: 13px; outline: none; }
+        #x-blocked-input:focus { border-color: #e74c3c; }
+        #x-blocked-add-btn { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 13px; font-weight: bold; cursor: pointer; }
+        #x-blocked-add-btn:hover { background: #c0392b; }
+        #x-blocked-list-wrap { max-width: 860px; }
+        #x-blocked-list-wrap h3 { font-size: 14px; color: #aaa; margin-bottom: 10px; }
+        .blocked-tag-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; margin-bottom: 6px; }
+        .blocked-tag-name { font-family: monospace; font-size: 13px; color: #eee; display: flex; align-items: center; gap: 8px; }
+        .blocked-tag-name::before { content: '🚫'; font-size: 12px; }
+        .blocked-remove-btn { background: none; border: 1px solid #444; color: #666; border-radius: 4px; padding: 3px 10px; font-size: 11px; cursor: pointer; transition: border-color .15s, color .15s; }
+        .blocked-remove-btn:hover { border-color: #e74c3c; color: #e74c3c; }
 
         /* Dev Tools */
         #x-devtools-overlay {
@@ -658,31 +805,64 @@
             display: flex; align-items: center; justify-content: center;
             height: 200px; font-style: italic;
         }
+        #x-dt-batch-bar {
+            display: none; position: sticky; top: 0; z-index: 5;
+            background: #1a1a00; border-bottom: 1px solid var(--gold, gold);
+            padding: 8px 12px; align-items: center; gap: 10px;
+            grid-column: 1 / -1;
+        }
+        #x-dt-batch-bar.visible { display: flex; }
+        #x-dt-batch-bar-count { font-size: 13px; color: gold; font-weight: bold; flex: 1; }
+        #x-dt-batch-tag-btn {
+            background: gold; color: #000; border: none; border-radius: 100px;
+            padding: 6px 16px; font-size: 12px; font-weight: bold; cursor: pointer;
+        }
+        #x-dt-batch-tag-btn:hover { background: #ffe066; }
         #x-devtools-right {
-            width: 240px; flex-shrink: 0; overflow-y: auto;
+            width: 260px; flex-shrink: 0; overflow-y: auto;
             border-left: 1px solid #222; background: #0e0e0e;
+            display: flex; flex-direction: column;
         }
         #x-devtools-right-header {
-            padding: 10px 14px; font-size: 10px; color: #555; letter-spacing: 2px;
+            padding: 8px 10px; font-size: 10px; color: #555; letter-spacing: 2px;
             text-transform: uppercase; border-bottom: 1px solid #1a1a1a;
             position: sticky; top: 0; background: #0e0e0e; z-index: 1;
         }
-        .dt-tag-row {
+        #x-dt-sort-bar {
+            display: flex; gap: 4px; padding: 6px 8px; background: #0e0e0e;
+            border-bottom: 1px solid #1a1a1a; flex-shrink: 0;
+            position: sticky; top: 36px; z-index: 1;
+        }
+        .dt-sort-btn {
+            flex: 1; padding: 4px 0; font-size: 10px; cursor: pointer; color: #555;
+            background: #1a1a1a; border: 1px solid #222; border-radius: 4px;
+            text-align: center; transition: all 0.1s; user-select: none; white-space: nowrap;
+        }
+        .dt-sort-btn:hover { color: #aaa; border-color: #333; }
+        .dt-sort-btn.active { color: gold; background: #1f1a00; border-color: #7a6115; }
+        #x-dt-tag-list { overflow-y: auto; flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+        /* Physical tag shape — right-pointing label with a small hole */
+        .dt-tag-item {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 7px 14px; cursor: pointer; border-bottom: 1px solid #141414;
-            transition: background 0.1s;
+            padding: 6px 12px 6px 10px; cursor: pointer; border-radius: 3px 6px 6px 3px;
+            position: relative; transition: filter 0.1s, transform 0.1s;
+            clip-path: polygon(0 50%, 8px 0%, 100% 0%, 100% 100%, 8px 100%);
+            padding-left: 18px;
         }
-        .dt-tag-row:hover { background: #1a1a1a; }
-        .dt-tag-row.active { background: #1f1a00; border-left: 3px solid gold; padding-left: 11px; }
-        .dt-tag-name { font-size: 13px; color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dt-tag-row.active .dt-tag-name { color: gold; }
-        .dt-tag-count {
-            font-size: 11px; color: #555; font-family: monospace;
-            background: #1a1a1a; border-radius: 10px; padding: 1px 7px; flex-shrink: 0; margin-left: 6px;
+        .dt-tag-item::before {
+            content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+            width: 5px; height: 5px; background: rgba(0,0,0,0.35); border-radius: 50%;
+            z-index: 1;
         }
-        .dt-tag-row.active .dt-tag-count { background: #2a2200; color: #aa8800; }
+        .dt-tag-item:hover { filter: brightness(1.2); transform: translateX(1px); }
+        .dt-tag-item.active { filter: brightness(1.35); transform: translateX(2px); box-shadow: 2px 0 8px rgba(255,215,0,0.3); outline: 1px solid rgba(255,215,0,0.5); }
+        .dt-tag-item-name { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+        .dt-tag-item-count { font-size: 10px; color: rgba(255,255,255,0.55); font-family: monospace; flex-shrink: 0; margin-left: 6px; background: rgba(0,0,0,0.25); border-radius: 8px; padding: 1px 6px; }
         /* Ghost eicons in dev tools get a gold outline when selected */
         .ghost-eicon.dt-selected { outline: 2px solid gold; box-shadow: 0 0 8px rgba(255,215,0,0.4); }
+        /* Synonym slave-to-master flash on chip */
+        @keyframes synFlash { 0%{background:#9d7ef5;color:#fff;} 60%{background:#9d7ef5;color:#fff;} 100%{background:gold;color:#000;} }
+        .chip.syn-flash { animation: synFlash 0.55s ease-out forwards; }
     `;
     document.head.appendChild(style);
 
@@ -695,6 +875,10 @@
 
     // Stored reference to the search input so we never rely on a fragile class selector.
     let searchInput = null;
+
+    // Ghost phrases — verbatim quoted search terms extracted from the search bar.
+    // Each entry is a plain string (without quotes) that must match a tag exactly.
+    let _ghostPhrases = [];
 
     // --- TAG MODE STATE ---
     // When active, any x-eiconview whose icon already has tags is hidden.
@@ -994,10 +1178,34 @@
                     }
 
                     if (!activeTags.includes(v)) {
-                        activeTags.push(v);
-                        input.value = '';
-                        renderModalChips();
-                        updateSuggestions('');
+                        // Check if this is a synonym slave — if so, add master instead
+                        const synMap = getSynonymMap();
+                        const related = synMap.get(v);
+                        let masterTag = v;
+                        if (related) {
+                            // Find which rule this slave belongs to — master is whichever
+                            // term in the group has the others as its slaves
+                            const allSynRules = getAllSynonyms();
+                            const rule = allSynRules.find(r => r.slaves.includes(v));
+                            if (rule) masterTag = rule.master;
+                        }
+                        if (!activeTags.includes(masterTag)) {
+                            activeTags.push(masterTag);
+                            input.value = '';
+                            renderModalChips();
+                            updateSuggestions('');
+                            // If substitution happened, flash the new chip purple
+                            if (masterTag !== v) {
+                                const chips = document.querySelectorAll('#x-active-chips .chip.yellow');
+                                const newChip = [...chips].find(c => c.textContent.trim().startsWith(masterTag));
+                                if (newChip) {
+                                    newChip.classList.add('syn-flash');
+                                    setTimeout(() => newChip.classList.remove('syn-flash'), 600);
+                                }
+                            }
+                        } else {
+                            input.value = '';
+                        }
                     }
                 }
             };
@@ -1170,6 +1378,33 @@
         wrap.appendChild(inner);
         wrap.appendChild(flash);
 
+        // Ctrl+Click on the composite selects the representative eicon (first named member).
+        // Uses capture phase so it fires before the cell's copy handler.
+        const representative = members.find(m => m.name)?.name;
+        if (representative) {
+            wrap.addEventListener('click', (e) => {
+                if (!(e.ctrlKey || e.metaKey)) return;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                if (selectedIconNames.has(representative)) {
+                    selectedIconNames.delete(representative);
+                    wrap.classList.remove('dt-selected');
+                    wrap.style.outline = '';
+                } else {
+                    selectedIconNames.add(representative);
+                    wrap.classList.add('dt-selected');
+                    wrap.style.outline = '2px solid gold';
+                    wrap.style.boxShadow = '0 0 8px rgba(255,215,0,0.4)';
+                }
+                // Restore selection appearance if deselected
+                if (!selectedIconNames.has(representative)) {
+                    wrap.style.outline = '';
+                    wrap.style.boxShadow = '';
+                }
+                updateSelectionBar();
+            }, true);
+        }
+
         return wrap;
     }
 
@@ -1193,21 +1428,46 @@
                 .map(([n, d]) => ({ name: n, ...d }));
 
             const composite = buildGridComposite(members);
-            if (composite) return composite;
+            if (composite) {
+                // Censor the whole composite if any member is censored
+                const anyCensored = members.some(m => m.name && isEiconCensored(m.name));
+                if (anyCensored) {
+                    composite.classList.add('x-censored');
+                    composite.style.border      = '4px solid transparent';
+                    composite.style.borderImage = 'repeating-linear-gradient(45deg,#111 0px,#111 8px,#f5c842 8px,#f5c842 16px) 4';
+                    // Blur all images inside
+                    composite.querySelectorAll('img').forEach(img => { img.style.filter = 'blur(9px)'; });
+                    const overlay = document.createElement('div');
+                    overlay.className = 'censor-overlay';
+                    overlay.innerHTML = '<span class="cx">✕</span><span class="cl">Blocked</span>';
+                    composite.style.position = 'relative';
+                    composite.appendChild(overlay);
+                }
+                return composite;
+            }
         }
 
         return createGhost(name);
     }
 
     function createGhost(name) {
+        const censored = isEiconCensored(name);
         const ghost = document.createElement('div');
-        ghost.className = 'ghost-eicon' + (selectedIconNames.has(name) ? ' dt-selected' : '');
-        // data-tooltip enables our custom tooltip system on hover
+        ghost.className = 'ghost-eicon' +
+            (selectedIconNames.has(name) ? ' dt-selected' : '') +
+            (censored ? ' x-censored' : '');
         ghost.dataset.tooltip = name;
         ghost.innerHTML = `
             <img src="https://static.f-list.net/images/eicon/${name}.gif">
             <span class="ghost-name">${name}</span>
             <div class="copy-flash">✓ Copied</div>`;
+
+        if (censored) {
+            const overlay = document.createElement('div');
+            overlay.className = 'censor-overlay';
+            overlay.innerHTML = '<span class="cx">✕</span><span class="cl">Blocked</span>';
+            ghost.appendChild(overlay);
+        }
 
         const gBtn = document.createElement('button');
         gBtn.className = 'tag-btn';
@@ -1247,88 +1507,123 @@
     }
 
     function renderAllSearch(query) {
-        const bestAnchor = document.getElementById('best-matches-content');
+        const bestAnchor    = document.getElementById('best-matches-content');
         const bestContainer = document.getElementById('best-matches-container');
-        const listAnchor = document.getElementById('tag-list-anchor');
+        const listAnchor    = document.getElementById('tag-list-anchor');
+        const topTagsEl     = document.getElementById('x-top-tags');
+
+        // Preserve open collapse state across re-renders (e.g. after modal save)
+        const openTags = new Set();
+        listAnchor.querySelectorAll('.tag-content.open').forEach(content => {
+            const header = content.previousElementSibling;
+            if (header) openTags.add(header.querySelector('span')?.textContent?.toLowerCase());
+        });
 
         listAnchor.innerHTML = '';
         bestAnchor.innerHTML = '';
         bestContainer.style.display = 'none';
+        if (topTagsEl) {
+            topTagsEl.classList.remove('visible');
+            topTagsEl.innerHTML = '<span id="x-top-tags-label">Top</span>';
+        }
 
-        if (!query || query.trim().length < 1) return;
+        const hasGhost = _ghostPhrases.length > 0;
+        const hasText  = query && query.trim().length > 0;
+        if (!hasGhost && !hasText) return;
 
-        // Split query into positive and negative keywords.
-        // A word prefixed with '-' is a negative (exclusion) term.
-        // Note: tags containing hyphens are unaffected — the '-' prefix only applies
-        // to the first character of a search word, not within a tag itself.
-        const allKeywords = query.toLowerCase().split(' ').filter(k => k.length > 0);
+        const allKeywords = hasText ? query.toLowerCase().split(' ').filter(k => k.length > 0) : [];
         const positiveKws = allKeywords.filter(k => !k.startsWith('-'));
         const negativeKws = allKeywords.filter(k => k.startsWith('-')).map(k => k.slice(1)).filter(k => k.length > 0);
 
-        // Bail out if there are no positive terms — negative-only queries return nothing
-        if (positiveKws.length === 0) return;
+        // Split ghost phrases into positive (exact match required) and negative (exact exclusion)
+        const posGhosts = _ghostPhrases.filter(e => !e.negative).map(e => e.phrase);
+        const negGhosts = _ghostPhrases.filter(e =>  e.negative).map(e => e.phrase);
 
-        // Expand each positive keyword through the synonym map.
-        // Each keyword becomes a group of terms (itself + synonyms/masters).
-        // An eicon is scored against the best-matching term in each group.
+        if (positiveKws.length === 0 && posGhosts.length === 0) return;
+
         const expandedKwGroups = positiveKws.map(kw => expandKeyword(kw));
-
         const lib = getAllTags();
-
-        // Build the duplicate skip set — non-representative members of duplicate groups
-        // are excluded from results so each group appears at most once per section.
         const dupSkipSet = buildDupSkipSet(lib);
 
-        // Tiered match score for a single keyword against a single tag string.
-        // Tiers are separated by 4 so no accumulation of lower tiers can outrank a higher one
-        // for a single keyword, while multiple-keyword scores still stack correctly.
-        //   4 = exact match          ("bar" === "bar")
-        //   3 = tag starts with kw   ("bar chart" starts with "bar")
-        //   2 = kw is a whole word   ("dive bar" contains word "bar")
-        //   1 = kw is a substring    ("embarrassed" contains "bar")
-        //   0 = no match
         const _wordBoundary = {};
         const kwTierScore = (kw, tag) => {
-            if (tag === kw)              return 4;
-            if (tag.startsWith(kw))     return 3;
-            // Cache compiled RegExp per keyword for performance across many tags
+            if (tag === kw)          return 4;
+            if (tag.startsWith(kw)) return 3;
             if (!_wordBoundary[kw]) _wordBoundary[kw] = new RegExp(`(?<![a-z])${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![a-z])`);
             if (_wordBoundary[kw].test(tag)) return 2;
-            if (tag.includes(kw))        return 1;
+            if (tag.includes(kw))   return 1;
             return 0;
         };
 
-        // Returns true if an eicon's tags contain any negative keyword (unchanged — negatives
-        // use substring matching because they are exclusions, not ranking criteria)
         const isExcluded = (tagStr) => {
-            if (negativeKws.length === 0) return false;
             const iconTags = tagStr.toLowerCase().split(',').map(t => t.trim());
-            return negativeKws.some(nkw => iconTags.some(tag => tag.includes(nkw)));
+            // Regular negative keywords (substring match)
+            if (negativeKws.some(nkw => iconTags.some(tag => tag.includes(nkw)))) return true;
+            // Negative ghost phrases (exact match only)
+            if (negGhosts.some(phrase => iconTags.includes(phrase))) return true;
+            return false;
         };
 
-        // Score each eicon by summing the best tier score each keyword group achieves.
-        // For each group, the best tier across all terms in the group AND all tags is used.
+        // Score: positive ghost phrases are exact-only (score 4 each); keywords use tier scoring.
         const scored = [];
         for (const [name, tagStr] of Object.entries(lib)) {
             if (isExcluded(tagStr)) continue;
             if (dupSkipSet.has(name)) continue;
             const iconTags = tagStr.toLowerCase().split(',').map(t => t.trim());
-            let score = 0;
-            let anyMatch = false;
+            let score = 0, anyMatch = false;
+            posGhosts.forEach(phrase => {
+                if (iconTags.includes(phrase)) { score += 4; anyMatch = true; }
+            });
             expandedKwGroups.forEach(kwGroup => {
-                // Best tier this keyword group achieves across all its terms and all eicon tags
                 let best = 0;
                 kwGroup.forEach(kw => {
-                    iconTags.forEach(tag => {
-                        const s = kwTierScore(kw, tag);
-                        if (s > best) best = s;
-                    });
+                    iconTags.forEach(tag => { const s = kwTierScore(kw, tag); if (s > best) best = s; });
                 });
                 if (best > 0) { score += best; anyMatch = true; }
             });
             if (anyMatch) scored.push({ name, score });
         }
 
+        // --- Top 5 tags ---
+        if (scored.length > 0 && topTagsEl) {
+            const tagFreq = {};
+            scored.forEach(({ name }) => {
+                (lib[name] || '').split(',').forEach(t => {
+                    const tag = t.trim().toLowerCase();
+                    if (tag) tagFreq[tag] = (tagFreq[tag] || 0) + 1;
+                });
+            });
+            const top5 = Object.entries(tagFreq)
+                .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([tag]) => tag);
+            if (top5.length > 0) {
+                topTagsEl.classList.add('visible');
+                topTagsEl.innerHTML = '<span id="x-top-tags-label">Top</span>';
+                top5.forEach(tag => {
+                    const chip = document.createElement('div');
+                    chip.className = 'top-tag-chip';
+                    chip.textContent = tag;
+                    chip.title = tag.includes(' ') ? `Add as phrase "${tag}"` : `Add "${tag}" to search`;
+                    chip.onclick = () => {
+                        if (tag.includes(' ')) {
+                            if (!_ghostPhrases.some(e => e.phrase === tag && !e.negative)) {
+                                _ghostPhrases.push({ phrase: tag, negative: false });
+                                renderGhostChipsFromState();
+                            }
+                        } else {
+                            if (searchInput) {
+                                const cur = searchInput.value.trim();
+                                const words = cur.split(' ');
+                                if (!words.includes(tag)) searchInput.value = cur ? `${cur} ${tag}` : tag;
+                            }
+                        }
+                        if (searchInput) renderAllSearch(searchInput.value);
+                    };
+                    topTagsEl.appendChild(chip);
+                });
+            }
+        }
+
+        // --- Best Matches ---
         if (scored.length > 0) {
             bestContainer.style.display = 'block';
             const bestRendered = new Set();
@@ -1338,20 +1633,17 @@
             });
         }
 
-        // Build tag sections: a tag qualifies if ANY term in ANY keyword group matches it.
-        const tagMap   = {};
-        const tagScore = {};
+        // --- Category sections ---
+        const tagMap = {}, tagScore = {};
         for (const [eicon, tagString] of Object.entries(lib)) {
             if (isExcluded(tagString)) continue;
             if (dupSkipSet.has(eicon)) continue;
             tagString.split(',').forEach(t => {
                 const tag = t.trim().toLowerCase();
                 let best = 0;
+                posGhosts.forEach(phrase => { if (tag === phrase) best = Math.max(best, 4); });
                 expandedKwGroups.forEach(kwGroup => {
-                    kwGroup.forEach(kw => {
-                        const s = kwTierScore(kw, tag);
-                        if (s > best) best = s;
-                    });
+                    kwGroup.forEach(kw => { const s = kwTierScore(kw, tag); if (s > best) best = s; });
                 });
                 if (best > 0) {
                     if (!tagMap[tag]) { tagMap[tag] = []; tagScore[tag] = 0; }
@@ -1361,7 +1653,6 @@
             });
         }
 
-        // Sort sections: first by tier (descending), then alphabetically within each tier
         Object.keys(tagMap)
             .sort((a, b) => (tagScore[b] - tagScore[a]) || a.localeCompare(b))
             .forEach(tag => {
@@ -1370,31 +1661,58 @@
                 cont.innerHTML = `
                 <div class="tag-header"><span>${tag.toUpperCase()}</span><span>▸</span></div>
                 <div class="tag-content collapsed"></div>`;
-
-                const header = cont.querySelector('.tag-header');
+                const header  = cont.querySelector('.tag-header');
                 const content = cont.querySelector('.tag-content');
-
                 header.onclick = () => {
                     const isCollapsed = !content.classList.contains('open');
                     content.classList.toggle('open', isCollapsed);
                     header.querySelector('span:last-child').textContent = isCollapsed ? '▾' : '▸';
                 };
-
                 const catRendered = new Set();
                 tagMap[tag].forEach(name => {
                     const el = renderEiconOrComposite(name, catRendered);
                     if (el) content.appendChild(el);
                 });
-
+                if (openTags.has(tag)) {
+                    content.classList.add('open');
+                    header.querySelector('span:last-child').textContent = '▾';
+                }
                 listAnchor.appendChild(cont);
             });
+    }
+
+    // Renders ghost phrase chips into #x-ghost-chips from module state.
+    // Called from the top-tag chip onclick (which can't close over the local renderGhostChips).
+    function renderGhostChipsFromState() {
+        const container = document.getElementById('x-ghost-chips');
+        if (!container) return;
+        container.innerHTML = '';
+        _ghostPhrases.forEach((entry, i) => {
+            const chip = document.createElement('div');
+            chip.className = 'search-ghost-chip' + (entry.negative ? ' negative' : '');
+            chip.innerHTML = entry.negative
+                ? `<span class="ghost-quote">-"</span>${entry.phrase}<span class="ghost-quote">"</span>`
+                : `<span class="ghost-quote">"</span>${entry.phrase}<span class="ghost-quote">"</span>`;
+            chip.title = entry.negative ? `Excluding phrase "${entry.phrase}"` : 'Click to edit';
+            chip.onclick = () => {
+                _ghostPhrases.splice(i, 1);
+                renderGhostChipsFromState();
+                if (searchInput) {
+                    searchInput.value = `${entry.negative ? '-' : ''}"${entry.phrase}" ${searchInput.value}`.trim();
+                    searchInput.focus();
+                    renderAllSearch(searchInput.value);
+                }
+            };
+            container.appendChild(chip);
+        });
     }
 
 
 
     // --- 7. DEV TOOLS ---
 
-    let _devToolsActiveTag = null; // currently selected tag in the right panel
+    let _devToolsActiveTag = null;
+    let _devToolsSortMode  = 'alpha-asc'; // alpha-asc | alpha-desc | count-asc | count-desc // currently selected tag in the right panel
 
     function openDevTools(startTab) {
         let overlay = document.getElementById('x-devtools-overlay');
@@ -1414,13 +1732,25 @@
                         <div class="dt-tab active" data-tab="browser">📂 Tag Browser</div>
                         <div class="dt-tab" data-tab="synonyms">🔗 Synonyms</div>
                         <div class="dt-tab" data-tab="duplicates">🔁 Duplicates</div>
+                        <div class="dt-tab" data-tab="blocked">🚫 Blocked</div>
                     </div>
                     <div id="x-dt-browser" class="dt-tab-panel active">
                         <div id="x-devtools-left">
-                            <div class="empty-state">← Select a tag to browse its eicons</div>
+                            <div id="x-dt-batch-bar">
+                                <span id="x-dt-batch-bar-count"></span>
+                                <button id="x-dt-batch-tag-btn">🏷️ Tag Selected</button>
+                            </div>
+                            <div class="empty-state">Select a tag to browse its eicons →</div>
                         </div>
                         <div id="x-devtools-right">
                             <div id="x-devtools-right-header">Tags — click to browse</div>
+                            <div id="x-dt-sort-bar">
+                                <div class="dt-sort-btn active" data-sort="alpha-asc">A→Z</div>
+                                <div class="dt-sort-btn" data-sort="alpha-desc">Z→A</div>
+                                <div class="dt-sort-btn" data-sort="count-desc"># ↓</div>
+                                <div class="dt-sort-btn" data-sort="count-asc"># ↑</div>
+                            </div>
+                            <div id="x-dt-tag-list"></div>
                         </div>
                     </div>
                     <div id="x-dt-synonyms" class="dt-tab-panel">
@@ -1466,6 +1796,22 @@
                             <div id="x-dup-list"></div>
                         </div>
                     </div>
+                    <div id="x-dt-blocked" class="dt-tab-panel">
+                        <div id="x-blocked-panel">
+                            <div id="x-blocked-form">
+                                <h3>🚫 Blocked Tags</h3>
+                                <p style="font-size:13px; color:#888; margin:0;">Any eicon tagged with a blocked tag is censored everywhere it appears — blurred with a hazard border. Blocked tags are <strong style="color:#eee;">never exported</strong> and are entirely personal to your browser.</p>
+                                <div id="x-blocked-input-row">
+                                    <input id="x-blocked-input" type="text" placeholder="Enter a tag to block…" autocomplete="off">
+                                    <button id="x-blocked-add-btn">Block Tag</button>
+                                </div>
+                            </div>
+                            <div id="x-blocked-list-wrap">
+                                <h3>Active Blocked Tags</h3>
+                                <div id="x-blocked-list"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>`;
             document.body.appendChild(overlay);
 
@@ -1473,10 +1819,22 @@
             overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDevTools(); });
             overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDevTools(); });
 
+            overlay.querySelector('#x-dt-batch-tag-btn').onclick = () => openBatchModal();
+
             // Tab switching
             overlay.querySelectorAll('.dt-tab').forEach(tab => {
                 tab.onclick = () => {
                     switchDevTab(tab.dataset.tab);
+                };
+            });
+
+            // Sort buttons
+            overlay.querySelectorAll('.dt-sort-btn').forEach(btn => {
+                btn.onclick = () => {
+                    overlay.querySelectorAll('.dt-sort-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    _devToolsSortMode = btn.dataset.sort;
+                    renderDevToolsTagList(overlay.querySelector('#x-devtools-search').value.toLowerCase().trim());
                 };
             });
 
@@ -1515,6 +1873,13 @@
 
             masterInput.oninput = refreshAddBtn;
 
+            // Custom event fired by editSynonymRule to pre-populate slaves from an existing rule
+            slaveInput.addEventListener('x-syn-load-slaves', (e) => {
+                _synSlaves = [...e.detail];
+                renderSlaveChips();
+                refreshAddBtn();
+            });
+
             slaveInput.onkeydown = (e) => {
                 if (e.key === 'Enter' || e.key === ',') {
                     e.preventDefault();
@@ -1544,6 +1909,20 @@
                     renderSynonymRules();
                 }
             };
+
+            // Blocked tags input
+            const blockedInput = overlay.querySelector('#x-blocked-input');
+            const blockedAddBtn = overlay.querySelector('#x-blocked-add-btn');
+            const doAddBlocked = () => {
+                const v = blockedInput.value.trim().toLowerCase();
+                if (!v) return;
+                addBlockedTag(v);
+                blockedInput.value = '';
+                renderBlockedTagsList();
+                applyCensorMode();
+            };
+            blockedInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); doAddBlocked(); } };
+            blockedAddBtn.onclick = doAddBlocked;
         }
 
         _devToolsActiveTag = null;
@@ -1558,15 +1937,16 @@
     function switchDevTab(tabName) {
         const overlay = document.getElementById('x-devtools-overlay');
         if (!overlay) return;
-        const panelMap = { browser: 'x-dt-browser', synonyms: 'x-dt-synonyms', duplicates: 'x-dt-duplicates' };
+        const panelMap = { browser: 'x-dt-browser', synonyms: 'x-dt-synonyms', duplicates: 'x-dt-duplicates', blocked: 'x-dt-blocked' };
         overlay.querySelectorAll('.dt-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
         overlay.querySelectorAll('.dt-tab-panel').forEach(p => p.classList.remove('active'));
         const panelEl = overlay.querySelector('#' + (panelMap[tabName] || 'x-dt-browser'));
         if (panelEl) panelEl.classList.add('active');
         overlay.querySelector('#x-devtools-search').style.display = tabName === 'browser' ? '' : 'none';
-        if (tabName === 'synonyms') renderSynonymRules();
+        if (tabName === 'synonyms')   renderSynonymRules();
         if (tabName === 'duplicates') renderDuplicatesList();
-        if (tabName === 'browser') renderDevToolsTagList('');
+        if (tabName === 'blocked')    renderBlockedTagsList();
+        if (tabName === 'browser')    renderDevToolsTagList('');
     }
 
     function closeDevTools() {
@@ -1665,8 +2045,12 @@
                     <div class="syn-master">⭐ ${master}</div>
                     <div class="syn-slaves">${slaves.map(s => `<span class="syn-slave-chip">${s}</span>`).join('')}</div>
                 </div>
-                <button class="syn-delete-btn" data-idx="${idx}">🗑 Delete</button>`;
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <button class="syn-edit-btn" style="background:none;border:1px solid #555;color:#888;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;" data-idx="${idx}">✏️ Edit</button>
+                    <button class="syn-delete-btn" data-idx="${idx}">🗑 Delete</button>
+                </div>`;
             row.querySelector('.syn-delete-btn').onclick = () => deleteSynonymRule(idx);
+            row.querySelector('.syn-edit-btn').onclick   = () => editSynonymRule(idx);
             container.appendChild(row);
         });
     }
@@ -1681,6 +2065,48 @@
         saveSynonyms(rules);
         invalidateSynonymMap();
         renderSynonymRules();
+    }
+
+    // Loads a synonym rule back into the Add Synonym form for editing.
+    // Removes the rule from the store immediately — the user re-adds it (possibly
+    // with changes and the Clean option) via the normal Add flow.
+    function editSynonymRule(idx) {
+        const rules = getAllSynonyms();
+        const rule = rules[idx];
+        if (!rule) return;
+
+        // Remove the rule from the list — it will be re-added on confirm
+        rules.splice(idx, 1);
+        saveSynonyms(rules);
+        invalidateSynonymMap();
+
+        // Populate the form fields
+        const masterInput  = document.getElementById('x-syn-master');
+        const slaveInput   = document.getElementById('x-syn-slave-input');
+        const slaveChipsEl = document.getElementById('x-syn-slave-chips');
+        const addBtn       = document.getElementById('x-syn-add-btn');
+        if (!masterInput || !slaveChipsEl || !addBtn) return;
+
+        masterInput.value = rule.master;
+
+        // Re-build the slave chip array by dispatching the same keyboard events
+        // the user would have used — simpler to just directly manipulate the chips.
+        // We reach into the closure via a custom event on the input.
+        const editEvent = new CustomEvent('x-syn-load-slaves', { detail: rule.slaves });
+        slaveInput.dispatchEvent(editEvent);
+
+        addBtn.disabled = false;
+
+        // Scroll the synonyms panel to the top so the form is visible
+        const panel = document.getElementById('x-syn-panel');
+        if (panel) panel.scrollTop = 0;
+
+        // Re-render the list to reflect the removal
+        renderSynonymRules();
+
+        // Focus the master input
+        masterInput.focus();
+        masterInput.select();
     }
 
     // Scrolls the duplicates tab to a specific group by index, expanding it if collapsed.
@@ -1715,7 +2141,30 @@
         setTimeout(() => { target.style.borderColor = origBorder || ''; }, 1200);
     }
 
-    // Renders the duplicates tab — one collapsible per group showing eicon thumbnails.
+    // Renders the blocked tags list in the Blocked tab.
+    function renderBlockedTagsList() {
+        const container = document.getElementById('x-blocked-list');
+        if (!container) return;
+        container.innerHTML = '';
+        const tags = getAllBlockedTags();
+        if (tags.length === 0) {
+            container.innerHTML = '<div style="color:#444; font-size:13px; font-style:italic; padding:8px 0;">No blocked tags yet.</div>';
+            return;
+        }
+        tags.forEach(tag => {
+            const row = document.createElement('div');
+            row.className = 'blocked-tag-row';
+            row.innerHTML = `
+                <span class="blocked-tag-name">${tag}</span>
+                <button class="blocked-remove-btn">✕ Unblock</button>`;
+            row.querySelector('.blocked-remove-btn').onclick = () => {
+                removeBlockedTag(tag);
+                renderBlockedTagsList();
+                applyCensorMode();
+            };
+            container.appendChild(row);
+        });
+    }
     function renderDuplicatesList() {
         const container = document.getElementById('x-dup-list');
         if (!container) return;
@@ -1732,8 +2181,9 @@
 
             const header = document.createElement('div');
             header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px 16px; cursor:pointer; user-select:none; background:#1f1f1f;';
+            const firstName = group[0] || `group-${idx + 1}`;
             header.innerHTML = `
-                <span style="color:#ccc; font-size:13px;">Group ${idx + 1} — <strong style="color:gold;">${group.length}</strong> eicons &nbsp;<span style="color:#555; font-size:11px;">${group.slice(0,3).join(', ')}${group.length > 3 ? '…' : ''}</span></span>
+                <span style="color:#ccc; font-size:13px;"><strong style="color:gold;">${firstName}</strong> <span style="color:#555;font-size:11px;">+${group.length - 1} duplicate${group.length - 1 === 1 ? '' : 's'}</span> &nbsp;<span style="color:#444; font-size:11px;">${group.slice(1,4).join(', ')}${group.length > 4 ? '…' : ''}</span></span>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <button class="dup-delete-btn" style="background:none; border:1px solid #444; color:#666; border-radius:4px; padding:3px 10px; font-size:11px; cursor:pointer;">🗑 Delete Group</button>
                     <span class="dup-toggle" style="color:#555; font-size:14px;">▸</span>
@@ -1770,19 +2220,28 @@
         });
     }
 
-    // Builds the right-panel tag list, optionally filtered by a search string.
+    // Deterministic colour from tag string — cycles through a palette.
+    const TAG_PALETTE = [
+        '#c0392b','#e67e22','#f39c12','#27ae60','#16a085',
+        '#2980b9','#8e44ad','#d35400','#1abc9c','#c0392b',
+        '#6c3483','#1e8bc3','#2ecc71','#e74c3c','#3498db',
+    ];
+    function tagColour(tag) {
+        let h = 0;
+        for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) & 0xfffffff;
+        return TAG_PALETTE[h % TAG_PALETTE.length];
+    }
+
+    // Builds the right-panel tag list with physical tag shapes, colour, and sort.
     function renderDevToolsTagList(filter) {
         const right = document.getElementById('x-devtools-right');
         if (!right) return;
-
-        // Remove all rows (keep the sticky header)
-        const header = right.querySelector('#x-devtools-right-header');
-        right.innerHTML = '';
-        right.appendChild(header);
+        const header  = right.querySelector('#x-devtools-right-header');
+        const listEl  = right.querySelector('#x-dt-tag-list');
+        if (!header || !listEl) return;
+        listEl.innerHTML = '';
 
         const lib = getAllTags();
-
-        // Count eicons per tag
         const tagCounts = {};
         for (const tagStr of Object.values(lib)) {
             tagStr.split(',').forEach(t => {
@@ -1791,34 +2250,49 @@
             });
         }
 
-        const allTags = Object.keys(tagCounts).sort();
-        const filtered = filter ? allTags.filter(t => t.includes(filter)) : allTags;
+        let tags = Object.keys(tagCounts);
+        const filtered = filter ? tags.filter(t => t.includes(filter)) : tags;
+
+        // Apply sort
+        filtered.sort((a, b) => {
+            switch (_devToolsSortMode) {
+                case 'alpha-desc':  return b.localeCompare(a);
+                case 'count-desc':  return tagCounts[b] - tagCounts[a] || a.localeCompare(b);
+                case 'count-asc':   return tagCounts[a] - tagCounts[b] || a.localeCompare(b);
+                default:            return a.localeCompare(b); // alpha-asc
+            }
+        });
 
         header.textContent = filter
-            ? `${filtered.length} of ${allTags.length} tags`
-            : `${allTags.length} tags — click to browse`;
+            ? `${filtered.length} of ${Object.keys(tagCounts).length} tags`
+            : `${Object.keys(tagCounts).length} tags`;
+
+        // Sync sort button active state (in case tab was switched and re-rendered)
+        right.querySelectorAll('.dt-sort-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.sort === _devToolsSortMode));
 
         filtered.forEach(tag => {
-            const row = document.createElement('div');
-            row.className = 'dt-tag-row' + (tag === _devToolsActiveTag ? ' active' : '');
-            row.innerHTML = `
-                <span class="dt-tag-name">${tag}</span>
-                <span class="dt-tag-count">${tagCounts[tag]}</span>`;
-            row.onclick = () => {
+            const colour = tagColour(tag);
+            const item = document.createElement('div');
+            item.className = 'dt-tag-item' + (tag === _devToolsActiveTag ? ' active' : '');
+            item.style.background = colour;
+            item.innerHTML = `
+                <span class="dt-tag-item-name">${tag}</span>
+                <span class="dt-tag-item-count">${tagCounts[tag]}</span>`;
+            item.onclick = () => {
                 _devToolsActiveTag = tag;
-                // Highlight active row
-                right.querySelectorAll('.dt-tag-row').forEach(r => r.classList.remove('active'));
-                row.classList.add('active');
+                listEl.querySelectorAll('.dt-tag-item').forEach(r => r.classList.remove('active'));
+                item.classList.add('active');
                 renderDevToolsEicons(tag);
             };
-            right.appendChild(row);
+            listEl.appendChild(item);
         });
 
         if (filtered.length === 0) {
             const empty = document.createElement('div');
-            empty.style.cssText = 'padding:20px 14px; color:#444; font-size:13px; font-style:italic;';
+            empty.style.cssText = 'padding:20px 10px; color:#444; font-size:13px; font-style:italic;';
             empty.textContent = 'No tags match that filter.';
-            right.appendChild(empty);
+            listEl.appendChild(empty);
         }
     }
 
@@ -1905,8 +2379,43 @@
 
     // --- 8. EXPLORER PANEL ---
 
+    // Shows a one-time welcome popup the first time XariahTagger runs (or after a
+    // localStorage clear). Sentinel key x_welcomed prevents it appearing again.
+    function showWelcomeModal() {
+        if (localStorage.getItem('x_welcomed')) return;
+        localStorage.setItem('x_welcomed', '1');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'x-welcome-overlay';
+        overlay.innerHTML = `
+            <div id="x-welcome-box">
+                <h2>🏷️ Welcome to XariahTagger</h2>
+                <div class="sub">v${SCRIPT_VERSION} · Alpha</div>
+                <p>XariahTagger adds a personal tagging and search system on top of Xariah. Hover any eicon to tag it, then search your tags to find it instantly.</p>
+                <p>
+                    <strong>Quick start:</strong> hover an eicon → click 🏷️ → add tags → Save.
+                    Then type in the search bar at the top to find it.
+                </p>
+                <p>
+                    <strong>📡 Developer tags:</strong> click the <strong>📡</strong> button in the tag bar to pull a curated starter library — a great way to hit the ground running without tagging everything from scratch.
+                </p>
+                <p>
+                    Need help? The full <a href="https://mojojohoe.github.io/F-List-Eicon-Categories/" target="_blank">User Guide</a>
+                    covers every feature — tagging, batch selection, grid sets, duplicates, synonyms, blocked tags, and more.
+                </p>
+                <p style="font-size:12px; color:#555; margin-bottom:0;">
+                    If you're seeing this a second time, your localStorage was cleared — your tags were lost with it.
+                    Use <strong style="color:#aaa;">💾 Export</strong> regularly to keep a backup, and re-import if needed.
+                </p>
+                <button id="x-welcome-btn">Let's go →</button>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#x-welcome-btn').onclick = () => overlay.remove();
+    }
+
     function initExplorer() {
         if (document.getElementById('x-tag-manager')) return;
+        showWelcomeModal();
 
         const manager = document.createElement('div');
         manager.id = 'x-tag-manager';
@@ -1926,10 +2435,14 @@
                         <button class="data-btn" id="x-import" title="Import tags">📥</button>
                     </div>
                 </div>
-                <input type="text" class="filter-input" placeholder="Search tags...">
+                <div id="x-search-wrap" onclick="this.querySelector('.filter-input')?.focus()">
+                    <div id="x-ghost-chips"></div>
+                    <input type="text" class="filter-input" placeholder="Search tags… or &quot;exact phrase&quot;">
+                </div>
             </div>
             <div id="x-tag-mode-banner">🔴 Tag Mode active — eicons with tags are hidden</div>
             <div id="x-explorer-body">
+                <div id="x-top-tags"><span id="x-top-tags-label">Top</span></div>
                 <div id="best-matches-container">
                     <div class="best-matches-header">✨ Best Matches</div>
                     <div id="best-matches-content" class="best-matches-content"></div>
@@ -2037,17 +2550,21 @@
                     return r.json();
                 })
                 .then(parsed => {
-                    let importedTags, importedGrid;
+                    let importedTags, importedGrid, importedSynonyms, importedDuplicates;
                     if (parsed.version === 1 && parsed.tags) {
-                        importedTags = parsed.tags;
-                        importedGrid = parsed.grid || {};
+                        importedTags       = parsed.tags;
+                        importedGrid       = parsed.grid       || {};
+                        importedSynonyms   = parsed.synonyms   || [];
+                        importedDuplicates = parsed.duplicates || [];
                     } else {
-                        importedTags = parsed;
-                        importedGrid = {};
+                        importedTags       = parsed;
+                        importedGrid       = {};
+                        importedSynonyms   = [];
+                        importedDuplicates = [];
                     }
                     btn.textContent = '📡';
                     btn.disabled = false;
-                    showDevTagsDialog(importedTags, importedGrid);
+                    showDevTagsDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates);
                 })
                 .catch(err => {
                     btn.textContent = '📡';
@@ -2056,13 +2573,66 @@
                 });
         };
 
-        // Debounced search — waits 200ms after the user stops typing before rendering.
-        // Prevents a full DOM rebuild on every single keystroke with a large library.
+        // Ghost chip + debounced search wiring
         let _searchDebounce = null;
         searchInput = manager.querySelector('.filter-input');
-        searchInput.oninput = (e) => {
+        const ghostChipContainer = manager.querySelector('#x-ghost-chips');
+
+        // Renders ghost phrase chips inside the search bar
+        const renderGhostChips = () => {
+            ghostChipContainer.innerHTML = '';
+            _ghostPhrases.forEach((entry, i) => {
+                const chip = document.createElement('div');
+                chip.className = 'search-ghost-chip' + (entry.negative ? ' negative' : '');
+                chip.innerHTML = entry.negative
+                    ? `<span class="ghost-quote">-"</span>${entry.phrase}<span class="ghost-quote">"</span>`
+                    : `<span class="ghost-quote">"</span>${entry.phrase}<span class="ghost-quote">"</span>`;
+                chip.title = entry.negative ? `Excluding phrase "${entry.phrase}"` : 'Click to edit';
+                chip.onclick = () => {
+                    _ghostPhrases.splice(i, 1);
+                    renderGhostChips();
+                    searchInput.value = `${entry.negative ? '-' : ''}"${entry.phrase}" ${searchInput.value}`.trim();
+                    searchInput.focus();
+                    triggerSearch();
+                };
+                ghostChipContainer.appendChild(chip);
+            });
+        };
+
+        const triggerSearch = () => {
             clearTimeout(_searchDebounce);
-            _searchDebounce = setTimeout(() => renderAllSearch(e.target.value), 200);
+            _searchDebounce = setTimeout(() => renderAllSearch(searchInput.value), 200);
+        };
+
+        searchInput.oninput = (e) => {
+            let val = e.target.value;
+            // Detect a completed quoted phrase, optionally prefixed with - for negation.
+            // Captures: (prefix)(before)(negative?)(phrase)(after)
+            const quoteMatch = val.match(/^(.*?)(-?)"([^"]+)"\s*(.*?)$/s);
+            if (quoteMatch) {
+                const before   = quoteMatch[1];
+                const negative = quoteMatch[2] === '-';
+                const phrase   = quoteMatch[3].trim().toLowerCase();
+                const after    = quoteMatch[4];
+                if (phrase) {
+                    _ghostPhrases.push({ phrase, negative });
+                    renderGhostChips();
+                    // Strip the before-text too, but only the trailing '-' if negative
+                    const remaining = (negative ? before.replace(/-\s*$/, '') : before) + after;
+                    searchInput.value = remaining.trim();
+                }
+            }
+            triggerSearch();
+        };
+
+        searchInput.onkeydown = (e) => {
+            // Backspace on empty input pops the last ghost phrase back as quoted text
+            if (e.key === 'Backspace' && searchInput.value === '' && _ghostPhrases.length > 0) {
+                const last = _ghostPhrases.pop();
+                renderGhostChips();
+                searchInput.value = `${last.negative ? '-' : ''}"${last.phrase}"`;
+                triggerSearch();
+            }
         };
     }
 
@@ -2079,7 +2649,7 @@
         const extraNote = [
             importGridCount > 0 ? `<strong style="color:#eee;">${importGridCount}</strong> grid positions` : '',
             synCount  > 0 ? `<strong style="color:#eee;">${synCount}</strong> synonym rules` : '',
-            dupCount  > 0 ? `<strong style="color:#eee;">${dupCount}</strong> duplicate groups` : ''
+            dupCount  > 0 ? `<strong style="color:#eee;">${dupCount}</strong> linked sets` : ''
         ].filter(Boolean).join(', ');
 
         const dialog = document.createElement('div');
@@ -2145,13 +2715,14 @@
 
     // Dev tags dialog — merge-only, no Replace option.
     // Shows what will be added before committing, lets user cancel safely.
-    function showDevTagsDialog(importedTags, importedGrid) {
+    function showDevTagsDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates) {
         if (document.getElementById('x-dev-dialog')) return;
 
         const importTagCount  = Object.keys(importedTags).length;
-        const importGridCount = Object.keys(importedGrid).length;
         const existingTags    = getAllTags();
         const existingCount   = Object.keys(existingTags).length;
+        const synCount        = (importedSynonyms   || []).length;
+        const setCount        = (importedDuplicates || []).length;
 
         // Count net-new eicons and net-new tags the merge would add
         let newEiconCount = 0;
@@ -2169,6 +2740,11 @@
             }
         }
 
+        const extras = [
+            synCount > 0 ? `<strong style="color:#eee;">${synCount}</strong> synonym rule${synCount === 1 ? '' : 's'}` : '',
+            setCount > 0 ? `<strong style="color:#eee;">${setCount}</strong> linked set${setCount === 1 ? '' : 's'}` : ''
+        ].filter(Boolean).join(' and ');
+
         const dialog = document.createElement('div');
         dialog.id = 'x-dev-dialog';
         dialog.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:2000002; display:flex; align-items:center; justify-content:center;`;
@@ -2176,8 +2752,7 @@
             <div style="background:#1a1a1a; border:2px solid #3ecfb2; border-radius:8px; width:90%; max-width:420px; padding:20px; color:#eee; font-family:sans-serif;">
                 <div style="color:#3ecfb2; font-weight:bold; margin-bottom:12px; font-size:14px;">📡 Developer Tag Library</div>
                 <div style="font-size:13px; color:#aaa; margin-bottom:16px; line-height:1.8;">
-                    The developer library contains <strong style="color:#eee;">${importTagCount}</strong> tagged eicons
-                    ${importGridCount > 0 ? `and <strong style="color:#eee;">${importGridCount}</strong> grid positions` : ''}.
+                    The developer library contains <strong style="color:#eee;">${importTagCount}</strong> tagged eicons${extras ? ` plus ${extras}` : ''}.
                     <br>You currently have <strong style="color:#eee;">${existingCount}</strong> eicons tagged.
                     <br><br>
                     Merging will add <strong style="color:#3ecfb2;">${newEiconCount}</strong> new eicons
@@ -2196,8 +2771,23 @@
 
         dialog.querySelector('#x-dev-merge').onclick = () => {
             saveFullLibrary(mergeLibraries(getAllTags(), importedTags));
-            const mergedGrid = { ...importedGrid, ...getAllGridData() };
-            saveAllGridData(mergedGrid);
+            saveAllGridData({ ...importedGrid, ...getAllGridData() });
+            // Merge synonyms by master
+            const existingSyn = getAllSynonyms();
+            (importedSynonyms || []).forEach(({ master, slaves }) => {
+                const existing = existingSyn.find(r => r.master === master);
+                if (existing) { slaves.forEach(s => { if (!existing.slaves.includes(s)) existing.slaves.push(s); }); }
+                else existingSyn.push({ master, slaves });
+            });
+            saveSynonyms(existingSyn);
+            invalidateSynonymMap();
+            // Merge linked sets
+            const existingDup = getAllDuplicates();
+            (importedDuplicates || []).forEach(group => {
+                const alreadyCovered = group.some(n => existingDup.some(g => g.includes(n)));
+                if (!alreadyCovered) existingDup.push(group);
+            });
+            saveAllDuplicates(existingDup);
             dialog.remove();
             location.reload();
         };
@@ -2223,7 +2813,6 @@
             const shouldDim = tagModeActive && !!(name && lib[name]);
 
             if (shouldDim && !el._xTagDimmed) {
-                // First time dimming this element — set styles and attach hover handlers
                 el._xTagDimmed = true;
                 el.style.opacity    = '0.28';
                 el.style.outline    = '1px solid rgba(255, 215, 0, 0.35)';
@@ -2234,7 +2823,6 @@
                 el.addEventListener('mouseleave', el._xTagHoverOut);
 
             } else if (!shouldDim && el._xTagDimmed) {
-                // Restore element
                 el._xTagDimmed = false;
                 el.style.opacity    = '';
                 el.style.outline    = '';
@@ -2243,6 +2831,61 @@
                 if (el._xTagHoverOut) el.removeEventListener('mouseleave', el._xTagHoverOut);
                 el._xTagHoverIn  = null;
                 el._xTagHoverOut = null;
+            }
+        });
+    }
+
+    // Applies or removes the censor visual on all visible live x-eiconview elements.
+    // Uses the hazard-tape border-image, image blur injected into the shadow,
+    // and a grey overlay div on the shadow root.
+    const HAZARD_BORDER = '4px solid transparent';
+    const HAZARD_IMAGE  = 'repeating-linear-gradient(45deg,#111 0px,#111 8px,#f5c842 8px,#f5c842 16px) 4';
+
+    function applyCensorMode() {
+        findDeep(document, 'x-eiconview').forEach(el => {
+            const name = getIconNameFromElement(el);
+            if (!name) return;
+            const shouldCensor = isEiconCensored(name);
+
+            if (shouldCensor && !el._xCensored) {
+                el._xCensored = true;
+                el.style.border      = HAZARD_BORDER;
+                el.style.borderImage = HAZARD_IMAGE;
+
+                // Inject blur + overlay into the shadow root
+                const shadow = el.shadowRoot;
+                if (shadow) {
+                    // Blur style
+                    const blurStyle = document.createElement('style');
+                    blurStyle.className = 'x-censor-style';
+                    blurStyle.textContent = `img { filter: blur(9px) !important; }`;
+                    shadow.appendChild(blurStyle);
+                    // Overlay div
+                    const overlay = document.createElement('div');
+                    overlay.className = 'x-censor-overlay';
+                    overlay.style.cssText = `
+                        position:absolute; inset:0; background:rgba(30,30,30,0.88);
+                        display:flex; align-items:center; justify-content:center;
+                        flex-direction:column; gap:2px; z-index:100; pointer-events:none;`;
+                    overlay.innerHTML = `
+                        <span style="font-size:22px;color:#e74c3c;font-weight:900;line-height:1;">✕</span>
+                        <span style="font-size:8px;color:#aaa;font-family:monospace;letter-spacing:.5px;text-transform:uppercase;">Blocked</span>`;
+                    const rootDiv = shadow.querySelector('.root');
+                    if (rootDiv) {
+                        rootDiv.style.position = 'relative';
+                        rootDiv.appendChild(overlay);
+                    }
+                }
+
+            } else if (!shouldCensor && el._xCensored) {
+                el._xCensored = false;
+                el.style.border      = '';
+                el.style.borderImage = '';
+                const shadow = el.shadowRoot;
+                if (shadow) {
+                    shadow.querySelectorAll('.x-censor-style').forEach(s => s.remove());
+                    shadow.querySelectorAll('.x-censor-overlay').forEach(s => s.remove());
+                }
             }
         });
     }
@@ -2277,6 +2920,19 @@
         } else {
             bar.classList.add('visible');
             const countEl = bar.querySelector('#x-selection-count');
+            if (countEl) countEl.textContent = `${count} eicon${count === 1 ? '' : 's'} selected`;
+        }
+        updateDtBatchBar();
+    }
+
+    // Keeps the sticky batch bar inside the dev tools tag browser in sync with selection.
+    function updateDtBatchBar() {
+        const bar = document.getElementById('x-dt-batch-bar');
+        if (!bar) return;
+        const count = selectedIconNames.size;
+        bar.classList.toggle('visible', count > 0);
+        if (count > 0) {
+            const countEl = bar.querySelector('#x-dt-batch-bar-count');
             if (countEl) countEl.textContent = `${count} eicon${count === 1 ? '' : 's'} selected`;
         }
     }
@@ -2478,6 +3134,7 @@
         }
         findDeep(document, 'x-eiconview').forEach(_processIcon_guarded);
         if (tagModeActive) applyTagMode();
+        applyCensorMode();
     }, 1000);
 
 })();
