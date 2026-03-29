@@ -1,6 +1,7 @@
 {
   "version": 1,
   "tags": {
+    "1117": "rainbow, text, boys, wavey",
     "1118": "word make, text",
     "1245": "effect, sleep, snore",
     "3527": "word real, text",
@@ -89,10 +90,10 @@
     "6tinynightshadetwitter": "digestion, cock vore, vore, internal, xray, cum, clench, balls, cummification, cockvore",
     "44magnum": "gun",
     "4tinynightshadetwitter": "digestion, cock vore, vore, xray, internal, cum, clench, balls, cummification, cockvore",
-    "alstad1": "hypno eyes, hypnosis, spiral eyes, eyes",
-    "alstad2": "hypnosis, hypno eyes, spiral eyes, eyes",
-    "alstad3": "hypno eyes, hypnosis, spiral eyes, eyes",
-    "alstad4": "hypnosis, hypno eyes, spiral eyes, eyes",
+    "alstad1": "hypno eyes, spiral eyes, eyes, hypno",
+    "alstad2": "hypno eyes, spiral eyes, eyes, hypno",
+    "alstad3": "hypno eyes, spiral eyes, eyes, hypno",
+    "alstad4": "hypno eyes, spiral eyes, eyes, hypno",
     "altf4": "emoji, dead",
     "altf4pose": "symbol, person",
     "alvos": "sleep, onomatopoeia, snore",
@@ -107,7 +108,7 @@
     "andriad4": "city, scene, rain, cyberpunk, scifi",
     "ang_2": "cum, splatter, cumshot",
     "angler1": "fucking, sex, riding, tongue",
-    "aniyahpregnation": "impregnation, ovum, sperm, impregnation chance, impreg, fertilisation",
+    "aniyahpregnation": "ovum, sperm, impregnation chance, impreg",
     "aniyahwombdump1": "womb, cum inside, internal, xray",
     "aridian7small": "pearl, ball",
     "apple pie": "food, pie",
@@ -124,7 +125,7 @@
     "arrowup1": "up arrow",
     "art-owner": "art owner, profile",
     "asanoha": "pattern, square",
-    "ashebhypno": "pendulum, hypnosis",
+    "ashebhypno": "pendulum, hypno",
     "ashowercm1": "cum, splatter, wall, shower, cumshot",
     "ashowercm2": "wall, splatter, cum, shower, cumshot",
     "assault": "shape, triangle, symbol",
@@ -153,10 +154,10 @@
     "baddaytouch1": "sorry, speech, speech bubble",
     "balloon_burst": "balloon, pop",
     "balloons": "balloons, party, confetti",
-    "bambiruby1": "hypno eyes, hypnosis, spiral eyes",
-    "bambiruby2": "spiral eyes, hypnosis, hypno eyes",
-    "bambiruby3": "hypno eyes, hypnosis, spiral eyes, mind control, 1girl",
-    "bambiruby4": "spiral eyes, hypnosis, hypno eyes",
+    "bambiruby1": "hypno eyes, spiral eyes, hypno",
+    "bambiruby2": "spiral eyes, hypno eyes, hypno",
+    "bambiruby3": "hypno eyes, spiral eyes, mind control, 1girl, hypno",
+    "bambiruby4": "spiral eyes, hypno eyes, hypno",
     "bamf": "onomatopoeia, effect, bamf, impact",
     "bbbh1": "right arrow",
     "bbbh2": "right arrow",
@@ -240,9 +241,9 @@
     "braincontrol2": "brain, brainwash",
     "bratstar": "dominate me, funny, dominate me you coward, coward",
     "bred_249": "womb, capacity, full",
-    "breedwarn": "sperm, ovum, fertilisation, impregnation, impreg",
+    "breedwarn": "sperm, ovum, impreg",
     "bring it on": "reaction, bring it on",
-    "brokenstare": "hypno eyes, hypnosis, spiral eyes, drool, drooling",
+    "brokenstare": "hypno eyes, spiral eyes, drool, drooling, hypno",
     "brokentoy": "fleshlight, broken, split",
     "bubblepop": "effect, pop",
     "bubblz": "bubble",
@@ -255,26 +256,26 @@
     "cacollar": "collar, choker",
     "camera": "camera, emoji",
     "campfire1": "campfire, fire, camp",
-    "campress1": "sex, mating press, cum, breeding, impregnation, impregnation chance, impreg, fucking, squirt, orgasm, cumshot",
-    "campress2": "sex, mating press, cum, breeding, impregnation, impregnation chance, impreg, fucking, squirt, orgasm, cumshot",
-    "campress3": "sex, mating press, cum, breeding, impregnation, impregnation chance, impreg, fucking, squirt, orgasm, cumshot",
-    "campress4": "sex, mating press, cum, breeding, impregnation, impregnation chance, impreg, fucking, squirt, orgasm, cumshot",
+    "campress1": "sex, mating press, cum, breeding, impregnation chance, impreg, fucking, squirt, orgasm, cumshot",
+    "campress2": "sex, mating press, cum, breeding, impregnation chance, impreg, fucking, squirt, orgasm, cumshot",
+    "campress3": "sex, mating press, cum, breeding, impregnation chance, impreg, fucking, squirt, orgasm, cumshot",
+    "campress4": "sex, mating press, cum, breeding, impregnation chance, impreg, fucking, squirt, orgasm, cumshot",
     "car keys": "car key, key",
     "carnivorous": "mouth, vampire, teeth",
     "canele": "food, chocolate, pudding",
     "cell_msg": "phone",
-    "chynis1": "spiral, hypnosis",
-    "chynis2": "hypnosis, spiral",
+    "chynis1": "spiral, hypno",
+    "chynis2": "spiral, hypno",
     "charizardvirus": "symbol, biohazard, toxic, fire, flame",
     "circle 1": "demon, sigil, magic",
     "circle 2": "sigil, demon, magic",
     "chest": "treasure, chest",
     "chibi apple": "apple, food, cherry",
     "chibi cake": "food, cake",
-    "canineimpregnation1": "impregnation, impreg, fertilisation, ovum, sperm, speech bubble",
-    "canineimpregnation2": "sperm, ovum, fertilisation, impreg, impregnation, speech bubble",
-    "cappuhypno1": "spiral eyes, hypno eyes, hypnosis",
-    "cappuhypno2": "hypnosis, hypno eyes, spiral eyes",
+    "canineimpregnation1": "impreg, ovum, sperm, speech bubble",
+    "canineimpregnation2": "sperm, ovum, impreg, speech bubble",
+    "cappuhypno1": "spiral eyes, hypno eyes, hypno",
+    "cappuhypno2": "hypno eyes, spiral eyes, hypno",
     "cartoonsroom7": "letter n",
     "cassr1": "rain, city, cyberpunk, purple, cityscape, scene",
     "cassr2": "rain, city, cyberpunk, purple, cityscape, scene",
@@ -306,15 +307,15 @@
     "coldborn2": "forest, environment forest, scene",
     "collar10": "collar, choker, crucifix",
     "collarme": "choker, collar",
-    "color_bars": "error, signal, tv, digital",
+    "color_bars": "error, signal, tv, digital, smpte, emergency, broadcast",
     "coloreggplant": "em, emoji, rainbow, eggplant",
-    "colors": "spiral, hypnosis, rainbow",
+    "colors": "spiral, rainbow, hypno",
     "compy": "monitor, tv, digital, retro, crt, computer, display",
     "conwaypulsar": "pattern, game of life, square, digital",
     "cookiefrog": "reaction, frog, eat",
     "cop55": "warning, alarm, siren, police, ambulance, blue",
     "crosshair": "target, aim, symbol",
-    "criticalleft": "impregnation, impreg, sperm, ovum",
+    "criticalleft": "impreg, sperm, ovum",
     "credit card": "purchase, credit card",
     "crashpowercrystal": "crystal, purple, pink, gem",
     "cp77warn3": "cyberpunk, digital, target, aim",
@@ -349,7 +350,7 @@
     "dngr": "danger, status, health, red, warning, heartrate, heartbeat",
     "dogcollar": "collar, choker",
     "dollonahole": "pink, onahole, sex toy",
-    "dollwash": "dronification, submit, empty, obey, brainwash, hypno eyes, hypnosis, doll",
+    "dollwash": "dronification, submit, empty, obey, brainwash, hypno eyes, doll, hypno",
     "domme wallet": "emoji, heel, high heel, red",
     "dronebitch1": "drone bitch, text",
     "dronebitch2": "drone bitch, text",
@@ -446,7 +447,7 @@
     "acceptpls": "i agree, agree, button, pointer",
     "admintome": "speech bubble, !, warning",
     "affinitygreen": "smile, green, emoji",
-    "aggressive impreg": "impregnation, impreg, sperm, ovum, fertilisation",
+    "aggressive impreg": "impreg, sperm, ovum",
     "agree": "checkmark, green, correct, tick",
     "aheemheem": "emoji, cry, sad, tears, melt",
     "akexpblue": "keycard, cyberpunk, digital, blue, security, pass",
@@ -677,7 +678,7 @@
     "finehealth1": "status, green, heartrate, heartbeat, fine",
     "finehealth2": "fine, heartbeat, heartrate, green, status",
     "filledup": "xray, womb, internal, cum inside, cum, cervix",
-    "fertilized1": "sperm, ovum, impregnation, impreg, fertilisation",
+    "fertilized1": "sperm, ovum, impreg",
     "ffquestcomplete": "quest, complete, success, green, checkmark, tick",
     "ffxivenzymes": "status, debuff, vore, melting, digestion",
     "fireleft": "fire, wall, burn, effect, inferno",
@@ -716,14 +717,14 @@
     "flurry2": "red, petals",
     "front door": "ring, circle, magic, void, hole, black",
     "froppytongue2": "border, red, line, laser",
-    "ftl1": "sperm, ovum, impregnation, fertilisation, speech bubble",
-    "ftl2": "speech bubble, fertilisation, impregnation, ovum, sperm",
-    "ftl3": "sperm, ovum, impregnation, fertilisation, speech bubble",
-    "ftl4": "speech bubble, fertilisation, impregnation, ovum, sperm",
-    "ftl5": "sperm, ovum, impregnation, fertilisation, speech bubble",
-    "ftl6": "speech bubble, fertilisation, impregnation, ovum, sperm",
-    "ftl7": "sperm, ovum, impregnation, fertilisation, speech bubble",
-    "ftl8": "speech bubble, fertilisation, impregnation, ovum, sperm",
+    "ftl1": "sperm, ovum, speech bubble, impreg",
+    "ftl2": "speech bubble, ovum, sperm, impreg",
+    "ftl3": "sperm, ovum, speech bubble, impreg",
+    "ftl4": "speech bubble, ovum, sperm, impreg",
+    "ftl5": "sperm, ovum, speech bubble, impreg",
+    "ftl6": "speech bubble, ovum, sperm, impreg",
+    "ftl7": "sperm, ovum, speech bubble, impreg",
+    "ftl8": "speech bubble, ovum, sperm, impreg",
     "fucktext": "fuck, word fuck, yellow, text",
     "gachi": "square, thomas, smile, creepy",
     "funorb": "orb, rainbow, circle, magic",
@@ -740,8 +741,8 @@
     "gas mask": "gas, mask, black, symbol",
     "gamingtv1": "retro, game, console, gaming, tv, snes",
     "gamingtv2": "snes, tv, gaming, console, game, retro",
-    "get pregnant": "speech bubble, ovum, sperm, impregnation, impreg, fertilisation",
-    "getimpreg": "fertilisation, impreg, impregnation, sperm, ovum, heart",
+    "get pregnant": "speech bubble, ovum, sperm, impreg",
+    "getimpreg": "impreg, sperm, ovum, heart",
     "ggcc1": "city, pastel, scene",
     "ggcc2": "scene, pastel, city",
     "ggcc3": "city, pastel, scene",
@@ -770,8 +771,8 @@
     "greymilk": "nipple, squirt, squirting, milk, jet, lactation, lactate",
     "gotten": "emoji, reach, grab",
     "gremlintime": "emoji, devious, gremlin, teehee, ponder",
-    "greenswirl": "green, spiral, hypnosis",
-    "greenspiral": "hypnosis, spiral, green",
+    "greenswirl": "green, spiral, hypno",
+    "greenspiral": "spiral, green, hypno",
     "greenpussypop": "candy, lollypop, lolly, green",
     "gowhiteboygo": "yippie, ddr, dance, game, silly",
     "gorgguts": "internal, flesh, vore, rectum, gullet, anal vore, cock vore",
@@ -860,17 +861,17 @@
     "horny 1": "horny, meter, overload",
     "horny 2": "overload, meter, horny",
     "hpheal": "health, heart, heal, green",
-    "hyphone": "hypno, phone, cell, hypnosis, spiral, rainbow",
-    "hypersperm": "ovum, sperm, impregnation, impreg, fertilisation",
+    "hyphone": "hypno, phone, cell, spiral, rainbow",
+    "hypersperm": "ovum, sperm, impreg",
     "hush2il": "sex toy, buttplug",
     "hub1": "bubbles, fish, goldfish, underwater",
     "hub": "fabric, rainbow, fluid",
     "iceheart": "gem, diamond, heart, blue",
     "hungrybubble": "im hungry, vore, speech bubble, delicious",
-    "hypnoslurp1": "hypno eyes, hypnosis, hypno, spiral, spiral eyes, blowjob",
-    "hypnoslurp2": "blowjob, spiral eyes, spiral, hypno, hypnosis, hypno eyes",
-    "hypnoslurp3": "hypno eyes, hypnosis, hypno, spiral, spiral eyes, blowjob",
-    "hypnoslurp4": "blowjob, spiral eyes, spiral, hypno, hypnosis, hypno eyes",
+    "hypnoslurp1": "hypno eyes, hypno, spiral, spiral eyes, blowjob",
+    "hypnoslurp2": "blowjob, spiral eyes, spiral, hypno, hypno eyes",
+    "hypnoslurp3": "hypno eyes, hypno, spiral, spiral eyes, blowjob",
+    "hypnoslurp4": "blowjob, spiral eyes, spiral, hypno, hypno eyes",
     "instantkill": "death, skull, instant kill, word instant kill, lightning",
     "inkdrip": "drip, black, drops, slime, oil",
     "inkfall": "oil, slime, drops, black, drip, ooze, wall, waterfall, cascade",
@@ -881,11 +882,11 @@
     "inkfall6": "cascade, waterfall, wall, ooze, drip, black, drops, slime, oil",
     "indanger": "health, status, danger, red, heartrate, heartbeat",
     "lennyface": "emoji, lenny, face, suggestive",
-    "hypnovisor": "dronification, drone, doll, empty, hypno eyes, hypnosis, hypno, headset, mind control, reprogramming",
+    "hypnovisor": "dronification, drone, doll, empty, hypno eyes, hypno, headset, mind control, reprogramming",
     "ifdlogoshine_1": "words, instant fucking defeat, defeat, instant",
     "ifdlogoshine_2": "words, instant fucking defeat, defeat, instant",
     "ifdlogoshine_3": "words, instant fucking defeat, defeat, instant",
-    "hypnostatus": "status, debuff, hypnosis, mind control",
+    "hypnostatus": "status, debuff, mind control, hypno",
     "i321": "scene, car, drive, flash, headlight",
     "i322": "scene, car, drive, flash, headlight",
     "i323": "scene, car, drive, flash, headlight",
@@ -921,7 +922,7 @@
     "shdb3": "cum, white, slime, drip, drop, ooze, dribble, splat",
     "sidedesign1": "gold, bracket, border, left, ornate",
     "sidedesign2": "border, bracket, gold, right",
-    "sidiglow": "glow, purple, spiral, pink, hypnosis, hypno, magic, orb",
+    "sidiglow": "glow, purple, spiral, pink, hypno, magic, orb",
     "sigil": "white, sigil, magic",
     "sigilb": "satan, demon, sigil, summoning, circle, pentagram",
     "shrivel": "tired, small, reaction, ptsd, goober",
@@ -993,7 +994,7 @@
     "amaok": "speech bubble, okay",
     "skull andcrossbones": "skull, dead, death, crossbones",
     "1wex": "ball, orb, sun, pink, glow, plasma",
-    "swirlpink": "hypnosis, hypno, spiral, pink",
+    "swirlpink": "hypno, spiral, pink",
     "angervein": "emoji, anger, stress, mark",
     "dashawnflisteig9": "word trans, text",
     "solyellow": "gem, citrine, yellow",
@@ -1021,7 +1022,7 @@
     "y-11": "stars, glow, pink, purple, two",
     "y-12": "two, purple, pink, glow, stars",
     "shadowrunlogoc": "word run, red, text",
-    "hypno dust": "hypno, hypnosis, spiral, red",
+    "hypno dust": "hypno, spiral, red",
     "kneesbookmark": "worship, bookmark, ooc, bookmarked, funny",
     "1tinynightshadetwitter": "vore, cockvore, cummification, digestion, internal, xray, cock vore, balls, clench, cum",
     "tinynightshadetwitter1": "cockvore, cummification, balls, clench, cum, xray, internal, vore, cock vore, digestion",
@@ -1052,12 +1053,12 @@
     "ilhp9-4": "bar, fight, battle, status, health, health bar",
     "ilhpm4": "health bar, health, status, battle, fight, bar",
     "imafuckbot": "speech bubble, beep, boop, fuckbot",
-    "impreg1": "sperm, ovum, impregnation, impreg, fertilisation",
-    "impregme": "fertilisation, impreg, impregnation, ovum, sperm",
-    "impregn1": "sperm, ovum, impregnation, impreg, fertilisation",
-    "impregn2": "fertilisation, impreg, impregnation, ovum, sperm",
-    "impregn3": "sperm, ovum, impregnation, impreg, fertilisation",
-    "impregn4": "fertilisation, impreg, impregnation, ovum, sperm",
+    "impreg1": "sperm, ovum, impreg",
+    "impregme": "impreg, ovum, sperm",
+    "impregn1": "sperm, ovum, impreg",
+    "impregn2": "impreg, ovum, sperm",
+    "impregn3": "sperm, ovum, impreg",
+    "impregn4": "impreg, ovum, sperm",
     "infinitegay": "rainbow, pattern, waves, sway, psychedelic",
     "information": "information, code, digital, board, green, computer",
     "itiswhatitis1": "windows, is what it is, popup, silly, funny, care, computer",
@@ -1380,7 +1381,7 @@
     "phonecall": "recorder, tape, cassette, answering, machine, phone, call, missed",
     "pills1": "pills, drugs, medicine",
     "pimpdcash": "cash, money, dollars, stack",
-    "pimpreg": "blue, pregnancy, impregnation, impreg, ovum, sperm, heart, impact",
+    "pimpreg": "blue, pregnancy, impreg, ovum, sperm, heart, impact",
     "pink pop": "glitter, sparkle, pink, stars",
     "peridotgem": "peridot, gem, green",
     "permavore": "skull, crossbones, white, death, dead",
@@ -1418,8 +1419,8 @@
     "dustyeyes": "eyes, pink, insane, wobble, strange, emoji",
     "typepred": "pokemon, type, pred",
     "smokingtime": "cigarette, smoking",
-    "hypno visor": "hypnosis, hypno, visor, headset, mind control, reprogramming",
-    "hypno spiral": "hypno, hypnosis, spiral, rainbow",
+    "hypno visor": "hypno, visor, headset, mind control, reprogramming",
+    "hypno spiral": "hypno, spiral, rainbow",
     "hypno locked": "padlock, lock, hypno, spiral, blue, white",
     "redmage": "gem, ruby, pink, red, rune, magic",
     "redrose": "rose, red, flower",
@@ -1516,57 +1517,57 @@
     "spermpoolright": "sperm",
     "spermpoolleft": "sperm",
     "spermpole": "sperm",
-    "spermblitz": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum2": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum3": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum4": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum5": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum6": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum7": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum8": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum9": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm12": "sperm, impregnation, impreg, ovum, blue, speech bubble",
+    "spermblitz": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum2": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum3": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum4": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum5": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum6": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum7": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum8": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum9": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm12": "sperm, impreg, ovum, blue, speech bubble",
     "sperm1": "sperm",
-    "sperm11": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
+    "sperm11": "sperm, impreg, ovum, blue, speech bubble",
     "sperm perk": "sperm",
     "sperm clog": "sperm",
-    "sperm and egg": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum12": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "sperm_meets_ovum1": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
+    "sperm and egg": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum12": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm_meets_ovum1": "sperm, impreg, ovum, blue, speech bubble",
     "spermankha": "sperm",
-    "spermacro": "sperm, impregnation, impreg, ovum, blue, speech bubble",
-    "spermgrab1": "sperm, impregnation, impreg, ovum, speech bubble, fertilisation",
-    "spermgrab2": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "spermgrab4": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
-    "spermgrab3": "sperm, impregnation, impreg, ovum, blue, speech bubble, fertilisation",
+    "spermacro": "sperm, impreg, ovum, blue, speech bubble",
+    "spermgrab1": "sperm, impreg, ovum, speech bubble",
+    "spermgrab2": "sperm, impreg, ovum, blue, speech bubble",
+    "spermgrab4": "sperm, impreg, ovum, blue, speech bubble",
+    "spermgrab3": "sperm, impreg, ovum, blue, speech bubble",
     "spermz": "sperm",
-    "spermegg": "impregnation, impreg, ovum, sperm, speech bubble, fertilisation",
-    "spermgangbang": "impregnation, impreg, ovum, sperm, blue, speech bubble",
-    "sperm_meets_ovum11": "impregnation, impreg, ovum, sperm, blue, speech bubble, fertilisation",
-    "spermbomb": "impregnation, impreg, ovum, sperm, blue, speech bubble, fertilisation",
-    "spermies": "impregnation, impreg, ovum, sperm, blue, speech bubble",
+    "spermegg": "impreg, ovum, sperm, speech bubble",
+    "spermgangbang": "impreg, ovum, sperm, blue, speech bubble",
+    "sperm_meets_ovum11": "impreg, ovum, sperm, blue, speech bubble",
+    "spermbomb": "impreg, ovum, sperm, blue, speech bubble",
+    "spermies": "impreg, ovum, sperm, blue, speech bubble",
     "greenspermdown": "sperm, symbol, shape, green",
     "greenspermleft": "sperm, symbol, shape, green",
     "greenspermup": "sperm, symbol, shape, green",
-    "monsperm1": "sperm, ovum, impregnation, impreg",
-    "monsperm2": "sperm, ovum, impregnation, impreg",
-    "monsperm3": "sperm, ovum, impregnation, impreg",
-    "monsperm4": "sperm, ovum, impregnation, impreg",
-    "msperm1": "sperm, ovum, impregnation, impreg",
-    "msperm2": "sperm, ovum, impregnation, impreg",
-    "msperm3": "sperm, ovum, impregnation, impreg",
-    "msperm4": "sperm, ovum, impregnation, impreg",
-    "alsperm2": "sperm, blue, impregnation, impreg, ovum, fertilisation, alien",
-    "alsperm3": "sperm, blue, impregnation, impreg, ovum, fertilisation, alien",
-    "alrasperm": "alien, sperm, ovum, impregnation, impreg",
-    "bluesperm1": "alien, sperm, ovum, impregnation, impreg",
-    "bluesperm2": "alien, sperm, ovum, impregnation, impreg",
-    "bluesperm3": "alien, sperm, ovum, impregnation, impreg",
-    "bluesperm4": "alien, sperm, ovum, impregnation, impreg",
-    "bugsperm1": "alien, sperm, ovum, impregnation, impreg",
-    "bugsperm2": "alien, sperm, ovum, impregnation, impreg",
-    "bugsperm3": "alien, sperm, ovum, impregnation, impreg",
-    "bugsperm4": "alien, sperm, ovum, impregnation, impreg",
+    "monsperm1": "sperm, ovum, impreg",
+    "monsperm2": "sperm, ovum, impreg",
+    "monsperm3": "sperm, ovum, impreg",
+    "monsperm4": "sperm, ovum, impreg",
+    "msperm1": "sperm, ovum, impreg",
+    "msperm2": "sperm, ovum, impreg",
+    "msperm3": "sperm, ovum, impreg",
+    "msperm4": "sperm, ovum, impreg",
+    "alsperm2": "sperm, blue, impreg, ovum, alien",
+    "alsperm3": "sperm, blue, impreg, ovum, alien",
+    "alrasperm": "alien, sperm, ovum, impreg",
+    "bluesperm1": "alien, sperm, ovum, impreg",
+    "bluesperm2": "alien, sperm, ovum, impreg",
+    "bluesperm3": "alien, sperm, ovum, impreg",
+    "bluesperm4": "alien, sperm, ovum, impreg",
+    "bugsperm1": "alien, sperm, ovum, impreg",
+    "bugsperm2": "alien, sperm, ovum, impreg",
+    "bugsperm3": "alien, sperm, ovum, impreg",
+    "bugsperm4": "alien, sperm, ovum, impreg",
     "waterfall1": "scene, nature, night, waterfall, river, stream, rocks, cliff, moon",
     "waterfall2": "scene, nature, night, waterfall, river, stream, rocks, cliff, moon",
     "waterfall3": "scene, nature, night, waterfall, river, stream, rocks, cliff, moon",
@@ -1575,23 +1576,23 @@
     "voided2": "drone, dronification, latex, smile, mooked, statue, petrification, rubberization, rubber, nulge",
     "voided3": "drone, dronification, latex, smile, mooked, statue, petrification, rubberization, rubber, nulge",
     "voided4": "drone, dronification, latex, smile, mooked, statue, petrification, rubberization, rubber, nulge",
-    "speared1": "sperm, fertilisation, ovum, impregnation, impreg, intense",
-    "speared2": "sperm, fertilisation, ovum, impregnation, impreg, intense",
-    "speared3": "sperm, fertilisation, ovum, impregnation, impreg, intense",
-    "speared4": "sperm, fertilisation, ovum, impregnation, impreg, intense",
+    "speared1": "sperm, ovum, impreg, intense",
+    "speared2": "sperm, ovum, impreg, intense",
+    "speared3": "sperm, ovum, impreg, intense",
+    "speared4": "sperm, ovum, impreg, intense",
     "special_ticket": "ticket, voucher, glow, yellow, special, token",
     "speedl": "speed, rush, impact, effect, gush, run, intense, suprise, stress, lines",
     "speedr": "speed, rush, impact, effect, gush, run, intense, suprise, stress, lines",
     "spellbook": "purple, book, spell, tome, magic, dark",
     "spellbookgif": "purple, book, spell, tome, magic, dark, glow, fire, flame",
     "spelltag": "spell, tag, talisman, token, paper, white",
-    "spirals2": "hypnosis, hypno, spiral, pink, vortex",
-    "spirals3": "hypnosis, hypno, spiral, black, white",
-    "spirals4": "hypnosis, hypno, spiral, black, white",
-    "spiralsway": "hypnosis, hypno, black, white, pendulum",
-    "swirlyeye": "hypnosis, hypno, eye, spiral eyes, black, white",
-    "voxhyp": "hypnosis, hypno",
-    "throblight": "hypnosis, hypno",
+    "spirals2": "hypno, spiral, pink, vortex",
+    "spirals3": "hypno, spiral, black, white",
+    "spirals4": "hypno, spiral, black, white",
+    "spiralsway": "hypno, black, white, pendulum",
+    "swirlyeye": "hypno, eye, spiral eyes, black, white",
+    "voxhyp": "hypno",
+    "throblight": "hypno",
     "splg1": "cum, bukkake, penis, sock, covered, slime, ooze, wet, eating, drinking, excessive",
     "splg2": "cum, bukkake, penis, sock, covered, slime, ooze, wet, eating, drinking, excessive",
     "splatter4": "cum, streak, splatter, cumshot",
@@ -1663,7 +1664,7 @@
     "smoochon": "smooch, one, free, token, voucher, pink, iou, kiss",
     "smoochon2": "smooch, one, free, token, voucher, pink, iou, kiss",
     "redshut": "stfu, shut, rl, bird, red, shup up, fingers, close, beak",
-    "redspiral2": "red, spiral, hypno, hypnosis",
+    "redspiral2": "red, spiral, hypno",
     "redspiro1": "spiral, red, pattern, spin, lines",
     "redspiro2": "spiral, red, pattern, spin, lines",
     "redspiro3": "spiral, red, pattern, spin, lines",
@@ -1862,10 +1863,10 @@
     "yordles": "fleshlight, pussy, sex toy, toy",
     "ztarget": "target, yellow, aim, locate",
     "zipper": "zip, zipper",
-    "zhs1": "hypnosis, hypno, blue, cyan",
-    "zhs2": "hypnosis, hypno, blue, cyan",
-    "zhs3": "hypnosis, hypno, blue, cyan",
-    "zhs4": "hypnosis, hypno, blue, cyan",
+    "zhs1": "hypno, blue, cyan",
+    "zhs2": "hypno, blue, cyan",
+    "zhs3": "hypno, blue, cyan",
+    "zhs4": "hypno, blue, cyan",
     "vanlust": "lust, grey, reaction, bite, lip, horny",
     "vetdrain": "-1, drain, orange",
     "vibez": "music, visualiser, black",
@@ -2098,7 +2099,239 @@
     "hearteyed": "heart eyes, stare, gaze, lust, mad, love, pulse, heart",
     "ablobhearteyes": "emoji, heart eyes, love, lust, wow, blob",
     "jobixpeek": "peek, purple, reaction, hide, hidden",
-    "jobixwarble": "lenny, face, warble, intensify, silly, horny, suggestive, excited, purple"
+    "jobixwarble": "lenny, face, warble, intensify, silly, horny, suggestive, excited, purple",
+    "cringeharold": "meme, rl, hide, pain, harold, cringe, sm, smile",
+    "comehere": "hand, grab, left",
+    "magehand": "mage, hand, spell, magic, blue, glow, ghost",
+    "canard": "orange, speech bubble, conversation, talk, symbol, glow",
+    "cum brain": "cum, brain, half, full, filling, blue",
+    "moanbubble": "speech bubble, hearts, ahn, text, love, lust, gasp",
+    "grilldcheese": "grilled, cheese, sandwich, food",
+    "bbsmooch": "bimbo, rl, pink, lips, plush, kiss",
+    "facemelter": "skull, black, oil, drip, slime, death, dead, face, melter",
+    "shruggers": "reaction, shrug, grey, dunno",
+    "pillarsmall": "pillar, pedistal, marble, column, art, display",
+    "noaharrow": "pink, arrow, up arrow, up",
+    "iskrw": "screw, object, junk",
+    "ahegao eyes": "emoji, eyes, look, up, ahegao, crosseyed",
+    "flurrygaytext": "text, pink, gay, gaaaay",
+    "lilkissd": "lipstick, mark, kiss, small",
+    "cokebaggy": "coke, drugs, bag",
+    "slrighttop": "border, pattern, ornate, corner",
+    "awesome1": "really, awesome, text, pink, wobble, excite",
+    "awesome2": "really, awesome, text, pink, wobble, excite",
+    "typetwink": "pokemon, type, twink",
+    "huhhcat": "huh, cat, meme, confused, what, wtf",
+    "caprisun spin": "caprisun, drink, spin, juice",
+    "chgr1": "breeding, impreg, sperm, ovum, child, granted, text",
+    "chgr2": "breeding, impreg, sperm, ovum, child, granted, text",
+    "chgr3": "breeding, impreg, sperm, ovum, child, granted, text",
+    "save top": "save, game, icon, button, raingow",
+    "tvscreenl": "border, tv, screen, retro, blank space",
+    "tvscreenr": "border, tv, screen, retro, blank space",
+    "tvfk1": "tv, cursed, ring, sex, horror, analog, retro",
+    "tvfk2": "tv, cursed, ring, sex, horror, analog, retro",
+    "tvfk3": "tv, cursed, ring, sex, horror, analog, retro",
+    "tvfk4": "tv, cursed, ring, sex, horror, analog, retro",
+    "tvcr1": "tv, sex, analog, retro, glitch, static, distortion",
+    "tvcr2": "tv, sex, analog, retro, glitch, static, distortion",
+    "tvcr3": "tv, sex, analog, retro, glitch, static, distortion",
+    "tvcr4": "tv, sex, analog, retro, glitch, static, distortion",
+    "tvcr5": "tv, sex, analog, retro, glitch, static, distortion",
+    "tvcr6": "tv, sex, analog, retro, glitch, static, distortion",
+    "tvv": "tv, static, rainbow",
+    "tvx18": "rating, xxx, 18+, restricted, age, black",
+    "tvz1": "error, signal, tv, digital, smpte, emergency, broadcast, 69, channel",
+    "tvz2": "error, signal, tv, digital, smpte, emergency, broadcast, 69, channel",
+    "tvz3": "error, signal, tv, digital, smpte, emergency, broadcast, 69, channel",
+    "tvz4": "error, signal, tv, digital, smpte, emergency, broadcast, 69, channel",
+    "cctv": "warning, yellow, sign, cctv, security, recording, watching",
+    "hypnosistv": "tv, hypno, spiral, black, white",
+    "purtv1": "tv, brainwash, hypno, spiral, purple, scene, brainwashing",
+    "purtv2": "tv, brainwash, hypno, spiral, purple, scene, brainwashing",
+    "purtv3": "tv, brainwash, hypno, spiral, purple, scene, brainwashing",
+    "purtv4": "tv, brainwash, hypno, spiral, purple, scene, brainwashing",
+    "sadatv11": "analog, horror, ring, tv, haunted, spooky, scary, curse, glitch",
+    "streetvs": "text, vs, fight",
+    "toiletvacancy": "bathroom, toilet, lock, shitting, vacant",
+    "violentvi4": "imperfection, glitch, distortion, tv, analog",
+    "twitchtvlogo": "twitch, icon, logo, purple",
+    "p4tv": "tv, distortion, pattern, hypno, black, white, squares, portal",
+    "old tv": "tv, retro, distortion, emergency, smpte",
+    "marsblastvallhalla": "vial, chemical, science, orange",
+    "mercuryblastvallhalla": "vial, chemical, science, blue",
+    "moonblastvallhalla": "vial, chemical, science, pink",
+    "indexpointingatviewer": "emoji, point, hand, finger",
+    "nutvb1": "fuck, panic, sex, offscreen, fucking, grit, teeth, pant, 2girls",
+    "nutvb2": "fuck, panic, sex, offscreen, fucking, grit, teeth, pant, 2girls",
+    "nutvb3": "fuck, panic, sex, offscreen, fucking, grit, teeth, pant, 2girls",
+    "girldick1": "penis",
+    "girldick2": "penis",
+    "dickpotion": "penis, potion, blue, bottle, vial",
+    "cuminme": "ahegao, reaction, red, lust",
+    "chaosemeralds": "chaos, emeralds, gems, rainbow",
+    "pinkglitter": "pink, glitter, sparkles",
+    "power telepathy": "yellow, eye, symbol",
+    "fersmile": "teeth, sharp, smile",
+    "angermoji": "emoji, anger, angry, furious, stress, mark",
+    "goldlipstick": "gold, lipstick, kiss",
+    "seibar": "feral, emoji, horny, teetj, wobble",
+    "greenportal": "portal, green, magic",
+    "potion-s2": "vial, potion, purple, glow",
+    "latexpot": "potion, vial, black, latex",
+    "tenmoelite": "skull, alien, teeth, demon, eyes, glow, evil",
+    "slooot": "black, arrow, text, slut",
+    "nttm1": "cyan, digital, blue, cyberpunk, scene, city, computer, scifi",
+    "nttm2": "cyan, digital, blue, cyberpunk, scene, city, computer, scifi",
+    "nttm3": "cyan, digital, blue, cyberpunk, scene, city, computer, scifi",
+    "bdel1": "1girl, pink, rl, ass, gyrate, bed, scene, hump",
+    "bdel2": "1girl, pink, rl, ass, gyrate, bed, scene, hump",
+    "bdel3": "1girl, pink, rl, ass, gyrate, bed, scene, hump",
+    "bdel4": "1girl, pink, rl, ass, gyrate, bed, scene, hump",
+    "bdel5": "1girl, pink, rl, ass, gyrate, bed, scene, hump",
+    "bdel6": "1girl, pink, rl, ass, gyrate, bed, scene, hump",
+    "bdel7": "1girl, pink, rl, ass, gyrate, bed, scene, hump",
+    "bdel8": "1girl, pink, rl, ass, gyrate, bed, scene, hump",
+    "purple eyez": "creepy, horror, eyes, pink",
+    "spankslut": "spank, symbol, black",
+    "qrl": "quotation, mark, quote, black",
+    "qrr": "quotation, mark, quote, black",
+    "thong1": "black, thong, panties, latex, rubber",
+    "y-10": "stars, blue, purple, sparkle, magic",
+    "chazdick": "grey, penis, throb, semi, erect, precum",
+    "chazdick2": "grey, penis, throb, semi, erect, precum",
+    "yrtdytrvcd": "shape, line, red, square",
+    "loverlasttrack": "blue, rewind, symbol, playback",
+    "1ping": "red, circle, 1, notification, ping",
+    "bbcbucks": "gold, coin, spade",
+    "factoriothingsgoingbad": "red, triangle, x, warning",
+    "granted-access": "access, granted, phone, icon, unlock",
+    "penivenomwomb": "black, white, heart",
+    "bigdick 1": "penis",
+    "bigdick 2": "penis",
+    "bigdick 3": "penis",
+    "bigdick 4": "penis",
+    "react10": "reaction, yippie, smile, laptop",
+    "skunktum1": "vore, digestion, skeleton, skull, bones, white, digested, tight, guts, stomach, belly, gut",
+    "skunktum2": "vore, digestion, skeleton, skull, bones, white, digested, tight, guts, stomach, belly, gut",
+    "skunktum3": "vore, digestion, skeleton, skull, bones, white, digested, tight, guts, stomach, belly, gut",
+    "skunktum4": "vore, digestion, skeleton, skull, bones, white, digested, tight, guts, stomach, belly, gut",
+    "master shard": "green, emerald, shard, crystal",
+    "master hand": "hand, grab, right",
+    "mastersword": "zelda, master, sword, weapon",
+    "redlight": "traffic, light, red, stop",
+    "mesnakefood": "hypno, speech bubble",
+    "pantype": "pokemon, type, pan, pansexual",
+    "cuteboyspls1": "cute, boys, please, thank, you, text, speech bubble",
+    "mysterypot": "potion, bottle, vial, pink, orange, ???, mystery, unknown",
+    "arborealfrippery2": "weed, drugs, cannabis, leaf",
+    "potiongreen": "potion, bottle, vial, green, chemical",
+    "kind of hot": "thats, kind, of, hot, speech bubble",
+    "meurgrabl": "grab, hand, armor, knight, gauntlet, glove, left",
+    "meurgrabr": "grab, hand, armor, knight, gauntlet, glove, right",
+    "tf2 crit": "game, text, green, critical, hit",
+    "fourstar": "stars, 4, yellow",
+    "ringmarriage": "gold, rings, wedding, proposal, marriage",
+    "200extra": "plus, +, yellow, pulse, symbol",
+    "framebot1": "border, bracket, purple, ornate",
+    "framebot2": "border, bracket, purple, ornate",
+    "possuwat": "emoji, what, stunned, panic, blush, embarrassed, wtf, eyes, bulge, oh",
+    "ychmouthg": "ych, yellow, mouth, square",
+    "midnamark": "sigil, magic, circle, white",
+    "stllk1": "scene, run, running, sprint, forest, escape, horror, rl, chase",
+    "stllk2": "scene, run, running, sprint, forest, escape, horror, rl, chase",
+    "stllk3": "scene, run, running, sprint, forest, escape, horror, rl, chase",
+    "loveperfume": "bottle, spray, perfume, pink, glass",
+    "bond1": "gem, blue",
+    "bond2": "gem, green",
+    "bond3": "gem, green",
+    "bond4": "gem, yellow",
+    "bandaidsticker": "sticker, plaster, band, aid, medical",
+    "reading is hard1": "ooc, furry, preference, no, furries, anthro, roleplay",
+    "reading is hard2": "ooc, furry, preference, no, furries, anthro, roleplay",
+    "u-turn": "black, arrow, down arrow, down, return, back",
+    "reikomark": "blue, anchor, symbol",
+    "typegoat1": "pokemon, type, goat",
+    "abjur01": "sigil, magic, blue",
+    "abjur02": "sigil, magic, red",
+    "access g": "green, digital, flash, access, granted, hack, success, computer",
+    "biyit": "text, it, blue",
+    "lecherous": "emoji, lust, lick, horny, suggestive, sultry, lecherous",
+    "pussygiant": "pussy, gape, huge, vaginal, canal",
+    "pussygao": "meme, cat, reaction, tired, out, dead",
+    "pussysluttt": "text, arrow, left arrow, left, pusst, slut",
+    "pussyslam1": "sex, fucking, agressive, fast, pounding, penis",
+    "pussyslam2": "sex, fucking, agressive, fast, pounding, penis",
+    "pussyslam3": "sex, fucking, agressive, fast, pounding, penis",
+    "pussyslam4": "sex, fucking, agressive, fast, pounding, penis",
+    "bloopussypop": "blue, lollypop, lolly, candy, kawaii",
+    "castrohypnopussy1": "hypno, pussy, rainbow",
+    "castrohypnopussy2": "hypno, pussy, rainbow",
+    "cpussy": "speech bubble, pussy",
+    "einshelmpussy1": "spreading, pussy, gape, finger, slimy, masturbation",
+    "einshelmpussy2": "spreading, pussy, gape, finger, slimy, masturbation",
+    "einshelmpussy3": "spreading, pussy, gape, finger, slimy, masturbation",
+    "einshelmpussy4": "spreading, pussy, gape, finger, slimy, masturbation",
+    "einshelmpussy5": "spreading, pussy, gape, finger, slimy, masturbation",
+    "einshelmpussy6": "spreading, pussy, gape, finger, slimy, masturbation",
+    "embpussy": "black, latex, pussy, pink",
+    "pocket pussy": "sex toy, onahole, onasheath, pink, toy, cum, used, hang, grip, grab",
+    "pocket pussy1": "sex toy, onahole, onasheath, pink, toy, cum, used, hang, grip, grab",
+    "pocket pussy2": "sex toy, onahole, onasheath, pink, toy, cum, used, hang, grip, grab",
+    "pinkpussypop": "candy, lolly, lollypop, sweet, kawaii, pink",
+    "mpussy": "mouth, gape, tongue, hungry, horny, needy, swallow, point, feed, hentai",
+    "nicpussy5": "pussy, rl, masturbation, frig, wet, slimy",
+    "bulltoy": "onahole, sex toy, toy, inanimate transformation, transformation",
+    "cromchy": "emoji, creepy, hungry, horror, bite, teeth, fangs, give",
+    "bloodrose2": "rose, red, drip, blood, drop, flower",
+    "amazedface": "amazed, wow, reaction, wonder, blush, cool, love, rainbow",
+    "justicebred": "impreg, sperm, ovum, blue, alien",
+    "magic ring": "ring, gem, jewelry, brown, bronze",
+    "mal crystal": "yellow, crystal, gem, sparkle, plumbob",
+    "heartbeat unstoppable": "text, cum, heart, intense, excite, pulse, throb",
+    "brainslurp": "green, tentacle, brain, vore, slurp, suck, brainvore, brainfuck",
+    "type psychic": "pokemon, type, psychic",
+    "whawah": "cute, bun, small, drool, smile, :d",
+    "bluepanties": "blue, underwear, sparkle, sparkles, panties",
+    "jerktard1": "fleshlight, masturbation, sex toy, penis, dildo, onahole",
+    "jerktard2": "fleshlight, masturbation, sex toy, penis, dildo, onahole",
+    "jerktard3": "fleshlight, masturbation, sex toy, penis, dildo, onahole",
+    "jerktard4": "fleshlight, masturbation, sex toy, penis, dildo, onahole",
+    "aangel54": "pink, lips, puffy, shiny, metallic",
+    "fromallsides": "impreg, ovum, sperm, intense",
+    "silvervalelooksee": "reaction, huh, what, confused, look, around, panic, nothing, here, wtf, neko",
+    "reneinterrupt1": "symbol, mouse, cursor, click, computer, tutorial",
+    "wvrb": "usb, technology, device, storage, data, stopwatch, timer",
+    "bees1": "funny, fear, bees, reaction, silly, panic, terror, scream",
+    "bees2": "funny, fear, bees, reaction, silly, panic, terror, scream",
+    "bees3": "funny, fear, bees, reaction, silly, panic, terror, scream",
+    "voidgem": "gem, purple, magic",
+    "sparkly metal suffering": "metal, silver, cube, foam, scifi",
+    "talibred1": "impreg, ovum, sperm, speech bubble",
+    "talibred2": "impreg, ovum, sperm, speech bubble",
+    "ikey": "gold, key, sticker",
+    "smt": "white, black, sigil",
+    "goodboye": "good, boy, speech bubble",
+    "loner": "leather, patch, radioactive, radiation, nuclear",
+    "bright powder": "green, bag, pouch, powder",
+    "ebonysuck": "pink, suck, text",
+    "murdercube": "gel, slime, cube, jello, jelly",
+    "itlurks": "teeth, pink, grin, smile, foam, drool, feral",
+    "diethree": "dice, die, white",
+    "justimagine": "speech bubble, imagine",
+    "feralberry": "emoji, feral, horny, teeth, drool, saliva, foaming, purple",
+    "relic 1": "slab, stone, egyptian, hieroglyph, spin",
+    "lipbite emoji": "emoji, bite, lip, lipbite, lust, horny",
+    "frenching1": "kissing, snog, tongue",
+    "frenching2": "kissing, snog, tongue",
+    "frenching3": "kissing, snog, tongue",
+    "frenching4": "kissing, snog, tongue",
+    "balls_1": "balls, teabag, face, blind, balls on face, big",
+    "balls_2": "balls, teabag, face, blind, balls on face, big",
+    "ballsof1": "balls, teabag, face, blind, balls on face, big",
+    "ballsof2": "balls, teabag, face, blind, balls on face, big",
+    "ballsof3": "balls, teabag, face, blind, balls on face, big",
+    "ballsof4": "balls, teabag, face, blind, balls on face, big"
   },
   "grid": {
     "bambiruby1": {
@@ -3465,22 +3698,6 @@
       "spec": "#1x2",
       "pos": 1
     },
-    "vs1": {
-      "spec": "#2x2",
-      "pos": 0
-    },
-    "vs2": {
-      "spec": "#2x2",
-      "pos": 1
-    },
-    "vs3": {
-      "spec": "#2x2",
-      "pos": 2
-    },
-    "vs4": {
-      "spec": "#2x2",
-      "pos": 3
-    },
     "vscene1": {
       "spec": "#2x2",
       "pos": 0
@@ -3640,6 +3857,374 @@
     "hearteyes4_3": {
       "spec": "#1x3",
       "pos": 2
+    },
+    "awesome1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "awesome2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "chgr1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "chgr2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "chgr3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "tvscreenl": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "tvscreenr": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "tvfk1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "tvfk2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "tvfk3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "tvfk4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "tvcr1": {
+      "spec": "#2x3",
+      "pos": 0
+    },
+    "tvcr2": {
+      "spec": "#2x3",
+      "pos": 1
+    },
+    "tvcr3": {
+      "spec": "#2x3",
+      "pos": 2
+    },
+    "tvcr4": {
+      "spec": "#2x3",
+      "pos": 3
+    },
+    "tvcr5": {
+      "spec": "#2x3",
+      "pos": 4
+    },
+    "tvcr6": {
+      "spec": "#2x3",
+      "pos": 5
+    },
+    "tvz1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "tvz2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "tvz3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "tvz4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "purtv1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "purtv2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "purtv3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "purtv4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "nutvb1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "nutvb2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "nutvb3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "girldick1": {
+      "spec": "#2x1",
+      "pos": 0
+    },
+    "girldick2": {
+      "spec": "#2x1",
+      "pos": 1
+    },
+    "nttm1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "nttm2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "nttm3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "bdel1": {
+      "spec": "#2x4",
+      "pos": 0
+    },
+    "bdel2": {
+      "spec": "#2x4",
+      "pos": 1
+    },
+    "bdel3": {
+      "spec": "#2x4",
+      "pos": 2
+    },
+    "bdel4": {
+      "spec": "#2x4",
+      "pos": 3
+    },
+    "bdel5": {
+      "spec": "#2x4",
+      "pos": 4
+    },
+    "bdel6": {
+      "spec": "#2x4",
+      "pos": 5
+    },
+    "bdel7": {
+      "spec": "#2x4",
+      "pos": 6
+    },
+    "bdel8": {
+      "spec": "#2x4",
+      "pos": 7
+    },
+    "chazdick": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "chazdick2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "bigdick": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "bigdick 1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "bigdick1": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "bigdick 2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "bigdick 3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "bigdick 4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "skunktum1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "skunktum2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "skunktum3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "skunktum4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "cuteboyspls1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "cuteboyspls2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "cuteboyspls3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "cuteboyspls4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "stllk1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "stllk2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "stllk3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "reading is hard1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "reading is hard2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "pussyslam1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "pussyslam2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "pussyslam3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "pussyslam4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "einshelmpussy1": {
+      "spec": "#2x3",
+      "pos": 0
+    },
+    "einshelmpussy2": {
+      "spec": "#2x3",
+      "pos": 1
+    },
+    "einshelmpussy3": {
+      "spec": "#2x3",
+      "pos": 2
+    },
+    "einshelmpussy4": {
+      "spec": "#2x3",
+      "pos": 3
+    },
+    "einshelmpussy5": {
+      "spec": "#2x3",
+      "pos": 4
+    },
+    "einshelmpussy6": {
+      "spec": "#2x3",
+      "pos": 5
+    },
+    "pocket pussy1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "pocket pussy2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "jerktard1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "jerktard2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "jerktard3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "jerktard4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "bees1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "bees2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "bees3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "frenching1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "frenching2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "frenching3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "frenching4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "balls": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "balls_1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "balls_2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "ballsof1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "ballsof2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "ballsof3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "ballsof4": {
+      "spec": "#2x2",
+      "pos": 3
     }
   },
   "synonyms": [
@@ -3721,6 +4306,20 @@
       "slaves": [
         "ejaculation"
       ]
+    },
+    {
+      "master": "impreg",
+      "slaves": [
+        "impregnation",
+        "fertilisation",
+        "fertilization"
+      ]
+    },
+    {
+      "master": "hypno",
+      "slaves": [
+        "hypnosis"
+      ]
     }
   ],
   "duplicates": [
@@ -3767,6 +4366,10 @@
       "phone",
       "xmsg",
       "you got mail"
+    ],
+    [
+      "toiletvacancy",
+      "toiletvacant"
     ]
   ]
 }
