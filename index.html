@@ -131,7 +131,7 @@
     <div class="hero-eyebrow">Tampermonkey Script · xariah.net</div>
     <h1>Xariah<span>Tagger</span><br>User Guide</h1>
     <p class="hero-sub">Tag eicons by description, search them instantly, and copy BBCode in one click — all from inside Xariah.</p>
-    <div class="version-badge">v0.0.26 — Alpha</div>
+    <div class="version-badge">v0.0.38 — Alpha</div>
   </div>
 
   <!-- TOC -->
@@ -189,7 +189,11 @@
     </ol>
     <div class="card gold">
       <div class="card-title">Confirming the version</div>
-      <p style="margin:0;color:var(--text-dim);font-size:14px;">The tag bar shows <strong style="color:var(--text);font-family:'Space Mono',monospace;">v0.0.26</strong> in small text. If it's different after updating, check that only <em>one</em> copy of the script is enabled in Tampermonkey.</p>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">The tag bar shows <strong style="color:var(--text);font-family:'Space Mono',monospace;">v0.0.38</strong> in small text. If it's different after updating, check that only <em>one</em> copy of the script is enabled in Tampermonkey.</p>
+    </div>
+    <div class="card teal">
+      <div class="card-title">Favicon activation indicator</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">When XariahTagger is fully operational, the browser tab icon changes to the XariahTagger tag icon. If it stays as the Xariah logo, the script's shadow-root hooks are not active — this usually means Tampermonkey's <strong style="color:var(--text)">Allow user scripts</strong> browser permission is not enabled. Check Tampermonkey's extension settings for your browser.</p>
     </div>
   </div>
 
@@ -201,7 +205,7 @@
     <p>A dark panel pinned to the top of Xariah. Type to search — results appear as you type.</p>
     <div class="ui-mockup">
       <div>🏷️ <strong style="color:var(--gold)">Tag Search</strong></div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#555;">v0.0.26</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#555;">v0.0.38</div>
       <div class="ui-badge">Collapse</div>
       <div class="ui-badge red">Tag Mode</div>
       <div style="flex:1;min-width:140px;background:#000;border:1px solid #444;border-radius:4px;padding:6px 12px;color:#888;font-size:13px;">Search tags… or "exact phrase"</div>
@@ -242,13 +246,18 @@
     <details>
       <summary>Suggestions, Copy Last, and chip colours</summary>
       <div class="details-body">
-        <p>As you type, chips appear above the input:</p>
+        <p>As you type, two kinds of chips appear above the input:</p>
         <div class="chip-demo">
           <div class="chip green">recently used ↻</div>
           <div class="chip blue">library match +</div>
         </div>
         <p><strong style="color:var(--green)">Green</strong> — your 16 most recently used tags. <strong style="color:var(--blue)">Blue</strong> — tags from your library matching what you're typing. Clicking either adds the tag without losing your cursor focus.</p>
-        <p>The <strong>↩ Copy Last</strong> button loads all tags from your most recently saved eicon — great for tagging similar eicons in a row. It does not copy grid position.</p>
+        <p>A third row of purple chips also appears:</p>
+        <div class="chip-demo">
+          <div class="chip purple">related tag ✦</div>
+        </div>
+        <p><strong style="color:var(--purple)">Purple</strong> — tags most commonly found together with the tags you've already added on this eicon. These are based on co-occurrence across your entire library, weighted so a tag that appears with 100% of heart-tagged eicons ranks above one that merely has a larger raw count. Purple chips don't filter when you type — they stay visible at all times based on your active tags.</p>
+        <p>The <strong>↩ Copy Last</strong> button loads all tags from your most recently saved eicon. If the current eicon already has a grid position set (for example, from the smart grid detection), Copy Last preserves the existing grid position rather than overwriting it — only the tags are copied.</p>
       </div>
     </details>
   </div>
@@ -336,6 +345,14 @@
         <p>XariahTagger strips trailing numbers or short suffixes and groups eicons sharing the same base name. <code>naturebg1</code>, <code>naturebg2</code>, <code>naturebg3</code> → base <code>naturebg</code>. Bases under 3 characters are never grouped. This auto-grouping is separate from linked sets — grid tags define <em>position</em> in a layout, while linked sets mark <em>identical artwork</em>.</p>
       </div>
     </details>
+
+    <h3>Smart grid detection</h3>
+    <p>When you open the tag editor for an eicon that belongs to a detectable set (other eicons on the page share the same name base), a <strong>Drag grid to size</strong> panel appears below the input. A small grid of cells is shown with a ⚓ anchor at the top-left. Drag the <strong>↕ top handle</strong> to add or remove rows, and the <strong>↔ right handle</strong> to add or remove columns. The opposite dimension auto-adjusts to fit the detected sibling count.</p>
+    <p>When you click <strong>Confirm ✓</strong>, grid positions are automatically assigned to all detected siblings in sorted order — you don't need to open each eicon individually. The current eicon's position is pre-selected in the position picker. The same auto-assignment happens if you type a <code>#NxM</code> grid tag manually while the eicon is part of a detectable set.</p>
+    <div class="callout">
+      <div class="callout-icon">💡</div>
+      <p>Selecting multiple eicons from the same set and using <strong>🏷️ Tag Selected</strong> also triggers grid auto-detection — if all selected eicons share a base name, positions are assigned automatically and the grid spec appears pre-filled in the batch modal.</p>
+    </div>
   </div>
 
   <!-- 8 -->
@@ -491,15 +508,17 @@
         <div class="chip yellow">active tag ×</div>
         <div class="chip green">recent ↻</div>
         <div class="chip blue">suggestion +</div>
+        <div class="chip purple">related ✦</div>
         <div class="chip red">#2x3 ×</div>
         <div class="chip grey">&&</div>
         <div class="chip ghost"><span class="q">"</span>exact phrase<span class="q">"</span></div>
         <div class="chip top">top tag</div>
       </div>
       <p style="font-size:13px;margin:12px 0 0;color:var(--text-dim);">
-        <strong style="color:var(--gold)">Yellow</strong> — tags currently on this eicon (click × to remove)<br>
+        <strong style="color:var(--gold)">Yellow</strong> — tags on this eicon (click × to remove)<br>
         <strong style="color:var(--green)">Green</strong> — recently used tags (click adds, focus stays)<br>
         <strong style="color:var(--blue)">Blue</strong> — library suggestions matching your typed query<br>
+        <strong style="color:var(--purple)">Purple</strong> — association suggestions based on co-occurrence with existing tags<br>
         <strong style="color:var(--red)">Red</strong> — active grid tag (right of input)<br>
         <strong style="color:var(--grey)">Grey</strong> — linked set marker (left of input, click to manage)<br>
         <strong style="color:#aaa;">Ghost</strong> — quoted exact-phrase in the search bar (click to edit)<br>
@@ -520,7 +539,7 @@
   </div>
 
   <div class="footer">
-    XariahTagger · v0.0.26 · Alpha · For use on xariah.net/eicons<br>
+    XariahTagger · v0.0.38 · Alpha · For use on xariah.net/eicons<br>
     All data stored locally · Blocked tags never leave your browser<br><br>
     <span style="color:var(--text-faint)">Built with 🏷️ and a lot of shadow-root wrangling</span>
   </div>
