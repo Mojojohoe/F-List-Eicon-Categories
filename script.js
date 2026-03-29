@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Xariah Tagger
-// @version      0.0.28
+// @version      0.0.38
 // @description  Alpha version of the tagging & search system for xariah eicon database
 // @author       Jobix
 // @match        *://xariah.net/eicons*
@@ -14,7 +14,7 @@
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '0.0.28';
+    const SCRIPT_VERSION = '0.0.38';
 
     // URL of the developer-maintained tag library on GitHub Pages.
     // Update this file in the repo to push new tags to all users.
@@ -224,6 +224,7 @@
     let _gridCache       = null;  // { [eiconName]: { spec, pos } }
     let _recentCache     = null;  // string[]
     let _uniqueTagsCache = null;  // Set<string> — all distinct tags across the library
+    let _assocCache      = null;  // Map<tag, Map<tag, count>> — co-occurrence counts
     let _blockedCache    = null;  // string[] — blocked tags, NEVER exported
 
     const getAllTags = () => {
@@ -249,6 +250,8 @@
     const saveFullLibrary = (data) => {
         _tagCache = data;
         _uniqueTagsCache = null; // tag set must be rebuilt after any library change
+        _assocCache      = null; // co-occurrence map must be rebuilt too
+        _tagFreqCache    = null; // tag frequency counts must be rebuilt too
         localStorage.setItem('x_tags', JSON.stringify(data));
     };
 
@@ -342,6 +345,67 @@
             );
         }
         return _uniqueTagsCache;
+    };
+
+    // Builds and caches two structures:
+    //   _assocCache: Map<tag, Map<tag, cooccurrence_count>>
+    //   _tagFreqCache: Map<tag, eicon_count>  (how many eicons carry each tag)
+    //
+    // Scoring uses conditional probability: for each source tag in currentTags,
+    // the score for a candidate tag = cooccurrence(source, candidate) / freq(source).
+    // These are summed across all source tags.
+    //
+    // This means: if 100 of 120 eicons tagged "heart" also have "pink",
+    // pink scores 100/120 = 0.833 for that source. Summing across multiple
+    // source tags rewards tags that are strongly associated with ALL of them.
+    let _tagFreqCache = null;
+
+    const getAssocMap = () => {
+        if (_assocCache !== null) return _assocCache;
+
+        _assocCache    = new Map(); // tag → Map<coTag, count>
+        _tagFreqCache  = new Map(); // tag → total eicons carrying it
+
+        for (const tagStr of Object.values(getAllTags())) {
+            const tags = tagStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+            // Deduplicate within a single eicon's tags to avoid double-counting
+            const unique = [...new Set(tags)];
+            unique.forEach(t => _tagFreqCache.set(t, (_tagFreqCache.get(t) || 0) + 1));
+            for (let i = 0; i < unique.length; i++) {
+                for (let j = 0; j < unique.length; j++) {
+                    if (i === j) continue;
+                    if (!_assocCache.has(unique[i])) _assocCache.set(unique[i], new Map());
+                    const inner = _assocCache.get(unique[i]);
+                    inner.set(unique[j], (inner.get(unique[j]) || 0) + 1);
+                }
+            }
+        }
+        return _assocCache;
+    };
+
+    // Returns up to N candidate tags scored by conditional probability summed across currentTags.
+    // score(candidate) = Σ  cooccurrence(source, candidate) / freq(source)
+    //                    source ∈ currentTags
+    const getAssocSuggestions = (currentTags, n = 6) => {
+        if (currentTags.length === 0) return [];
+        const assoc = getAssocMap(); // also populates _tagFreqCache
+        const scores = new Map();
+
+        currentTags.forEach(tag => {
+            const freq    = _tagFreqCache ? (_tagFreqCache.get(tag) || 1) : 1;
+            const related = assoc.get(tag);
+            if (!related) return;
+            related.forEach((count, other) => {
+                if (currentTags.includes(other)) return;
+                // Normalize by frequency of the source tag so common tags don't dominate
+                scores.set(other, (scores.get(other) || 0) + count / freq);
+            });
+        });
+
+        return [...scores.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, n)
+            .map(([tag]) => tag);
     };
 
     let _synonymCache = null;  // Array<{ master: string, slaves: string[] }>
@@ -686,7 +750,7 @@
         #x-tag-mode-toggle.active { background: #e74c3c; color: white; border-color: #c0392b; box-shadow: 0 0 8px rgba(231,76,60,0.5); }
         #x-tag-mode-banner { display: none; background: #2d0a0a; border-top: 1px solid #e74c3c; padding: 4px 15px; font-size: 11px; color: #e74c3c; letter-spacing: 0.3px; }
         #x-tag-mode-banner.visible { display: block; }
-        #x-tag-modal { background: #1a1a1a; border: 2px solid gold; border-radius: 8px; width: 90%; max-width: 450px; padding: 20px; }
+        #x-tag-modal { background: #1a1a1a; border: 2px solid gold; border-radius: 8px; width: 92%; max-width: 560px; padding: 20px; }
         #x-modal-title { color: gold; font-size: 13px; font-weight: bold; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
         #x-modal-title span { color: #fff; font-weight: normal; }
 
@@ -698,6 +762,87 @@
         .chip.green { background: #28a745; color: #fff; cursor: pointer; }
         .chip.red { background: #e74c3c; color: #fff; cursor: default; }
         .chip.grey { background: #555; color: #ccc; cursor: pointer; border: 1px solid #777; }
+        .chip.purple { background: #7c3aed; color: #fff; cursor: pointer; border: 1px solid #9d7ef5; }
+
+        /* Smart grid detection panel */
+        /* Smart grid drag-to-size widget */
+        #x-smart-grid-hint {
+            display: none; margin-top: 10px; padding: 12px 14px;
+            background: #1a0a0a; border: 1px solid #e74c3c44; border-radius: 6px;
+        }
+        #x-smart-grid-hint.visible { display: block; }
+        #x-smart-grid-hint-label {
+            font-size: 10px; color: #e74c3c88; text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 10px;
+        }
+        /* Smart grid hint — position:relative so sidebar can be absolute within it */
+        #x-smart-grid-hint {
+            display: none; margin-top: 10px; padding: 10px 14px;
+            background: #1a0a0a; border: 1px solid #e74c3c44; border-radius: 6px;
+            position: relative;
+        }
+        #x-smart-grid-hint.visible { display: block; }
+        #x-smart-grid-hint-label {
+            font-size: 10px; color: #e74c3c88; text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 10px;
+        }
+        /* Sidebar: absolutely pinned to the right of the hint panel — never moves */
+        #x-sg-sidebar {
+            position: absolute; top: 10px; right: 14px;
+            display: flex; flex-direction: column;
+            align-items: flex-start; gap: 10px;
+        }
+        /* Canvas: just holds the grid wrap, padded right to avoid sidebar overlap */
+        #x-smart-grid-canvas {
+            display: inline-block;
+            padding-right: 130px;
+        }
+        #x-sg-wrap {
+            position: relative; display: inline-block;
+            user-select: none;
+            margin-top: 10px; /* room for top handle */
+        }
+        /* Top drag handle */
+        #x-sg-top-handle {
+            position: absolute; top: -10px; left: 0; right: 0; height: 10px;
+            cursor: ns-resize; display: flex; align-items: center; justify-content: center;
+            background: #e74c3c33; border-radius: 3px 3px 0 0;
+            border: 1px solid #e74c3c55; border-bottom: none;
+            transition: background 0.15s;
+        }
+        #x-sg-top-handle:hover { background: #e74c3c55; }
+        #x-sg-top-handle::after { content: '↕'; color: #e74c3c; font-size: 10px; }
+        /* Right drag handle */
+        #x-sg-right-handle {
+            position: absolute; top: 0; right: -10px; bottom: 0; width: 10px;
+            cursor: ew-resize; display: flex; align-items: center; justify-content: center;
+            background: #e74c3c33; border-radius: 0 3px 3px 0;
+            border: 1px solid #e74c3c55; border-left: none;
+            transition: background 0.15s;
+        }
+        #x-sg-right-handle:hover { background: #e74c3c55; }
+        #x-sg-right-handle::after { content: '↔'; color: #e74c3c; font-size: 10px; }
+        /* Cells */
+        #x-sg-cells { display: inline-grid; gap: 4px; }
+        .sgc {
+            width: 24px; height: 24px; border-radius: 3px;
+            background: rgba(231,76,60,0.18); border: 1px solid #e74c3c55;
+        }
+        .sgc.anchor {
+            background: rgba(231,76,60,0.55); border: 1px solid #e74c3c;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; color: #e74c3c;
+        }
+        #x-sg-size-label {
+            font-family: monospace; font-size: 15px; color: #e74c3c88;
+            pointer-events: none;
+        }
+        #x-sg-confirm {
+            background: #e74c3c; color: white; border: none; border-radius: 4px;
+            padding: 6px 14px; font-size: 12px; font-weight: bold;
+            cursor: pointer; transition: background 0.15s; white-space: nowrap;
+        }
+        #x-sg-confirm:hover { background: #c0392b; }
 
         /* Grid tag widget */
         #x-grid-area { margin-top: 10px; display: none; }
@@ -947,16 +1092,15 @@
                 rBox.appendChild(c);
             });
 
-        // Tag library suggestions — uses cached unique tag set, rebuilt only on save
+        // Tag library suggestions — 6 chips, shown when user is typing a query
         if (q) {
             Array.from(getUniqueTagSet())
                 .filter(t => t.includes(q) && !activeTags.includes(t))
-                .slice(0, 8)
+                .slice(0, 6)
                 .forEach(tag => {
                     const c = document.createElement('div');
                     c.className = 'chip blue';
                     c.innerHTML = `${tag} +`;
-                    // Prevent mousedown from stealing focus away from the input
                     c.addEventListener('mousedown', e => e.preventDefault());
                     c.onclick = () => {
                         activeTags.push(tag);
@@ -966,6 +1110,31 @@
                         updateSuggestions(suggestionQuery);
                     };
                     sBox.appendChild(c);
+                });
+        }
+
+        // Association suggestions — always show up to 6 purple chips based on existing tags.
+        // Not filtered by query: they reflect what's already tagged, not what's being typed.
+        const assocBox = document.getElementById('x-assoc-suggestions');
+        if (assocBox) {
+            assocBox.innerHTML = '';
+            getAssocSuggestions(activeTags, 6)
+                .filter(t => !activeTags.includes(t))
+                .slice(0, 6)
+                .forEach(tag => {
+                    const c = document.createElement('div');
+                    c.className = 'chip purple';
+                    c.innerHTML = `${tag} ✦`;
+                    c.title = 'Often tagged together with your current tags';
+                    c.addEventListener('mousedown', e => e.preventDefault());
+                    c.onclick = () => {
+                        activeTags.push(tag);
+                        renderModalChips();
+                        const input = document.getElementById('x-modal-input');
+                        if (input) { input.value = ''; input.focus(); }
+                        updateSuggestions(suggestionQuery);
+                    };
+                    assocBox.appendChild(c);
                 });
         }
     }
@@ -1020,6 +1189,179 @@
         return n;
     }
 
+    // Detects if this eicon likely belongs to a multi-tile set (other eicons share its base name),
+    // and if so renders an interactive 5×5 grid for choosing the set dimensions.
+    // The grid is anchored at bottom-left. Hovering any cell sets the prospective rows×cols.
+    // Clicking the #?×? label commits it as the active grid spec.
+    // Smart grid hint — drag-to-size widget.
+    // Top handle: drag up = more rows, down = fewer rows.
+    // Right handle: drag right = more cols, left = fewer cols.
+    // Changing cols auto-adjusts rows to ceil(count/cols) and vice versa.
+    // Anchor icon ⚓ is fixed at bottom-left.
+    // Extracts the numeric/alpha suffix after the group base for sorting.
+    // Handles: trailing digits (abc1→1), separator+digits (abc-1→1),
+    // row-col encoded digits (abc11→[1,1] treated as 11 for numeric sort),
+    // trailing letters (abca→a).
+    function extractSuffix(name) {
+        const base = getGroupBase(name);
+        return name.toLowerCase().slice(base.length).replace(/^[-_ ]/, '') || '';
+    }
+
+    // Sorts sibling names into a predictable grid order.
+    // Detects row-col encoded pattern (e.g. abc11, abc12, abc21) and sorts by [row,col].
+    // Falls back to natural alphanumeric sort.
+    function sortSiblings(names) {
+        // Check if all suffixes match a row-col pattern (1-2 digit row + 1-2 digit col)
+        const rcPattern = /^(\d{1,2})(\d{1,2})$/;
+        const rcSuffixes = names.map(n => extractSuffix(n).match(rcPattern));
+        if (rcSuffixes.every(Boolean)) {
+            return [...names].sort((a, b) => {
+                const [, ar, ac] = rcSuffixes[names.indexOf(a)];
+                const [, br, bc] = rcSuffixes[names.indexOf(b)];
+                return (parseInt(ar) - parseInt(br)) || (parseInt(ac) - parseInt(bc));
+            });
+        }
+        // Natural sort by suffix (handles letters, numbers, mixed)
+        return [...names].sort((a, b) => extractSuffix(a).localeCompare(extractSuffix(b), undefined, { numeric: true }));
+    }
+
+    // After setting a grid spec for `currentIconName`, automatically saves grid data
+    // for all detected siblings, assigning positions in sorted order (row-major).
+    // Returns the position assigned to `currentIconName` so the modal can pre-select it.
+    function autoApplyGridToSiblings(spec) {
+        const base = getGroupBase(currentIconName);
+
+        // Collect siblings from DOM + library + gridData
+        const sibSet = new Set([currentIconName]);
+        findDeep(document, 'x-eiconview').forEach(el => {
+            const n = getIconNameFromElement(el);
+            if (n && getGroupBase(n) === base) sibSet.add(n);
+        });
+        Object.keys(getAllGridData()).forEach(n => { if (getGroupBase(n) === base) sibSet.add(n); });
+        Object.keys(getAllTags()).forEach(n => { if (getGroupBase(n) === base) sibSet.add(n); });
+
+        const sorted = sortSiblings([...sibSet]);
+        const total = spec.rows * spec.cols;
+
+        sorted.forEach((name, idx) => {
+            if (idx < total) {
+                saveIconGrid(name, spec.raw, idx);
+            }
+        });
+
+        return sorted.indexOf(currentIconName);
+    }
+
+    function renderSmartGridHint(name) {
+        const hint  = document.getElementById('x-smart-grid-hint');
+        if (!hint) return;
+
+        if (activeGridSpec || !name) { hint.classList.remove('visible'); return; }
+
+        const base = getGroupBase(name);
+
+        // Siblings: live DOM first (catches untagged), then library + gridData
+        const siblings = new Set();
+        findDeep(document, 'x-eiconview').forEach(el => {
+            const n = getIconNameFromElement(el);
+            if (n && getGroupBase(n) === base) siblings.add(n);
+        });
+        const gridData = getAllGridData();
+        const lib = getAllTags();
+        Object.keys(gridData).forEach(n => { if (getGroupBase(n) === base) siblings.add(n); });
+        Object.keys(lib).forEach(n => { if (getGroupBase(n) === base) siblings.add(n); });
+
+        if (siblings.size < 2) { hint.classList.remove('visible'); return; }
+
+        hint.classList.add('visible');
+
+        const CELL = 22, GAP = 3, MAX = 5;
+        const count = siblings.size;
+
+        // Initial suggested size — square-ish
+        let curCols = Math.min(MAX, Math.ceil(Math.sqrt(count)));
+        let curRows = Math.min(MAX, Math.ceil(count / curCols));
+
+        const cellsEl   = document.getElementById('x-sg-cells');
+        const sizeLabel = document.getElementById('x-sg-size-label');
+        const topHandle = document.getElementById('x-sg-top-handle');
+        const rightHandle = document.getElementById('x-sg-right-handle');
+        const confirmBtn = document.getElementById('x-sg-confirm');
+        if (!cellsEl || !sizeLabel || !topHandle || !rightHandle || !confirmBtn) return;
+
+        const STEP = CELL + GAP; // px per grid unit
+
+        const rebuild = () => {
+            cellsEl.style.gridTemplateColumns = `repeat(${curCols}, ${CELL}px)`;
+            cellsEl.style.gridTemplateRows    = `repeat(${curRows}, ${CELL}px)`;
+            cellsEl.style.gap = `${GAP}px`;
+            cellsEl.innerHTML = '';
+            for (let r = 0; r < curRows; r++) {
+                for (let c = 0; c < curCols; c++) {
+                    const cell = document.createElement('div');
+                    const isAnchor = r === 0 && c === 0;
+                    cell.className = 'sgc' + (isAnchor ? ' anchor' : '');
+                    if (isAnchor) cell.textContent = '⚓';
+                    cellsEl.appendChild(cell);
+                }
+            }
+            sizeLabel.textContent = `#${curRows}×${curCols}`;
+        };
+
+        // Drag logic — shared between top and right handles
+        const makeDragHandler = (axis) => (startEvt) => {
+            startEvt.preventDefault();
+            const startX = startEvt.clientX;
+            const startY = startEvt.clientY;
+            const startCols = curCols;
+            const startRows = curRows;
+
+            const onMove = (e) => {
+                if (axis === 'x') {
+                    const delta = e.clientX - startX;
+                    const newCols = Math.max(1, Math.min(MAX, startCols + Math.round(delta / STEP)));
+                    if (newCols !== curCols) {
+                        curCols = newCols;
+                        curRows = Math.min(MAX, Math.ceil(count / curCols));
+                        rebuild();
+                    }
+                } else {
+                    const delta = startY - e.clientY; // up = more rows
+                    const newRows = Math.max(1, Math.min(MAX, startRows + Math.round(delta / STEP)));
+                    if (newRows !== curRows) {
+                        curRows = newRows;
+                        curCols = Math.min(MAX, Math.ceil(count / curRows));
+                        rebuild();
+                    }
+                }
+            };
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        };
+
+        topHandle.onmousedown   = makeDragHandler('y');
+        rightHandle.onmousedown = makeDragHandler('x');
+
+        confirmBtn.onclick = () => {
+            const spec = parseGridTag(`#${curRows}x${curCols}`);
+            if (spec) {
+                activeGridSpec = spec;
+                // Auto-assign positions to all detected siblings
+                const myPos = autoApplyGridToSiblings(spec);
+                activeGridPos = myPos >= 0 && myPos < spec.rows * spec.cols ? myPos : null;
+                hint.classList.remove('visible');
+                renderGridArea();
+                updateSuggestions(document.getElementById('x-modal-input')?.value.toLowerCase() || '');
+            }
+        };
+
+        rebuild();
+    }
+
     function renderGridArea() {
         const chipSlot  = document.getElementById('x-grid-chip-slot');
         const gridArea  = document.getElementById('x-grid-area');
@@ -1034,6 +1376,10 @@
             return;
         }
 
+        // Spec is active — hide the smart grid hint
+        const hint = document.getElementById('x-smart-grid-hint');
+        if (hint) hint.classList.remove('visible');
+
         // Red chip with remove button
         const chip = document.createElement('div');
         chip.className = 'chip red';
@@ -1042,6 +1388,8 @@
             activeGridSpec = null;
             activeGridPos  = null;
             renderGridArea();
+            // Re-show the smart hint if still relevant
+            renderSmartGridHint(currentIconName);
             updateSuggestions(document.getElementById('x-modal-input')?.value.toLowerCase() || '');
         };
         chipSlot.appendChild(chip);
@@ -1143,13 +1491,29 @@
                     <div id="x-recent-suggestions" class="chip-container" style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px;"></div>
 
                     <div class="chip-section-label">Suggestions</div>
-                    <div id="x-suggestions" class="chip-container" style="margin-bottom:10px;"></div>
+                    <div id="x-suggestions" class="chip-container" style="margin-bottom:6px;"></div>
+                    <div id="x-assoc-suggestions" class="chip-container" style="margin-bottom:10px;"></div>
 
                     <div id="x-input-row">
                         <div id="x-left-chip-slot"></div>
                         <input type="text" id="x-modal-input" placeholder="Search/Add tags… or #2x4 for a grid"
                             style="padding:10px; background:#000; color:#fff; border:1px solid #444; border-radius:4px; box-sizing:border-box;">
                         <div id="x-grid-chip-slot"></div>
+                    </div>
+
+                    <div id="x-smart-grid-hint">
+                        <div id="x-smart-grid-hint-label">⚓ Drag grid to size</div>
+                        <div id="x-sg-sidebar">
+                            <div id="x-sg-size-label">#1×1</div>
+                            <button id="x-sg-confirm">Confirm ✓</button>
+                        </div>
+                        <div id="x-smart-grid-canvas">
+                            <div id="x-sg-wrap">
+                                <div id="x-sg-top-handle"></div>
+                                <div id="x-sg-right-handle"></div>
+                                <div id="x-sg-cells"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="x-grid-area">
@@ -1191,8 +1555,28 @@
                     const parsed = parseGridTag(v);
                     if (parsed) {
                         activeGridSpec = parsed;
-                        activeGridPos  = null;
                         input.value = '';
+                        const hint = document.getElementById('x-smart-grid-hint');
+                        if (hint) hint.classList.remove('visible');
+                        // Auto-assign positions to siblings
+                        if (!currentIconName) {
+                            // Batch mode — use sorted-first of selected eicons as reference
+                            const sorted = sortSiblings([...selectedIconNames]);
+                            if (sorted.length > 0) {
+                                const prevName = currentIconName;
+                                currentIconName = sorted[0];
+                                const myPos = autoApplyGridToSiblings(parsed);
+                                currentIconName = prevName;
+                                activeGridPos = null; // batch — no single position
+                            } else {
+                                activeGridPos = null;
+                            }
+                        } else if (getGroupBase(currentIconName) !== currentIconName) {
+                            const myPos = autoApplyGridToSiblings(parsed);
+                            activeGridPos = myPos >= 0 && myPos < parsed.rows * parsed.cols ? myPos : null;
+                        } else {
+                            activeGridPos = null;
+                        }
                         renderGridArea();
                         updateSuggestions('');
                         return;
@@ -1235,12 +1619,16 @@
             overlay.querySelector('#x-copy-last-btn').onclick = () => {
                 if (!lastSavedEntry) return;
                 activeTags = [...lastSavedEntry.tags];
-                if (lastSavedEntry.gridSpec) {
-                    activeGridSpec = parseGridTag(lastSavedEntry.gridSpec);
-                    activeGridPos  = null; // position is intentionally not copied
-                } else {
-                    activeGridSpec = null;
-                    activeGridPos  = null;
+                // Only copy the grid spec if there isn't one already set for this eicon.
+                // If we auto-applied a grid position, preserve it — Copy Last is for tags only.
+                if (!activeGridSpec) {
+                    if (lastSavedEntry.gridSpec) {
+                        activeGridSpec = parseGridTag(lastSavedEntry.gridSpec);
+                        activeGridPos  = null; // position is intentionally not copied
+                    } else {
+                        activeGridSpec = null;
+                        activeGridPos  = null;
+                    }
                 }
                 renderModalChips();
                 renderGridArea();
@@ -1305,6 +1693,7 @@
         updateSuggestions('');
         renderModalChips();
         renderGridArea();
+        renderSmartGridHint(name);
         renderLeftChipSlot(name);
     }
 
@@ -2477,7 +2866,12 @@
         const updateOffset = () => {
             const h = manager.getBoundingClientRect().height;
             document.documentElement.style.setProperty('--tag-h', h + 'px');
-            document.querySelectorAll('x-mainapp, .app-root, #app').forEach(el => el.style.transform = `translateY(${h}px)`);
+            document.querySelectorAll('x-mainapp, .app-root, #app').forEach(el => {
+                el.style.transform    = `translateY(${h}px)`;
+                // marginBottom compensates for translateY so the document scroll
+                // height increases by the same amount — preventing bottom content cutoff.
+                el.style.marginBottom = `${h}px`;
+            });
         };
         new ResizeObserver(updateOffset).observe(manager);
 
@@ -2995,34 +3389,79 @@
             const raw = getStoredTags(n);
             return new Set(raw ? raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : []);
         });
-        // Start with all tags from the first eicon, then intersect
         const common = tagSets[0];
         tagSets.slice(1).forEach(set => {
             for (const t of [...common]) { if (!set.has(t)) common.delete(t); }
         });
         activeTags = [...common];
 
+        // Grid detection: if all selected eicons share the same group base, try to
+        // detect the grid size and auto-assign positions.
+        // Uses the first eicon as the representative (for autoApplyGridToSiblings).
+        const bases = names.map(n => getGroupBase(n));
+        const allSameBase = bases.length > 1 && bases.every(b => b === bases[0]) && bases[0] !== names[0].toLowerCase();
+
+        let batchGridApplied = false;
+        if (allSameBase) {
+            // Count total siblings visible in DOM + library + gridData
+            const base = bases[0];
+            const sibSet = new Set(names);
+            findDeep(document, 'x-eiconview').forEach(el => {
+                const n = getIconNameFromElement(el);
+                if (n && getGroupBase(n) === base) sibSet.add(n);
+            });
+            Object.keys(getAllGridData()).forEach(n => { if (getGroupBase(n) === base) sibSet.add(n); });
+            Object.keys(getAllTags()).forEach(n => { if (getGroupBase(n) === base) sibSet.add(n); });
+            const count = sibSet.size;
+
+            if (count >= 2) {
+                // Suggest a grid spec based on sibling count
+                const sugCols = Math.min(5, Math.ceil(Math.sqrt(count)));
+                const sugRows = Math.min(5, Math.ceil(count / sugCols));
+                const spec = parseGridTag(`#${sugRows}x${sugCols}`);
+                if (spec) {
+                    // Temporarily set currentIconName to the sorted-first sibling so
+                    // autoApplyGridToSiblings has a reference point.
+                    const sorted = sortSiblings([...sibSet]);
+                    const prevName = currentIconName;
+                    currentIconName = sorted[0];
+                    autoApplyGridToSiblings(spec);
+                    currentIconName = prevName; // restore batch mode flag
+                    activeGridSpec = spec;
+                    batchGridApplied = true;
+                }
+            }
+        }
+
         if (!document.getElementById('x-tag-modal-overlay')) {
-            // The modal doesn't exist yet — call openTagModal with a dummy name to build it,
-            // then we'll overwrite the title. But simpler: just ensure modal is built.
             openTagModal(names[0]);
-            // Immediately override the state we just set
             currentIconName = '';
             activeTags = [...common];
         }
 
-        // Set modal state directly and show
-        document.getElementById('x-modal-icon-name').textContent =
-            `${names.length} eicons`;
+        // Set modal state and show
+        const countLabel = batchGridApplied
+            ? `${names.length} eicons (grid auto-assigned)`
+            : `${names.length} eicons`;
+        document.getElementById('x-modal-icon-name').textContent = countLabel;
         document.getElementById('x-tag-modal-overlay').style.display = 'flex';
 
         const input = document.getElementById('x-modal-input');
         if (input) { input.value = ''; input.focus(); }
 
+        if (batchGridApplied) {
+            // Show the grid area pre-filled — don't show smart hint
+            const hint = document.getElementById('x-smart-grid-hint');
+            if (hint) hint.classList.remove('visible');
+            renderGridArea();
+        } else {
+            renderGridArea();
+            renderSmartGridHint('');
+        }
+
         suggestionQuery = '';
         updateSuggestions('');
         renderModalChips();
-        renderGridArea();
         renderLeftChipSlot('');
     }
 
