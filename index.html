@@ -38,11 +38,11 @@
   .section-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px}
   h2{font-size:28px;font-weight:600;letter-spacing:-0.5px;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:12px}
   h2 .icon{font-size:22px;width:42px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  h3{font-size:18px;font-weight:600;color:var(--text);margin:32px 0 10px}
+  h3{font-size:18px;font-weight:600;color:var(--text);margin:28px 0 10px}
   h3::before{content:'▸ ';color:var(--gold);font-size:14px}
   p{color:var(--text-dim);margin-bottom:14px}
   p strong{color:var(--text);font-weight:500}
-  a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold-dim);}
+  a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold-dim)}
   a:hover{border-bottom-color:var(--gold)}
 
   .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin:16px 0}
@@ -70,13 +70,14 @@
   details[open] summary::before{transform:rotate(90deg)}
   summary:hover{background:var(--surface2)}
   .details-body{padding:0 18px 18px;border-top:1px solid var(--border)}
-  .details-body p:first-child,.details-body h3:first-child{margin-top:14px}
+  .details-body p:first-child{margin-top:14px}
 
   .chip-demo{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;align-items:center}
   .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;font-size:13px;font-weight:500}
   .chip.yellow{background:var(--gold);color:#000}
   .chip.green{background:var(--green);color:#000}
   .chip.blue{background:var(--blue);color:#fff}
+  .chip.purple{background:var(--purple);color:#fff}
   .chip.red{background:var(--red);color:#fff}
   .chip.grey{background:#555;color:#ccc;border:1px solid #777}
   .chip.ghost{background:transparent;border:1px dashed #666;color:#aaa;font-size:12px}
@@ -89,16 +90,12 @@
   .ft-icon{font-size:26px;margin-bottom:10px} .ft-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
   .ft-desc{font-size:13px;color:var(--text-dim);line-height:1.5}
 
-  /* Mockup search bar */
-  .mock-search{background:#000;border:1px solid var(--border);border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0;font-size:13px}
-  .mock-search:focus-within,.mock-search.active{border-color:var(--gold)}
-  .mock-cursor{color:var(--gold);opacity:.7;animation:blink 1.1s steps(1) infinite}
-  @keyframes blink{0%,100%{opacity:.7}50%{opacity:0}}
-
   .ui-mockup{background:#1a1a1a;border:3px solid var(--gold);border-radius:8px;padding:10px 16px;margin:16px 0;font-size:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .ui-badge{background:var(--gold);color:#000;font-weight:700;font-size:11px;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
-  .ui-badge.teal{background:var(--teal)} .ui-badge.red{background:var(--red);color:#fff}
-  .ui-badge.subtle{background:#333;color:#aaa}
+  .ui-badge.red{background:var(--red);color:#fff} .ui-badge.subtle{background:#333;color:#aaa}
+
+  .mock-search{background:#000;border:1px solid var(--border);border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0;font-size:13px}
+  .mock-search.active{border-color:var(--gold)}
 
   kbd{display:inline-block;background:var(--surface2);border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;padding:2px 8px;font-family:'Space Mono',monospace;font-size:12px;color:var(--text);white-space:nowrap}
   code{font-family:'Space Mono',monospace;font-size:13px;background:var(--surface2);padding:1px 6px;border-radius:3px;color:var(--teal)}
@@ -110,7 +107,7 @@
   .ref-table td:first-child{color:var(--text);font-family:'Space Mono',monospace;font-size:12px;white-space:nowrap}
 
   .grid-demo{display:inline-grid;gap:3px;background:#0d0d0d;border:1px solid var(--border);border-radius:6px;padding:4px;margin:12px 0}
-  .grid-cell{width:48px;height:48px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .grid-cell{width:40px;height:40px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px}
   .grid-cell.sel{background:#2a1a1a;border-color:var(--red)}
 
   hr{border:none;border-top:1px solid var(--border);margin:48px 0}
@@ -126,56 +123,33 @@
 <body>
 <div class="page">
 
-  <!-- HERO -->
   <div class="hero">
     <div class="hero-eyebrow">Tampermonkey Script · xariah.net</div>
     <h1>Xariah<span>Tagger</span><br>User Guide</h1>
-    <p class="hero-sub">Tag eicons by description, search them instantly, and copy BBCode in one click — all from inside Xariah.</p>
+    <p class="hero-sub">Tag eicons by description, find them instantly, and copy BBCode in one click.</p>
     <div class="version-badge">v0.0.38 — Alpha</div>
   </div>
 
-  <!-- TOC -->
   <div class="toc">
     <div class="toc-title">Contents</div>
     <ol>
-      <li><a href="#what">What is XariahTagger?</a></li>
       <li><a href="#install">Installation</a></li>
       <li><a href="#tagbar">The Tag Search Bar</a></li>
       <li><a href="#tagging">Tagging Eicons</a></li>
       <li><a href="#batch">Batch Tagging &amp; Selection</a></li>
-      <li><a href="#search">Searching — Keywords, Phrases &amp; Negatives</a></li>
+      <li><a href="#search">Searching</a></li>
       <li><a href="#grids">Grid Tags &amp; Eicon Sets</a></li>
       <li><a href="#dupes">Linked Sets (&&)</a></li>
-      <li><a href="#blocked">Blocked Tags 🚫</a></li>
+      <li><a href="#blocked">Blocked Tags</a></li>
       <li><a href="#tagmode">Tag Mode</a></li>
       <li><a href="#io">Import &amp; Export</a></li>
       <li><a href="#devtags">Developer Tag Library (📡)</a></li>
-      <li><a href="#devtools">Dev Tools Window</a></li>
+      <li><a href="#devtools">Dev Tools</a></li>
       <li><a href="#ref">Quick Reference</a></li>
     </ol>
   </div>
 
-  <!-- 1 -->
-  <div class="section" id="what">
-    <div class="section-label">Introduction</div>
-    <h2><span class="icon">❓</span>What is XariahTagger?</h2>
-    <p><strong>Xariah.net</strong> is a database for F-List eicons. The problem: eicons can only be found by their exact filename. XariahTagger lets you add plain-English tags and search by description instead.</p>
-    <div class="feature-grid">
-      <div class="feature-tile"><div class="ft-icon">🏷️</div><div class="ft-name">Tag Eicons</div><div class="ft-desc">Add descriptive tags directly on the page.</div></div>
-      <div class="feature-tile"><div class="ft-icon">🔍</div><div class="ft-name">Smart Search</div><div class="ft-desc">Exact matches first. Phrase search. Synonyms. Negatives.</div></div>
-      <div class="feature-tile"><div class="ft-icon">📋</div><div class="ft-name">One-Click Copy</div><div class="ft-desc">Click any result to copy its BBCode instantly.</div></div>
-      <div class="feature-tile"><div class="ft-icon">🔲</div><div class="ft-name">Grid Sets</div><div class="ft-desc">Multi-tile sets copy as a complete BBCode block.</div></div>
-      <div class="feature-tile"><div class="ft-icon">🚫</div><div class="ft-name">Blocked Tags</div><div class="ft-desc">Censor any content category — stays private, never exported.</div></div>
-      <div class="feature-tile"><div class="ft-icon">🛠️</div><div class="ft-name">Dev Tools</div><div class="ft-desc">Browse by tag, synonyms, linked sets, and blocked tags.</div></div>
-    </div>
-    <div class="callout">
-      <div class="callout-icon">💡</div>
-      <p>Everything is stored <strong>locally in your browser</strong>. Nothing is sent to any server. Blocked tags in particular are <strong>never exported</strong> and exist only on your device.</p>
-    </div>
-  </div>
-
-  <!-- 2 -->
-  <hr>
+  <!-- INSTALLATION -->
   <div class="section" id="install">
     <div class="section-label">Getting Started</div>
     <h2><span class="icon">⚙️</span>Installation</h2>
@@ -185,24 +159,20 @@
       <li><span>Open the Tampermonkey dashboard and click <strong>Create a new script</strong>.</span></li>
       <li><span>Delete the default content and paste in the full XariahTagger script.</span></li>
       <li><span>Press <kbd>Ctrl</kbd>&thinsp;+&thinsp;<kbd>S</kbd> to save.</span></li>
-      <li><span>Navigate to <strong>xariah.net/eicons</strong> — the gold tag bar appears at the top. A welcome message will appear on your first visit.</span></li>
+      <li><span>Navigate to <strong>xariah.net/eicons</strong>. The gold tag bar appears at the top, and a welcome message appears on your first visit.</span></li>
     </ol>
-    <div class="card gold">
-      <div class="card-title">Confirming the version</div>
-      <p style="margin:0;color:var(--text-dim);font-size:14px;">The tag bar shows <strong style="color:var(--text);font-family:'Space Mono',monospace;">v0.0.38</strong> in small text. If it's different after updating, check that only <em>one</em> copy of the script is enabled in Tampermonkey.</p>
-    </div>
-    <div class="card teal">
-      <div class="card-title">Favicon activation indicator</div>
-      <p style="margin:0;color:var(--text-dim);font-size:14px;">When XariahTagger is fully operational, the browser tab icon changes to the XariahTagger tag icon. If it stays as the Xariah logo, the script's shadow-root hooks are not active — this usually means Tampermonkey's <strong style="color:var(--text)">Allow user scripts</strong> browser permission is not enabled. Check Tampermonkey's extension settings for your browser.</p>
+    <div class="callout">
+      <div class="callout-icon">🏷️</div>
+      <p>When XariahTagger is fully active, the browser tab icon changes to the XariahTagger logo. If it stays as the default Xariah icon, check that Tampermonkey's <strong>Allow user scripts</strong> browser permission is enabled in your browser's extension settings.</p>
     </div>
   </div>
 
-  <!-- 3 -->
+  <!-- TAG BAR -->
   <hr>
   <div class="section" id="tagbar">
     <div class="section-label">The Interface</div>
     <h2><span class="icon">🔍</span>The Tag Search Bar</h2>
-    <p>A dark panel pinned to the top of Xariah. Type to search — results appear as you type.</p>
+    <p>A dark panel pinned to the top of Xariah. Type to search — results appear instantly.</p>
     <div class="ui-mockup">
       <div>🏷️ <strong style="color:var(--gold)">Tag Search</strong></div>
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:#555;">v0.0.38</div>
@@ -214,245 +184,204 @@
       <div class="ui-badge subtle">💾</div>
       <div class="ui-badge subtle">📥</div>
     </div>
-    <p>The <strong>Collapse</strong> button hides the results area when you need more vertical space. The other buttons are for Dev Tools, developer tags, export, and import — explained in later sections.</p>
-    <details>
-      <summary>How results are ordered</summary>
-      <div class="details-body">
-        <p>Results are ranked in four tiers per keyword. The best-matching eicons appear in the <strong>✨ Best Matches</strong> row at the top. Category sections below sort by the same tier order — so a section called "BAR" appears before "EMBARRASSED" when you search "bar".</p>
-        <table class="ref-table">
-          <tr><th>Tier</th><th>Example (searching "bar")</th></tr>
-          <tr><td>Exact match</td><td>Tag is literally "bar"</td></tr>
-          <tr><td>Starts with</td><td>"bar chart", "bar stool"</td></tr>
-          <tr><td>Whole word</td><td>"dive bar", "candy bar"</td></tr>
-          <tr><td>Substring</td><td>"embarrassed", "rebar"</td></tr>
-        </table>
-        <p>Above Best Matches, up to 5 of the most common tags among your results appear as small chips. Clicking one adds it to your search — a handy way to narrow results without typing.</p>
-      </div>
-    </details>
+    <p><strong>Collapse</strong> hides the results area when you need more screen space. The buttons on the right are Dev Tools, developer tag import, export, and import — covered in their own sections below.</p>
   </div>
 
-  <!-- 4 -->
+  <!-- TAGGING -->
   <hr>
   <div class="section" id="tagging">
     <div class="section-label">Core Feature</div>
     <h2><span class="icon">✏️</span>Tagging Eicons</h2>
-    <p>Hover over any eicon on Xariah — a <strong>🏷️</strong> button appears in the bottom-left corner. Click it to open the tag editor.</p>
+    <p>Hover over any eicon — a <strong>🏷️</strong> button appears in the bottom-left. Click it to open the tag editor.</p>
     <ol class="steps">
       <li><span>Hover over an eicon and click the <strong>🏷️</strong> button.</span></li>
       <li><span>Type a tag and press <kbd>Enter</kbd> or <kbd>,</kbd>. It becomes a yellow chip.</span></li>
       <li><span>Add as many tags as you like, then click <strong>Save</strong>.</span></li>
     </ol>
-    <p>A gold glow on the 🏷️ button means the eicon is already tagged. Tags are case-insensitive. If you type a tag that is a synonym slave of an existing rule, it will automatically be replaced with the master tag, with a brief purple flash to signal the substitution.</p>
+    <p>A gold glow on the 🏷️ button means the eicon already has tags. Tags are case-insensitive.</p>
+
     <details>
-      <summary>Suggestions, Copy Last, and chip colours</summary>
+      <summary>Suggestions — green, blue, and purple chips</summary>
       <div class="details-body">
-        <p>As you type, two kinds of chips appear above the input:</p>
+        <p>Three rows of suggestion chips appear above the input as you work:</p>
         <div class="chip-demo">
-          <div class="chip green">recently used ↻</div>
+          <div class="chip green">recent ↻</div>
           <div class="chip blue">library match +</div>
+          <div class="chip purple">related ✦</div>
         </div>
-        <p><strong style="color:var(--green)">Green</strong> — your 16 most recently used tags. <strong style="color:var(--blue)">Blue</strong> — tags from your library matching what you're typing. Clicking either adds the tag without losing your cursor focus.</p>
-        <p>A third row of purple chips also appears:</p>
-        <div class="chip-demo">
-          <div class="chip purple">related tag ✦</div>
-        </div>
-        <p><strong style="color:var(--purple)">Purple</strong> — tags most commonly found together with the tags you've already added on this eicon. These are based on co-occurrence across your entire library, weighted so a tag that appears with 100% of heart-tagged eicons ranks above one that merely has a larger raw count. Purple chips don't filter when you type — they stay visible at all times based on your active tags.</p>
-        <p>The <strong>↩ Copy Last</strong> button loads all tags from your most recently saved eicon. If the current eicon already has a grid position set (for example, from the smart grid detection), Copy Last preserves the existing grid position rather than overwriting it — only the tags are copied.</p>
+        <p><strong style="color:var(--green)">Green</strong> — your 16 most recently used tags.<br>
+        <strong style="color:var(--blue)">Blue</strong> — tags from your library matching what you're currently typing.<br>
+        <strong style="color:var(--purple)">Purple</strong> — tags commonly found alongside the tags you've <em>already added</em>. These don't change when you type — they're based on your active tags, not your input.</p>
+        <p>Clicking any suggestion adds the tag and keeps your cursor in the field.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Copy Last and synonym auto-substitution</summary>
+      <div class="details-body">
+        <p>The <strong>↩ Copy Last</strong> button loads all tags from your most recently saved eicon — useful when tagging a series of similar eicons. It won't overwrite a grid position if one is already set.</p>
+        <p>If you type a tag that has a synonym rule, it is silently replaced with the master tag and the new chip briefly flashes purple to signal the substitution.</p>
       </div>
     </details>
   </div>
 
-  <!-- 5 -->
+  <!-- BATCH -->
   <hr>
   <div class="section" id="batch">
-    <div class="section-label">Productivity Feature</div>
+    <div class="section-label">Productivity</div>
     <h2><span class="icon">☑️</span>Batch Tagging &amp; Selection</h2>
-    <p>Hold <kbd>Ctrl</kbd> and click multiple eicons — including eicons inside search results, the Dev Tools tag browser, and grid composites — to select them. A floating gold bar appears at the bottom of the screen.</p>
+    <p>Hold <kbd>Ctrl</kbd> and click multiple eicons to select them. Works on the main browse grid, search results, and the Dev Tools tag browser. A floating gold bar appears at the bottom.</p>
+    <p>Click <strong>🏷️ Tag Selected</strong> to tag all of them at once. Tags you add are <em>merged in</em> — existing tags on each eicon are preserved. Tags shared by all selected eicons are pre-loaded as yellow chips.</p>
     <div class="callout">
       <div class="callout-icon">💡</div>
-      <p>Selected eicons glow with a gold outline. A plain click anywhere clears the selection. The floating bar also appears inside the Dev Tools tag browser when you have eicons selected, so you can tag directly from there.</p>
+      <p>If you select eicons that belong to the same naming group (e.g. <code>banner1</code>, <code>banner2</code>, <code>banner3</code>), the batch modal will auto-detect the grid layout and assign positions to all of them automatically.</p>
     </div>
-    <p>Click <strong>🏷️ Tag Selected</strong> in the floating bar. Tags you add are <em>merged</em> into every selected eicon — their existing individual tags are preserved. Tags already shared by all selected eicons appear pre-loaded as yellow chips.</p>
     <details>
-      <summary>Creating linked sets with &&</summary>
+      <summary>Marking linked sets with &&</summary>
       <div class="details-body">
-        <p>With 2+ eicons selected in the batch modal, type <code>&&</code> and press <kbd>Enter</kbd> to mark them as identical artwork uploaded under different names. See <a href="#dupes">Linked Sets</a> for the full explanation.</p>
+        <p>With 2+ eicons selected, type <code>&&</code> and press <kbd>Enter</kbd> to mark them as identical artwork. See <a href="#dupes">Linked Sets</a> for details.</p>
       </div>
     </details>
   </div>
 
-  <!-- 6 -->
+  <!-- SEARCH -->
   <hr>
   <div class="section" id="search">
     <div class="section-label">Search</div>
-    <h2><span class="icon">🔎</span>Searching — Keywords, Phrases &amp; Negatives</h2>
+    <h2><span class="icon">🔎</span>Searching</h2>
+    <p>Type any words — results rank by how closely tags match. Exact tag names rank first; words buried inside longer tags rank last. Multi-word searches score each word separately.</p>
 
-    <h3>Multi-word keyword search</h3>
-    <p>Type any words and XariahTagger scores eicons by how well their tags match. Each word is scored independently — eicons matching more words rank higher. Results are ordered by tier (exact → starts with → whole word → substring) so the most relevant results always surface first.</p>
-
-    <h3>Quoted phrase search</h3>
-    <p>Wrap any phrase in quotes to search for it as a <strong>verbatim tag</strong>. The quoted phrase appears as a ghost chip inside the search bar and is matched exactly — no fuzzy scoring, no splitting into component words.</p>
-
+    <h3>Quoted phrases</h3>
+    <p>Wrap a phrase in quotes to match it as a verbatim tag. It appears as a ghost chip in the search bar and matches exactly — no fuzzy scoring.</p>
     <div class="mock-search active">
       <div class="chip ghost"><span class="q">"</span>heart eyes<span class="q">"</span></div>
-      <span style="color:#555;font-size:13px;">sparkle<span class="mock-cursor">|</span></span>
+      <span style="color:#555;font-size:13px;">sparkle</span>
     </div>
+    <p>Click a ghost chip to edit it. Backspace on an empty input pops the last chip back to text. Use <code>-"phrase"</code> to exclude a phrase.</p>
 
-    <p>In the example above, <em>heart eyes</em> is a ghost chip — it only matches eicons tagged exactly <code>heart eyes</code>. The word <em>sparkle</em> is a regular keyword scored by tier. The two signals are independent and both contribute to the final ranking.</p>
-
-    <p><strong>Editing a ghost chip:</strong> click it to dissolve it back into quoted text in the input so you can change it. <strong>Removing:</strong> backspace on an empty input pops the last ghost chip back to text. Deleting either quote character in the input also converts it back to plain text automatically.</p>
-
-    <h3>Top tags row</h3>
-    <p>Above Best Matches, up to 5 of the most common tags among your current results appear as small chips. Clicking a single-word chip appends it to your search. Clicking a multi-word chip converts it directly into a ghost chip for an exact match. This is a fast way to refine results without typing.</p>
-
-    <h3>Negative terms</h3>
-    <p>Prefix any keyword with <strong>-</strong> to exclude eicons tagged with it.</p>
-    <div class="card teal">
-      <div class="card-title">Example</div>
-      <p style="font-family:'Space Mono',monospace;font-size:14px;color:var(--teal);margin:0 0 8px;">nature -animated</p>
-      <p style="font-size:14px;margin:0;color:var(--text-dim)">Returns eicons tagged <strong style="color:var(--text)">nature</strong> that are not tagged <strong style="color:var(--text)">animated</strong>. Chain as many as you like: <code>nature -animated -dark</code></p>
-    </div>
-    <div class="callout">
-      <div class="callout-icon">⚠️</div>
-      <p>The <code>-</code> exclusion only applies at the very start of a search word. Tags like <code>sci-fi</code> are unaffected by it. Avoid naming tags starting with a hyphen. A search of <em>only</em> negative terms returns nothing — at least one positive keyword or phrase is required.</p>
-    </div>
+    <h3>Negative terms &amp; top tags</h3>
+    <p>Prefix any word with <strong>-</strong> to exclude eicons tagged with it: <code>nature -animated</code>. Above the Best Matches row, the 5 most common tags in your current results appear as small chips — click one to add it to your search instantly.</p>
 
     <details>
       <summary>Synonyms in search</summary>
       <div class="details-body">
-        <p>If synonym rules exist (set up in Dev Tools), searching any term in a synonym group automatically includes results for all related terms. Searching <code>happy</code> also surfaces eicons tagged <code>joy</code> if they are linked as synonyms. Synonyms are bidirectional — either end finds the full group.</p>
+        <p>If synonym rules are set up in Dev Tools, searching any term in a synonym group automatically finds eicons tagged with any related term. Synonyms work in both directions.</p>
       </div>
     </details>
   </div>
 
-  <!-- 7 -->
+  <!-- GRIDS -->
   <hr>
   <div class="section" id="grids">
     <div class="section-label">Advanced Feature</div>
     <h2><span class="icon">🔲</span>Grid Tags &amp; Eicon Sets</h2>
-    <p>Many eicons are tiles in a larger image — a 2×3 banner made of six eicons placed side by side. XariahTagger can recognise these sets and copy the complete BBCode in one click, including <code>[eicon]none[/eicon]</code> spacers for empty positions.</p>
-    <h3>Creating a grid tag</h3>
-    <p>In the tag editor, type <code>#rows×cols</code> (e.g. <code>#2x3</code>) and press <kbd>Enter</kbd>. A <span class="chip red" style="font-size:11px;padding:2px 8px;">#2x3 ×</span> chip appears to the right of the input. A small grid renders below — click the square that represents this eicon's position in the set. Repeat for every eicon in the group.</p>
-    <div class="grid-demo" style="grid-template-columns:repeat(3,48px);">
-      <div class="grid-cell sel">●</div>
-      <div class="grid-cell"></div><div class="grid-cell"></div>
-      <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-    </div>
-    <p>When any set member appears in results, the full composite preview is shown. Click it to copy all rows. Ctrl+Click a composite to add its representative eicon to your batch selection.</p>
-    <details>
-      <summary>How eicons are grouped automatically</summary>
-      <div class="details-body">
-        <p>XariahTagger strips trailing numbers or short suffixes and groups eicons sharing the same base name. <code>naturebg1</code>, <code>naturebg2</code>, <code>naturebg3</code> → base <code>naturebg</code>. Bases under 3 characters are never grouped. This auto-grouping is separate from linked sets — grid tags define <em>position</em> in a layout, while linked sets mark <em>identical artwork</em>.</p>
-      </div>
-    </details>
+    <p>Multi-tile eicons — banners or panels made of several 100×100px eicons placed side by side — can be tagged as a set and copied as a complete BBCode block in one click.</p>
 
     <h3>Smart grid detection</h3>
-    <p>When you open the tag editor for an eicon that belongs to a detectable set (other eicons on the page share the same name base), a <strong>Drag grid to size</strong> panel appears below the input. A small grid of cells is shown with a ⚓ anchor at the top-left. Drag the <strong>↕ top handle</strong> to add or remove rows, and the <strong>↔ right handle</strong> to add or remove columns. The opposite dimension auto-adjusts to fit the detected sibling count.</p>
-    <p>When you click <strong>Confirm ✓</strong>, grid positions are automatically assigned to all detected siblings in sorted order — you don't need to open each eicon individually. The current eicon's position is pre-selected in the position picker. The same auto-assignment happens if you type a <code>#NxM</code> grid tag manually while the eicon is part of a detectable set.</p>
-    <div class="callout">
-      <div class="callout-icon">💡</div>
-      <p>Selecting multiple eicons from the same set and using <strong>🏷️ Tag Selected</strong> also triggers grid auto-detection — if all selected eicons share a base name, positions are assigned automatically and the grid spec appears pre-filled in the batch modal.</p>
-    </div>
+    <p>When you tag an eicon that belongs to a detectable set, a <strong>Drag grid to size</strong> widget appears below the input. The <strong>⚓</strong> anchor is fixed at the top-left. Drag the red <strong>↕</strong> handle to adjust rows and the <strong>↔</strong> handle to adjust columns. Click <strong>Confirm ✓</strong> to apply — positions are automatically assigned to all eicons in the set. You don't need to open each one individually.</p>
+
+    <details>
+      <summary>Setting a grid tag manually</summary>
+      <div class="details-body">
+        <p>Type <code>#rows×cols</code> (e.g. <code>#2x3</code>) in the tag input and press <kbd>Enter</kbd>. A <span class="chip red" style="font-size:11px;padding:2px 8px;">#2x3 ×</span> chip appears. A position picker appears below — click the square for this eicon's position. For sets larger than 5×5, manual entry is required.</p>
+        <p>As with the smart widget, typing a grid tag while on a detectable set will auto-assign positions to siblings.</p>
+        <div class="grid-demo" style="grid-template-columns:repeat(3,40px);">
+          <div class="grid-cell sel">⚓</div>
+          <div class="grid-cell"></div><div class="grid-cell"></div>
+          <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+        </div>
+        <p>When any set member appears in results, the full composite preview renders. Click it to copy all rows as BBCode. Ctrl+Click a composite to add it to your batch selection.</p>
+      </div>
+    </details>
   </div>
 
-  <!-- 8 -->
+  <!-- LINKED SETS -->
   <hr>
   <div class="section" id="dupes">
     <div class="section-label">Deduplication</div>
     <h2><span class="icon">🔁</span>Linked Sets (&&)</h2>
-    <p>Some eicons are identical artwork uploaded under different filenames. Left unmanaged, every version appears in search results, wasting space. The <code>&&</code> tag marks them as a linked set so only one representative appears per result section.</p>
-    <h3>Creating a linked set</h3>
+    <p>Some eicons are identical artwork uploaded under different filenames. Marking them as a linked set means only one appears per search result section.</p>
     <ol class="steps">
-      <li><span>Ctrl+Click 2 or more eicons with identical artwork to select them.</span></li>
+      <li><span>Ctrl+Click 2 or more eicons with identical artwork.</span></li>
       <li><span>Click <strong>🏷️ Tag Selected</strong> in the floating bar.</span></li>
-      <li><span>Type <code>&&</code> and press <kbd>Enter</kbd>. The set is saved.</span></li>
+      <li><span>Type <code>&&</code> and press <kbd>Enter</kbd>.</span></li>
     </ol>
-    <h3>The && chip</h3>
-    <p>When you open the tag editor for an eicon in a linked set, a <span class="chip grey" style="font-size:11px;padding:2px 8px;">&&</span> chip appears to the <em>left</em> of the input. It cannot be removed from here. Clicking it opens <strong>Dev Tools → Duplicates</strong> and scrolls directly to that set with a gold flash.</p>
-    <div class="card grey">
-      <div class="card-title">How deduplication works in results</div>
-      <p style="font-size:14px;margin:0;color:var(--text-dim)">Within each search result section, only the alphabetically first member of a linked set that exists in your library is shown. All others are silently skipped — the same artwork occupies exactly one slot per category.</p>
-    </div>
+    <p>A <span class="chip grey" style="font-size:11px;padding:2px 8px;">&&</span> chip appears left of the input when editing any eicon in a linked set. Clicking it opens the <strong>Dev Tools → Duplicates</strong> tab and jumps to that set.</p>
   </div>
 
-  <!-- 9 -->
+  <!-- BLOCKED -->
   <hr>
   <div class="section" id="blocked">
     <div class="section-label">Content Control</div>
     <h2><span class="icon">🚫</span>Blocked Tags</h2>
-    <p>Any tag can be blocked. Eicons whose tags include a blocked tag are <strong>censored everywhere they appear</strong> — blurred, overlaid in grey, and framed with a black-and-gold hazard border. This applies to the main Xariah browse page, search results, the tag browser, and grid composites.</p>
-    <p>Blocked tags are checked against synonym rules too — blocking a master tag also censors eicons tagged with any of its slaves, and vice versa.</p>
+    <p>Any tag can be blocked. Eicons tagged with a blocked tag are <strong>censored everywhere</strong> — blurred, overlaid in grey, and framed with a hazard border. Works across the main page, search results, and Dev Tools.</p>
+    <p>Manage blocked tags in <strong>🛠️ Dev Tools → 🚫 Blocked</strong>. Changes take effect immediately.</p>
     <div class="card red">
       <div class="card-title">⚠️ Blocked tags are never exported</div>
-      <p style="font-size:14px;margin:0;color:var(--text-dim)">Blocked tags exist only in your browser and are intentionally excluded from all export files and the developer tag import. They are entirely personal.</p>
+      <p style="font-size:14px;margin:0;color:var(--text-dim)">Blocked tags exist only in your browser. They are excluded from all exports and unaffected by imports — entirely personal.</p>
     </div>
-    <h3>Managing blocked tags</h3>
-    <p>Open <strong>🛠️ Dev Tools → 🚫 Blocked</strong>. Type a tag in the input and click <strong>Block Tag</strong> (or press Enter). The list below shows all active blocked tags — click <strong>✕ Unblock</strong> to remove one. Changes take effect immediately on the page without a reload.</p>
   </div>
 
-  <!-- 10 -->
+  <!-- TAG MODE -->
   <hr>
   <div class="section" id="tagmode">
-    <div class="section-label">Productivity Feature</div>
+    <div class="section-label">Productivity</div>
     <h2><span class="icon">👁️</span>Tag Mode</h2>
-    <p>Click the red <strong>Tag Mode</strong> button to dim every already-tagged eicon, leaving only untagged ones at full visibility. As you tag and save, eicons fade out immediately — giving you a clear view of what still needs work. Hover any dimmed eicon to temporarily restore full opacity. Click <strong>Tag Mode ON</strong> to deactivate.</p>
+    <p>Click the red <strong>Tag Mode</strong> button to dim every already-tagged eicon, leaving only untagged ones at full visibility. As you tag and save, eicons fade out — making it easy to see what's left. Hover any dimmed eicon to restore full opacity temporarily. Click <strong>Tag Mode ON</strong> to deactivate.</p>
   </div>
 
-  <!-- 11 -->
+  <!-- IMPORT / EXPORT -->
   <hr>
   <div class="section" id="io">
-    <div class="section-label">Data Management</div>
+    <div class="section-label">Data</div>
     <h2><span class="icon">💾</span>Import &amp; Export</h2>
-    <p>The <strong>💾</strong> button exports your entire library as <code>xariah_tags.txt</code> — one file containing tags, grid positions, synonym rules, and linked sets. Keep a copy somewhere safe; localStorage can be cleared by browser maintenance or privacy tools.</p>
-    <p>The <strong>📥</strong> button imports a previously exported file. A dialog shows what's in the file before anything changes:</p>
+    <p><strong>💾</strong> exports everything — tags, grid positions, synonym rules, and linked sets — as a single <code>xariah_tags.txt</code> file. Export regularly; localStorage can be cleared by browser maintenance.</p>
+    <p><strong>📥</strong> imports a previously exported file. A dialog shows the contents before anything changes.</p>
     <div class="card green">
       <div class="card-title">Merge</div>
-      <p style="font-size:14px;margin:0;color:var(--text-dim)">Adds what's new from the imported file into your existing data. New tags, new synonym rules, new linked sets — all added without removing anything you already have. <strong>Recommended for most cases.</strong></p>
+      <p style="font-size:14px;margin:0;color:var(--text-dim)">Adds new data from the file into your existing library. Nothing existing is removed. <strong>Recommended.</strong></p>
     </div>
     <div class="card red">
       <div class="card-title">Replace</div>
-      <p style="font-size:14px;margin:0;color:var(--text-dim)">Discards all existing tags, grids, synonyms, and linked sets and replaces them entirely. Cannot be undone without a prior backup export.</p>
+      <p style="font-size:14px;margin:0;color:var(--text-dim)">Replaces everything with the imported file. Cannot be undone without a prior backup.</p>
     </div>
     <div class="callout">
       <div class="callout-icon">🔒</div>
-      <p>Blocked tags are <strong>never</strong> included in exports or affected by imports. They remain untouched regardless of which import option you choose.</p>
+      <p>Blocked tags are never included in exports and are never affected by imports.</p>
     </div>
   </div>
 
-  <!-- 12 -->
+  <!-- DEV TAGS -->
   <hr>
   <div class="section" id="devtags">
-    <div class="section-label">Community Feature</div>
+    <div class="section-label">Community</div>
     <h2><span class="icon">📡</span>Developer Tag Library</h2>
-    <p>The <strong>📡</strong> button fetches a curated tag library from the script's developer on GitHub and merges it into your local library. A confirmation dialog shows exactly how many new eicons, synonym rules, and linked sets will be added — you can always cancel before anything changes.</p>
-    <p>This is always a Merge. Your own tags, blocked tags, and settings are never overwritten. The file is fetched fresh each time (<code>cache: no-cache</code>) so you always get the latest version.</p>
+    <p>The <strong>📡</strong> button fetches a curated tag library from the script's developer on GitHub and merges it into your local library. A confirmation shows exactly what will be added before anything changes. Always a Merge — your tags are never overwritten.</p>
   </div>
 
-  <!-- 13 -->
+  <!-- DEV TOOLS -->
   <hr>
   <div class="section" id="devtools">
     <div class="section-label">Power Feature</div>
-    <h2><span class="icon">🛠️</span>Dev Tools Window</h2>
-    <p>The <strong>🛠️</strong> button opens a full-screen overlay with four tabs. Close with ✕ or press <kbd>Escape</kbd>.</p>
+    <h2><span class="icon">🛠️</span>Dev Tools</h2>
+    <p>Click <strong>🛠️</strong> to open the Dev Tools overlay. Close with ✕ or <kbd>Escape</kbd>.</p>
 
     <details open>
       <summary>📂 Tag Browser</summary>
       <div class="details-body">
-        <p>The right panel lists every tag in your library as a coloured physical tag shape. Each tag is a distinct colour based on its name — consistent across sessions. Four sort controls let you order them A→Z, Z→A, most eicons first, or fewest first. The filter input narrows the list live.</p>
-        <p>Click a tag to populate the left panel with all eicons using it, displayed as a full masonry grid including composites. Ctrl+Click eicons to add them to your batch selection — a <strong>🏷️ Tag Selected</strong> bar appears at the top of the left panel when you have eicons selected so you can batch-tag without leaving Dev Tools.</p>
-        <p>Hovering any eicon shows its name as a tooltip. Clicking 🏷️ on an eicon opens the tag editor for it directly.</p>
+        <p>The right panel lists every tag in your library as a coloured label. Sort by A→Z, Z→A, most eicons, or fewest using the buttons at the top. Filter the list live with the search input.</p>
+        <p>Click a tag to browse all eicons with that tag in the left panel. Ctrl+Click eicons to select them for batch tagging — a <strong>🏷️ Tag Selected</strong> bar appears at the top of the panel when you have a selection.</p>
       </div>
     </details>
 
     <details>
       <summary>🔗 Synonyms</summary>
       <div class="details-body">
-        <p>Synonym rules make search terms interchangeable. Define <code>happy</code> as the master with slaves <code>joy</code> and <code>cheerful</code> — searching any of those three words returns eicons tagged with any of them. Rules are bidirectional.</p>
-        <p>When you type a slave tag in the regular tag editor and press Enter, it is automatically replaced with the master tag and the new chip briefly flashes purple to signal the substitution.</p>
-        <p><strong>To add a rule:</strong> type the master tag, add slaves by typing and pressing Enter, then click <strong>Add Synonym Rule</strong>. <strong>To edit a rule:</strong> click <strong>✏️ Edit</strong> — the rule is removed from the list and its values are loaded back into the form so you can modify and re-add it, including running the Clean option again.</p>
+        <p>Synonym rules make search terms interchangeable — searching <code>happy</code> also finds eicons tagged <code>joy</code> if they're linked. Rules are bidirectional.</p>
+        <p><strong>To add:</strong> type the master tag, add slave tags by pressing Enter after each, then click <strong>Add Synonym Rule</strong>. <strong>To edit:</strong> click <strong>✏️ Edit</strong> on any existing rule — it loads back into the form for modification.</p>
         <div class="card red" style="margin-top:12px;">
-          <div class="card-title">⚠️ Clean Database option</div>
-          <p style="font-size:14px;margin:0;color:var(--text-dim)">Checking <strong>Clean database</strong> before adding replaces every instance of the slave tags with the master tag across your entire library. A confirmation shows how many eicons are affected. <strong>Cannot be undone without a backup.</strong></p>
+          <div class="card-title">⚠️ Clean Database</div>
+          <p style="font-size:14px;margin:0;color:var(--text-dim)">Optionally tick <strong>Clean database</strong> before adding to replace all slave tags with the master tag across your entire library. A confirmation shows how many eicons are affected. Cannot be undone without a backup.</p>
         </div>
       </div>
     </details>
@@ -460,22 +389,20 @@
     <details>
       <summary>🔁 Duplicates (Linked Sets)</summary>
       <div class="details-body">
-        <p>Lists all linked sets as collapsible rows named after the first eicon in the set. Click a row to expand it and see the eicons inside as a grid. Click <strong>🗑 Delete Group</strong> to remove the set — the eicons and their tags are unchanged, only the deduplication relationship is removed.</p>
-        <p>When you click the <span class="chip grey" style="font-size:11px;padding:2px 8px;">&&</span> chip in any tag editor, you jump directly to this tab and the relevant group is expanded and scrolled into view with a brief gold highlight.</p>
+        <p>Lists all linked sets as collapsible rows. Click a row to expand and see the eicons. Click <strong>🗑 Delete Group</strong> to remove the link — eicons and their tags are unchanged.</p>
+        <p>Clicking the <span class="chip grey" style="font-size:11px;padding:2px 8px;">&&</span> chip in any tag editor jumps directly here and expands the relevant group.</p>
       </div>
     </details>
 
     <details>
-      <summary>🚫 Blocked</summary>
+      <summary>🚫 Blocked Tags</summary>
       <div class="details-body">
-        <p>Add tags to your block list here. Any eicon tagged with a blocked tag is censored everywhere — blurred, overlaid in grey, and given a hazard border. Blocking works through synonyms: blocking a master also censors eicons tagged with any of its slaves.</p>
-        <p>Type a tag and press Enter or click <strong>Block Tag</strong>. Active blocked tags are listed below with individual <strong>✕ Unblock</strong> buttons. Changes take effect immediately.</p>
-        <p>Blocked tags are personal — they are never included in any export and cannot be received via the developer tag import.</p>
+        <p>Type a tag and press Enter or click <strong>Block Tag</strong> to add it to your block list. Active blocked tags are listed below with individual <strong>✕ Unblock</strong> buttons. Changes apply immediately. Blocked tags are never exported.</p>
       </div>
     </details>
   </div>
 
-  <!-- 14 -->
+  <!-- QUICK REFERENCE -->
   <hr>
   <div class="section" id="ref">
     <div class="section-label">Quick Reference</div>
@@ -485,44 +412,43 @@
       <div class="card-title">Search syntax</div>
       <table class="ref-table" style="margin:8px 0 0;">
         <tr><th>Syntax</th><th>What it does</th></tr>
-        <tr><td>word</td><td>Tiered fuzzy match — exact tags rank highest, substrings lowest</td></tr>
-        <tr><td>"phrase"</td><td>Exact verbatim tag match only — no fuzzy, no splitting</td></tr>
-        <tr><td>-word</td><td>Exclude all eicons tagged with "word" from results</td></tr>
-        <tr><td>word1 word2</td><td>Both keywords scored independently; eicons matching more rank higher</td></tr>
-        <tr><td>"phrase" word -bad</td><td>Combinations work freely</td></tr>
+        <tr><td>word</td><td>Fuzzy match — exact tags first, substrings last</td></tr>
+        <tr><td>"phrase"</td><td>Exact verbatim tag only</td></tr>
+        <tr><td>-word</td><td>Exclude eicons tagged with this word</td></tr>
+        <tr><td>-"phrase"</td><td>Exclude eicons tagged with this exact phrase</td></tr>
       </table>
     </div>
 
     <div class="card blue" style="margin-top:12px;">
-      <div class="card-title">Special tag formats (in the tag editor)</div>
+      <div class="card-title">Special tag formats</div>
       <table class="ref-table" style="margin:8px 0 0;">
         <tr><th>Input</th><th>What it does</th></tr>
-        <tr><td>#2x3</td><td>Grid tag — marks this eicon's position in a 2-row, 3-col set</td></tr>
-        <tr><td>&&</td><td>Batch modal only (2+ selected) — marks eicons as a linked set</td></tr>
+        <tr><td>#2x3</td><td>Grid tag — this eicon's position in a 2-row, 3-col set</td></tr>
+        <tr><td>&&</td><td>Batch only — marks selected eicons as a linked set</td></tr>
       </table>
     </div>
 
     <div class="card purple" style="margin-top:12px;">
-      <div class="card-title">Chip colour guide</div>
+      <div class="card-title">Chip colours</div>
       <div class="chip-demo" style="margin-top:10px;">
-        <div class="chip yellow">active tag ×</div>
+        <div class="chip yellow">active ×</div>
         <div class="chip green">recent ↻</div>
-        <div class="chip blue">suggestion +</div>
+        <div class="chip blue">match +</div>
         <div class="chip purple">related ✦</div>
         <div class="chip red">#2x3 ×</div>
         <div class="chip grey">&&</div>
-        <div class="chip ghost"><span class="q">"</span>exact phrase<span class="q">"</span></div>
+        <div class="chip ghost"><span class="q">"</span>phrase<span class="q">"</span></div>
         <div class="chip top">top tag</div>
       </div>
       <p style="font-size:13px;margin:12px 0 0;color:var(--text-dim);">
         <strong style="color:var(--gold)">Yellow</strong> — tags on this eicon (click × to remove)<br>
-        <strong style="color:var(--green)">Green</strong> — recently used tags (click adds, focus stays)<br>
+        <strong style="color:var(--green)">Green</strong> — recently used tags<br>
         <strong style="color:var(--blue)">Blue</strong> — library suggestions matching your typed query<br>
-        <strong style="color:var(--purple)">Purple</strong> — association suggestions based on co-occurrence with existing tags<br>
-        <strong style="color:var(--red)">Red</strong> — active grid tag (right of input)<br>
-        <strong style="color:var(--grey)">Grey</strong> — linked set marker (left of input, click to manage)<br>
-        <strong style="color:#aaa;">Ghost</strong> — quoted exact-phrase in the search bar (click to edit)<br>
-        <strong style="color:#666;">Dim</strong> — top-5 most common tags in current results
+        <strong style="color:var(--purple)">Purple</strong> — tags often used together with your current tags<br>
+        <strong style="color:var(--red)">Red</strong> — active grid tag<br>
+        <strong style="color:var(--grey)">Grey</strong> — linked set marker (left of input)<br>
+        <strong style="color:#aaa;">Ghost</strong> — quoted phrase in the search bar<br>
+        <strong style="color:#666;">Dim</strong> — top 5 tags in current search results
       </p>
     </div>
 
@@ -530,18 +456,17 @@
       <div class="card-title">Keyboard shortcuts</div>
       <table class="ref-table" style="margin:8px 0 0;">
         <tr><th>Key</th><th>Action</th></tr>
-        <tr><td>Enter or ,</td><td>Confirm a tag in the editor</td></tr>
-        <tr><td>Ctrl+Click eicon</td><td>Add to / remove from batch selection</td></tr>
-        <tr><td>Backspace (empty search)</td><td>Pop last ghost chip back to quoted text for editing</td></tr>
-        <tr><td>Escape</td><td>Close the Dev Tools window</td></tr>
+        <tr><td>Enter or ,</td><td>Confirm a tag</td></tr>
+        <tr><td>Ctrl+Click</td><td>Select / deselect an eicon</td></tr>
+        <tr><td>Backspace (empty search)</td><td>Pop last ghost phrase back to text</td></tr>
+        <tr><td>Escape</td><td>Close Dev Tools</td></tr>
       </table>
     </div>
   </div>
 
   <div class="footer">
-    XariahTagger · v0.0.38 · Alpha · For use on xariah.net/eicons<br>
-    All data stored locally · Blocked tags never leave your browser<br><br>
-    <span style="color:var(--text-faint)">Built with 🏷️ and a lot of shadow-root wrangling</span>
+    XariahTagger · v0.0.38 · Alpha · xariah.net/eicons<br>
+    All data stored locally · Blocked tags never leave your browser
   </div>
 
 </div>
