@@ -5,12 +5,13 @@
     "1118": "word make, text",
     "1245": "effect, sleep, snore",
     "3527": "word real, text",
+    "10015": "blob, cat, roll, emoji",
     "knotted2": "womb",
     "angycute": "reaction, emoji, angry blush",
-    "pinkburp1": "burp",
-    "pinkburp2": "burp",
-    "pinkburp3": "burp",
-    "pinkburp4": "burp",
+    "pinkburp1": "burp, pink",
+    "pinkburp2": "burp, pink",
+    "pinkburp3": "burp, pink",
+    "pinkburp4": "burp, pink",
     "womb2": "cum inside, womb",
     "womb f": "cum inside, womb",
     "1000bits": "twitch, gem",
@@ -37,7 +38,7 @@
     "kancollemain4": "letter n",
     "mnote1": "music, music notes",
     "mnote2": "music, music notes",
-    "buuurp": "onomatopoeia, sound effect, burp, vore",
+    "buuurp": "onomatopoeia, sound effect, burp, vore, pink",
     "ffcrossicon": "wrong, x",
     "stinkflies": "effect, stink",
     "slurs": "word slurs, text",
@@ -84,12 +85,12 @@
     "2bc28": "computer, digital, binary",
     "2crash": "digital, computer, error, bluescreen",
     "2reboot": "error, rebooting, computer, digital",
-    "2tinynightshadetwitter": "vore, cock vore, digestion, xray, internal, cum, clench, balls, cummification, cockvore",
-    "3tinynightshadetwitter": "digestion, cock vore, vore, internal, xray, cockvore, cummification, balls, clench, cum",
-    "5tinynightshadetwitter": "vore, cock vore, digestion, xray, internal, cockvore, cummification, balls, clench, cum",
-    "6tinynightshadetwitter": "digestion, cock vore, vore, internal, xray, cum, clench, balls, cummification, cockvore",
+    "2tinynightshadetwitter": "vore, digestion, xray, internal, cum, clench, balls, cummification, cockvore",
+    "3tinynightshadetwitter": "digestion, vore, internal, xray, cockvore, cummification, balls, clench, cum",
+    "5tinynightshadetwitter": "vore, digestion, xray, internal, cockvore, cummification, balls, clench, cum",
+    "6tinynightshadetwitter": "digestion, vore, internal, xray, cum, clench, balls, cummification, cockvore",
     "44magnum": "gun",
-    "4tinynightshadetwitter": "digestion, cock vore, vore, xray, internal, cum, clench, balls, cummification, cockvore",
+    "4tinynightshadetwitter": "digestion, vore, xray, internal, cum, clench, balls, cummification, cockvore",
     "alstad1": "hypno eyes, spiral eyes, eyes, hypno",
     "alstad2": "hypno eyes, spiral eyes, eyes, hypno",
     "alstad3": "hypno eyes, spiral eyes, eyes, hypno",
@@ -130,12 +131,12 @@
     "ashowercm2": "wall, splatter, cum, shower, cumshot",
     "assault": "shape, triangle, symbol",
     "avaelogo": "symbol, triangle, shape",
-    "ataaburp1": "onomatopoeia, burp, belch, vore, digestion",
-    "ataaburp2": "digestion, vore, belch, burp, onomatopoeia",
-    "ataaburp3": "onomatopoeia, burp, belch, vore, digestion",
-    "ataaburp4": "digestion, vore, belch, burp, onomatopoeia",
-    "ataaburp6": "onomatopoeia, burp, belch, vore, digestion",
-    "ataaburp7": "digestion, vore, belch, burp, onomatopoeia",
+    "ataaburp1": "onomatopoeia, burp, vore, digestion",
+    "ataaburp2": "digestion, vore, burp, onomatopoeia",
+    "ataaburp3": "onomatopoeia, burp, vore, digestion",
+    "ataaburp4": "digestion, vore, burp, onomatopoeia",
+    "ataaburp6": "onomatopoeia, burp, vore, digestion",
+    "ataaburp7": "digestion, vore, burp, onomatopoeia",
     "atgad": "windows, loading, attempting, funny",
     "atomictest1": "digital, atomic, error, danger",
     "attentionicon": "warning, symbol, danger",
@@ -284,7 +285,7 @@
     "catcupcake": "food, cupcake, cake",
     "cultcircle1": "sigil, white, demon, magic",
     "cultcircle2": "sigil, white, demon, magic",
-    "cum-1": "vore, cock vore, cum inside, cum, internal, xray",
+    "cum-1": "vore, cum inside, cum, internal, xray, cockvore",
     "crystals": "crystals, meth, drugs",
     "crystalheart": "crystal, gem, heart, pink",
     "csalert": "!, warning",
@@ -296,7 +297,7 @@
     "correctbig": "correct, word correct, text",
     "condomsam1": "condom, condom full",
     "condomsam2": "condom full, condom",
-    "cockvored6": "cock vore, clench, spazman",
+    "cockvored6": "clench, spazman, cockvore",
     "code01": "is anyone there, digital, glitch, code, cyberpunk",
     "code02": "cyberpunk, code, glitch, digital, is anyone there",
     "code575": "digital, code, glitch, cyberpunk",
@@ -325,7 +326,7 @@
     "convertdrone": "dronification, drone, transformation, conversion, assimilation",
     "condition fine 1": "condition, status, health, fine, healthy, heartbeat, heartrate",
     "condition fine 2": "healthy, fine, health, status, condition, heartrate, heartbeat",
-    "churnslut": "xray, internal, cock vore, digestion, cum inside, cum",
+    "churnslut": "xray, internal, digestion, cum inside, cum, cockvore",
     "csromance": "symbol, heart, pink",
     "css": "missing, texture, error, square",
     "5star": "stars, rating, review",
@@ -775,7 +776,7 @@
     "greenspiral": "spiral, green, hypno",
     "greenpussypop": "candy, lollypop, lolly, green",
     "gowhiteboygo": "yippie, ddr, dance, game, silly",
-    "gorgguts": "internal, flesh, vore, rectum, gullet, anal vore, cock vore",
+    "gorgguts": "internal, flesh, vore, rectum, gullet, anal vore, cockvore",
     "gllk": "onomatopoeia, purple, gllk, choke, swallow",
     "gloosh": "cum, squirt, jet, cumshot",
     "gothglitter": "glitter, grey",
@@ -918,7 +919,7 @@
     "sha8": "suck, gesture, pink, teeth, tongue",
     "shadowsurge1": "line, purple, border",
     "shortie": "kiss, boykisser, cute, bear, short",
-    "shortiekiss": "short, bear, cute, boykisser, kiss, kissed, kiss mark",
+    "shortiekiss": "short, bear, cute, boykisser, kiss, kissed, kiss mark, shortie",
     "shdb3": "cum, white, slime, drip, drop, ooze, dribble, splat",
     "sidedesign1": "gold, bracket, border, left, ornate",
     "sidedesign2": "border, bracket, gold, right",
@@ -959,7 +960,7 @@
     "sliclick": "pink, lock, locked, padlock, snap, locking",
     "iltl": "i lost to labyrinth, speech bubble, labyrinth, lost",
     "iltcode": "speech bubble, lost, i lost to codefails, codefail",
-    "pinkburp": "digestion, belch, vore, pink, burp, onomatopoeia",
+    "pinkburp": "digestion, vore, pink, burp, onomatopoeia",
     "pinkbow": "kawaii, pink, bow",
     "pinkcloud": "cloud, fluff, pink, foam, gas",
     "pinkgas": "gas, pink, skull, mist, wisp, soul",
@@ -1004,10 +1005,10 @@
     "shiny blue heart": "blue, heart, throb, emoji",
     "xpgameover1": "word game over, game, over, pink, text",
     "xpgameover2": "pink, over, game, word game over, text",
-    "blue2x2burp1": "burp, blue, onomatopoeia, belch",
-    "blue2x2burp2": "belch, onomatopoeia, blue, burp",
-    "blue2x2burp3": "burp, blue, onomatopoeia, belch",
-    "blue2x2burp4": "belch, onomatopoeia, blue, burp",
+    "blue2x2burp1": "burp, blue, onomatopoeia",
+    "blue2x2burp2": "onomatopoeia, blue, burp",
+    "blue2x2burp3": "burp, blue, onomatopoeia",
+    "blue2x2burp4": "onomatopoeia, blue, burp",
     "oldamber": "gem, orange, yellow, amber",
     "blkrld": "pulse, blue, cyan, throb, orb, signal, beat",
     "timeout counter": "timer, countdown, count, seconds, 60, minute",
@@ -1024,15 +1025,15 @@
     "shadowrunlogoc": "word run, red, text",
     "hypno dust": "hypno, spiral, red",
     "kneesbookmark": "worship, bookmark, ooc, bookmarked, funny",
-    "1tinynightshadetwitter": "vore, cockvore, cummification, digestion, internal, xray, cock vore, balls, clench, cum",
-    "tinynightshadetwitter1": "cockvore, cummification, balls, clench, cum, xray, internal, vore, cock vore, digestion",
-    "tinynightshadetwitter2": "digestion, cock vore, vore, internal, xray, cum, clench, balls, cummification, cockvore",
-    "tinynightshadetwitter3": "cockvore, cummification, balls, clench, cum, xray, internal, vore, cock vore, digestion",
-    "tinynightshadetwitter4": "digestion, cock vore, vore, internal, xray, cum, clench, balls, cummification, cockvore",
-    "tinynightshadetwitter5": "cockvore, cummification, balls, clench, cum, xray, internal, vore, cock vore, digestion",
-    "tinynightshadetwitter6": "digestion, cock vore, vore, internal, xray, cum, clench, balls, cummification, cockvore",
+    "1tinynightshadetwitter": "vore, cockvore, cummification, digestion, internal, xray, balls, clench, cum",
+    "tinynightshadetwitter1": "cockvore, cummification, balls, clench, cum, xray, internal, vore, digestion, digested, absorbed, death, clenched, fatal",
+    "tinynightshadetwitter2": "digestion, vore, internal, xray, cum, clench, balls, cummification, cockvore",
+    "tinynightshadetwitter3": "cockvore, cummification, balls, clench, cum, xray, internal, vore, digestion",
+    "tinynightshadetwitter4": "digestion, vore, internal, xray, cum, clench, balls, cummification, cockvore",
+    "tinynightshadetwitter5": "cockvore, cummification, balls, clench, cum, xray, internal, vore, digestion",
+    "tinynightshadetwitter6": "digestion, vore, internal, xray, cum, clench, balls, cummification, cockvore",
     "iiam": "silly, ghost, its a mystery, mystery",
-    "ikugo_braindrain": "braindrain, intelligence, drain, draining, foreskin, suck, sucking, cock vore",
+    "ikugo_braindrain": "braindrain, intelligence, drain, draining, foreskin, suck, sucking, cockvore",
     "ilhp10-1": "health bar, health, status, battle, fight, bar",
     "ilhp10-2": "health, health bar, bar, fight, battle, status",
     "ilhp10-3": "health bar, health, status, battle, fight, bar",
@@ -1119,8 +1120,8 @@
     "key item": "key, green",
     "kikibuttstuff": "bongo, cat, ass, silly, drum",
     "kisspinkm": "lips, pink, lipstick, kiss, mark, heart",
-    "korbelch1": "burp, belch, green, blue, onomatopoeia",
-    "korbelch2": "burp, belch, green, blue, onomatopoeia",
+    "korbelch1": "burp, green, blue, onomatopoeia",
+    "korbelch2": "burp, green, blue, onomatopoeia",
     "kriscity1": "scene, city, cityscape, scifi, cyberpunk, blue",
     "kriscity2": "scene, city, cityscape, scifi, cyberpunk, blue",
     "kriscity3": "scene, city, cityscape, scifi, cyberpunk, blue",
@@ -1231,7 +1232,7 @@
     "missingmilk": "milk, drink, missing, person",
     "missingp": "missing, poster, red, white, blank",
     "missingno": "signal, missing, distortion, tv, computer, digital",
-    "missingspam": "missing, confusion, quest, objective, confusing, ???, ?",
+    "missingspam": "missing, confusion, quest, objective, confusing, ???, ?, yellow",
     "missingtexture": "missing, texture, checkerboard, purple, pink, black, square",
     "missing-asset": "square, white, missing, missing image, image, word missing image, text",
     "f-list character missing": "missing, character, ooc, ascii, digital, retro, computer, blue, white, bsod, deleted, error",
@@ -1424,8 +1425,8 @@
     "hypno locked": "padlock, lock, hypno, spiral, blue, white",
     "redmage": "gem, ruby, pink, red, rune, magic",
     "redrose": "rose, red, flower",
-    "sacscream2": "spazman, clench, cock vore, balls, tight, bulges, diges, absorption, cummification, green",
-    "sacscream3": "spazman, clench, cock vore, balls, purple, tight, bulges, diges, absorption, cummification",
+    "sacscream2": "spazman, clench, balls, tight, bulges, diges, absorption, cummification, green, cockvore",
+    "sacscream3": "spazman, clench, balls, purple, tight, bulges, diges, absorption, cummification, cockvore",
     "sayurifoxfire": "flame, fire, cyan, blue, soul, wisp",
     "rubbersmoke": "wisp, smoke, smog, black, vapour, gas",
     "rubberbulge": "null, nulge, bulge, latex, black, dronification, m2f, transformation, tight, vacuum, compress, nullification",
@@ -1517,35 +1518,35 @@
     "spermpoolright": "sperm",
     "spermpoolleft": "sperm",
     "spermpole": "sperm",
-    "spermblitz": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum2": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum3": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum4": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum5": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum6": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum7": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum8": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum9": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm12": "sperm, impreg, ovum, blue, speech bubble",
+    "spermblitz": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum2": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum3": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum4": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum5": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum6": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum7": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum8": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum9": "sperm, impreg, ovum, speech bubble",
+    "sperm12": "sperm, impreg, ovum, speech bubble",
     "sperm1": "sperm",
-    "sperm11": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm11": "sperm, impreg, ovum, speech bubble",
     "sperm perk": "sperm",
     "sperm clog": "sperm",
-    "sperm and egg": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum12": "sperm, impreg, ovum, blue, speech bubble",
-    "sperm_meets_ovum1": "sperm, impreg, ovum, blue, speech bubble",
+    "sperm and egg": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum12": "sperm, impreg, ovum, speech bubble",
+    "sperm_meets_ovum1": "sperm, impreg, ovum, speech bubble",
     "spermankha": "sperm",
-    "spermacro": "sperm, impreg, ovum, blue, speech bubble",
+    "spermacro": "sperm, impreg, ovum, speech bubble",
     "spermgrab1": "sperm, impreg, ovum, speech bubble",
-    "spermgrab2": "sperm, impreg, ovum, blue, speech bubble",
-    "spermgrab4": "sperm, impreg, ovum, blue, speech bubble",
-    "spermgrab3": "sperm, impreg, ovum, blue, speech bubble",
+    "spermgrab2": "sperm, impreg, ovum, speech bubble",
+    "spermgrab4": "sperm, impreg, ovum, speech bubble",
+    "spermgrab3": "sperm, impreg, ovum, speech bubble",
     "spermz": "sperm",
     "spermegg": "impreg, ovum, sperm, speech bubble",
-    "spermgangbang": "impreg, ovum, sperm, blue, speech bubble",
-    "sperm_meets_ovum11": "impreg, ovum, sperm, blue, speech bubble",
-    "spermbomb": "impreg, ovum, sperm, blue, speech bubble",
-    "spermies": "impreg, ovum, sperm, blue, speech bubble",
+    "spermgangbang": "impreg, ovum, sperm, speech bubble",
+    "sperm_meets_ovum11": "impreg, ovum, sperm, speech bubble",
+    "spermbomb": "impreg, ovum, sperm, speech bubble",
+    "spermies": "impreg, ovum, sperm, speech bubble",
     "greenspermdown": "sperm, symbol, shape, green",
     "greenspermleft": "sperm, symbol, shape, green",
     "greenspermup": "sperm, symbol, shape, green",
@@ -1572,7 +1573,7 @@
     "waterfall2": "scene, nature, night, waterfall, river, stream, rocks, cliff, moon",
     "waterfall3": "scene, nature, night, waterfall, river, stream, rocks, cliff, moon",
     "waterfall4": "scene, nature, night, waterfall, river, stream, rocks, cliff, moon",
-    "voided1": "drone, dronification, latex, smile, mooked, statue, petrification, rubberization, rubber, nulge",
+    "voided1": "drone, dronification, latex, smile, mooked, statue, petrification, rubberization, rubber, nulge, 1male",
     "voided2": "drone, dronification, latex, smile, mooked, statue, petrification, rubberization, rubber, nulge",
     "voided3": "drone, dronification, latex, smile, mooked, statue, petrification, rubberization, rubber, nulge",
     "voided4": "drone, dronification, latex, smile, mooked, statue, petrification, rubberization, rubber, nulge",
@@ -1780,12 +1781,12 @@
     "werewire tf": "transformation, werewire, undertale, 1girl",
     "wet floor": "caution, wet, floor, sign, plastic, yellow, warning",
     "wha": "?, teal, green, 3d, spin",
-    "tinynightshade1": "digestion, cock vore, vore, internal, xray, cockvore, cummification, balls, clench, cum",
-    "tinynightshade2": "digestion, cock vore, vore, internal, xray, cockvore, cummification, balls, clench, cum",
-    "tinynightshade3": "digestion, cock vore, vore, internal, xray, cockvore, cummification, balls, clench, cum",
-    "tinynightshade4": "digestion, cock vore, vore, internal, xray, cockvore, cummification, balls, clench, cum",
-    "tinynightshade5": "digestion, cock vore, vore, internal, xray, cockvore, cummification, balls, clench, cum",
-    "tinynightshade6": "digestion, cock vore, vore, internal, xray, cockvore, cummification, balls, clench, cum",
+    "tinynightshade1": "digestion, vore, internal, xray, cockvore, cummification, balls, clench, cum",
+    "tinynightshade2": "digestion, vore, internal, xray, cockvore, cummification, balls, clench, cum",
+    "tinynightshade3": "digestion, vore, internal, xray, cockvore, cummification, balls, clench, cum",
+    "tinynightshade4": "digestion, vore, internal, xray, cockvore, cummification, balls, clench, cum",
+    "tinynightshade5": "digestion, vore, internal, xray, cockvore, cummification, balls, clench, cum",
+    "tinynightshade6": "digestion, vore, internal, xray, cockvore, cummification, balls, clench, cum",
     "trashcum": "dumpster, cum, full",
     "thatismyfetish": "thats my fetish, fetish, text",
     "thewatcher": "glitch, symbol, eye, creepy, digital, cyan, blue",
@@ -1902,9 +1903,9 @@
     "viedeshock1": "shock, effect, buzz, electricity, confusion, wisp, spray, panic, lust",
     "viedeshock2": "shock, effect, buzz, electricity, confusion, wisp, spray, panic, lust",
     "vopicks": "lockpicks, tools, thieves, rob, steal, pick, lock, crack",
-    "voreburp1": "belch, burp, green, onomatopoeia",
-    "voreburp2": "belch, burp, green, onomatopoeia",
-    "voreburp3": "belch, burp, green, onomatopoeia",
+    "voreburp1": "burp, green, onomatopoeia",
+    "voreburp2": "burp, green, onomatopoeia",
+    "voreburp3": "burp, green, onomatopoeia",
     "voredream": "thought, bubble, vore, text",
     "vorope": "rope, cord, hemp, old, escape, climbing",
     "vortal": "void, portal, magic, mystery",
@@ -2051,12 +2052,12 @@
     "rediamond": "red, diamond, gem, spin",
     "proud lesbian 1": "green, text, rape, bait, arrow, right, right arrow",
     "proud lesbian 2": "rape, her, green, text, left arrow, left, arrow",
-    "embelch1": "belch, burp, green, onomatopoeia, skull, bubbles",
-    "embelch2": "belch, burp, green, onomatopoeia, skull, bubbles",
-    "embelch3": "belch, burp, green, onomatopoeia, skull, bubbles",
-    "embelch4": "belch, burp, green, onomatopoeia, skull, bubbles",
-    "embelch5": "belch, burp, green, onomatopoeia, skull, bubbles",
-    "embelch6": "belch, burp, green, onomatopoeia, skull, bubbles",
+    "embelch1": "burp, green, onomatopoeia, skull, bubbles",
+    "embelch2": "burp, green, onomatopoeia, skull, bubbles",
+    "embelch3": "burp, green, onomatopoeia, skull, bubbles",
+    "embelch4": "burp, green, onomatopoeia, skull, bubbles",
+    "embelch5": "burp, green, onomatopoeia, skull, bubbles",
+    "embelch6": "burp, green, onomatopoeia, skull, bubbles",
     "nuralips": "lipstick, mark, blue, kiss",
     "ravenonahole": "grey, pussy, cunt, fleshlight, sex toy, toy",
     "mwahkiss": "pink, text, mwah",
@@ -2274,7 +2275,7 @@
     "einshelmpussy4": "spreading, pussy, gape, finger, slimy, masturbation",
     "einshelmpussy5": "spreading, pussy, gape, finger, slimy, masturbation",
     "einshelmpussy6": "spreading, pussy, gape, finger, slimy, masturbation",
-    "embpussy": "black, latex, pussy, pink",
+    "embpussy": "black, latex, pussy",
     "pocket pussy": "sex toy, onahole, onasheath, pink, toy, cum, used, hang, grip, grab",
     "pocket pussy1": "sex toy, onahole, onasheath, pink, toy, cum, used, hang, grip, grab",
     "pocket pussy2": "sex toy, onahole, onasheath, pink, toy, cum, used, hang, grip, grab",
@@ -2331,7 +2332,324 @@
     "ballsof1": "balls, teabag, face, blind, balls on face, big",
     "ballsof2": "balls, teabag, face, blind, balls on face, big",
     "ballsof3": "balls, teabag, face, blind, balls on face, big",
-    "ballsof4": "balls, teabag, face, blind, balls on face, big"
+    "ballsof4": "balls, teabag, face, blind, balls on face, big",
+    "evburp1": "burp, pink, onomatopoeia",
+    "evburp2": "burp, pink, onomatopoeia",
+    "evburp3": "burp, pink, onomatopoeia",
+    "evburp5": "burp, pink, onomatopoeia",
+    "evburp4": "burp, pink, onomatopoeia",
+    "evburp6": "burp, pink, onomatopoeia",
+    "grglburp4": "burp, teal, onomatopoeia",
+    "grglburp1": "burp, onomatopoeia, teal, 1/4",
+    "grglburp2": "burp, onomatopoeia, teal",
+    "grglburp3": "burp, onomatopoeia, teal",
+    "beelzeburp": "onomatopoeia, yellow, burp",
+    "beelzeburp1": "onomatopoeia, yellow, burp",
+    "beelzeburp2": "onomatopoeia, yellow, burp",
+    "beelzeburp3": "onomatopoeia, yellow, burp",
+    "skullburp": "bworp, onomatopoeia, burp, skull, disposal",
+    "burp2iris": "burp, acid, glow, green, onomatopoeia",
+    "burp11": "burp, onomatopoeia, pink",
+    "burp12": "burp, onomatopoeia, pink",
+    "burp13": "burp, onomatopoeia, pink",
+    "burp14": "burp, onomatopoeia, pink",
+    "gannetburp": "green, heart, skull, drip, ooze, slime, dead, death, poison",
+    "snogging": "noid, nerd",
+    "gthdied1": "ass, goth, funny, you, died",
+    "casting01": "pentagram, magic, purple",
+    "pkarrowl": "red, arrow, left, left arrow",
+    "pkarrowr": "red, arrow, right, right arrow",
+    "kaahypnoclose": "kaa, snake, hypno eyes, hypno",
+    "old gateau": "brick, red, purple",
+    "wumpafruit5": "wumpa, fruit, food",
+    "mcporkchop": "porkchop, pork, minecraft, meat, food",
+    "ellethink": "think, idea, smart, emoji, taps, forehead",
+    "detailedbrainmap": "organ, brain, spin",
+    "twinspring_1": "scene, waterfall, stream, nature, meadow, field, trees, tree, fantasy",
+    "twinspring_2": "scene, waterfall, stream, nature, meadow, field, trees, tree, fantasy",
+    "twinspring_3": "scene, waterfall, stream, nature, meadow, field, trees, tree, fantasy",
+    "twinspring_4": "scene, waterfall, stream, nature, meadow, field, trees, tree, fantasy",
+    "ikcredit": "exp, credit, device, game",
+    "wine11": "wine, red, glass",
+    "voided5": "drone, dronification, latex, mooked, statue, petrification, rubberization, rubber, nulge, blue, purple, 1male",
+    "voided6": "drone, dronification, latex, mooked, statue, petrification, rubberization, rubber, nulge, blue, purple",
+    "voided7": "drone, dronification, latex, mooked, statue, petrification, rubberization, rubber, nulge, blue, purple",
+    "voided8": "drone, dronification, latex, mooked, statue, petrification, rubberization, rubber, nulge, blue, purple",
+    "voidies": "cum, cumshot, splatter, pink",
+    "voidpeach": "purple, peach, emoji",
+    "voidswallow": "swallow, gullet, vore, internal, flesh, black",
+    "voidc1": "clench, vore, balls, void, clamed, white, cockvore",
+    "voidc2": "clench, vore, balls, void, clamed, white, cockvore",
+    "voidc3": "clench, vore, balls, void, clamed, white, cockvore",
+    "voidc4": "clench, vore, balls, void, clamed, white, cockvore",
+    "arinvoidgem": "gem, purple, magic",
+    "avoiding": "emoji, blush, coy, sad, indifferent, look, up",
+    "glowtongueprototype15": "cyan, tongue, blue, lick, licking",
+    "docuass1": "slime, purple, ass, slimy, grab, boy",
+    "docuass2": "slime, purple, ass, slimy, grab, boy",
+    "docuass3": "slime, purple, ass, slimy, grab, boy",
+    "docuass4": "slime, purple, ass, slimy, grab, boy",
+    "blf9": "blue, sperm, impreg, ovum, speech bubble",
+    "blf8": "blue, sperm, impreg, ovum, speech bubble",
+    "blf7": "blue, sperm, impreg, ovum, speech bubble",
+    "blf6": "blue, sperm, impreg, ovum, speech bubble",
+    "blf4": "blue, sperm, impreg, ovum, speech bubble",
+    "blf3": "blue, sperm, impreg, ovum, speech bubble",
+    "blf2": "blue, sperm, impreg, ovum, speech bubble",
+    "blf1": "blue, sperm, impreg, ovum, speech bubble",
+    "heartbub1": "speech bubble, heart, <3",
+    "heartbub2": "speech bubble, heart, <3",
+    "heartbub3": "speech bubble, heart, <3",
+    "heartbub4": "speech bubble, heart, <3",
+    "clench": "clench, balls, spazman, skull, purple, white, cockvore",
+    "clench1": "clench, text, scroll, onomatopoeia",
+    "clench2": "clench",
+    "clencha1": "clench, balls, spazman, skull, purple, white, cockvore",
+    "clencha2": "clench, balls, spazman, skull, purple, white, cockvore",
+    "clencha3": "clench, balls, spazman, skull, purple, white, cockvore",
+    "clencha4": "clench, balls, spazman, skull, purple, white, cockvore",
+    "clenchingif": "clench",
+    "aliclench1": "clench, balls, spazman, cockvore",
+    "aliclench2": "clench, balls, spazman, cockvore",
+    "aliclench3": "clench, balls, spazman, cockvore",
+    "aliclench4": "clench, balls, spazman, cockvore",
+    "hypnoclench2": "spazman, clench, balls, hypno, purple, cockvore",
+    "hypnoclench": "spazman, clench, balls, hypno, purple, cockvore",
+    "ballclenching": "spazman, clench, balls, brown, cockvore",
+    "dezbclench": "spazman, clench, balls, cockvore",
+    "dezbclench1": "spazman, clench, balls, cockvore",
+    "dezbclench2": "spazman, clench, balls, cockvore",
+    "dezbclench3": "spazman, clench, balls, cockvore",
+    "dnutclench": "spazman, clench, balls, cockvore",
+    "erez clench": "spazman, clench, balls, yellow, giraffe, cockvore",
+    "kaneclench": "spazman, clench, balls, black, cockvore",
+    "pocusclench": "spazman, clench, balls, blue, cockvore",
+    "goobunclench": "spazman, clench, balls, orange, cockvore",
+    "starfail": "f, failure, key, keyboard, letter, fail, blue, stars",
+    "monaink1": "inkwell, quill",
+    "upperururu2": "scene, blossom, pink, tree",
+    "upperururu1": "scene, tree, blossom, pink",
+    "rubberheart": "metallic, shiny, heart, pink",
+    "loadingicon": "loading, wheel, blue, thobber, circle",
+    "lowtier1": "you, should, kill, yourself, now, funny, meme",
+    "lowtier2": "you, should, kill, yourself, now, funny, meme",
+    "lowtier3": "you, should, kill, yourself, now, funny, meme",
+    "lowtier4": "you, should, kill, yourself, now, funny, meme",
+    "approved1": "entry, granted, approved, stamp, permit, papers, please",
+    "approved2": "entry, granted, approved, stamp, permit, papers, please",
+    "moneyshot": "emoji, facial, cum",
+    "powerhorny": "horny, heart eyes, big eyes, emoji, blush",
+    "kskaey": "text, ey, yelow",
+    "mal0p1": "latex, black, shiny, penis, breasts, 1futa, knot, animal penis",
+    "mal0p2": "latex, black, shiny, penis, breasts, 1futa, knot, animal penis",
+    "mal0p3": "latex, black, shiny, penis, breasts, 1futa, knot, animal penis",
+    "mal0p4": "latex, black, shiny, penis, breasts, 1futa, knot, animal penis",
+    "slut type": "pokemon, status, slut",
+    "research and development": "symbol, white, wrench",
+    "vsbutt": "cameltoe, latex, shiny, black, squat, ass, cunt, pussy",
+    "panass1": "ass, ebony",
+    "panass2": "ass, ebony",
+    "panass3": "ass, ebony",
+    "panass4": "ass, ebony",
+    "indexd": "letter, d",
+    "loosepussy": "gape, pussy, spreading",
+    "splrtheart": "dripping, white, cum, slime, heart, melting, bubbles",
+    "zthf": "book, tome, knives, glow, daggers",
+    "entanglement": "danger, warning, sign, yellow, triangle, moving, machinery, gears, crushing",
+    "sashalocked2": "connection, lost, locked, hacker, hack, digital, computer, purple, pink, cat, scroll",
+    "khalock1": "padlock, lock, locked, white",
+    "potion_purple": "purple, potion, vial, bottle",
+    "typecorpse": "pokemon, type, corpse",
+    "callidangle3": "big, breasts, nipples, puffy, sagging",
+    "snakedusted": "skull, dust, bag, smoke, steam, grey",
+    "fullstomach": "vore, stomach, internal, xray",
+    "happynod": "emoji, yes, nod",
+    "latexvinyl1": "latex, bodysuit, black, ass, lift, grab",
+    "latexvinyl2": "latex, bodysuit, black, ass, lift, grab, tail",
+    "kreiglowies": "cum, splatter, cumshot, glow, yellow",
+    "crossleg1": "penis, crossed, legs, reveal, flop",
+    "crossleg2": "penis, crossed, legs, reveal, flop",
+    "crossleg3": "penis, crossed, legs, reveal, flop",
+    "crossleg4": "penis, crossed, legs, reveal, flop",
+    "111hosen": "folded, clothing, jeans, laundry",
+    "syringe2": "dart, syringe, drugs, injection, poison, green",
+    "eyess": "emoji, eyes, blur, intense",
+    "twistedspoon": "spoon, bend",
+    "choc": "dark, chocolate, sweet, candy",
+    "grits1": "breasts, squish, fondle, huge, big, squeeze",
+    "grits2": "breasts, squish, fondle, huge, big, squeeze",
+    "grits3": "breasts, squish, fondle, huge, big, squeeze",
+    "grits4": "breasts, squish, fondle, huge, big, squeeze",
+    "cpie22": "internal, xray, cum, cum inside, cervix, womb",
+    "cpie21": "internal, xray, cum, cum inside, cervix, womb",
+    "tmdisk": "disk, cd, rainbow, retro, sticker",
+    "reddoor": "door, red, translucent",
+    "gammacore": "device, scrap, wires, electronics, gamma, core",
+    "wictext1": "symbols, black, runes",
+    "wictext2": "symbols, black, runes",
+    "smokeytreat": "cigarette, lit",
+    "blueglk": "onomatopoeia, blue, glk, swallow, choke",
+    "bnchl": "skeleton, hand, dead, necromancy, teal",
+    "bosshp1": "boss, health, bar, pink, danger, hp, fight",
+    "bosshp2": "boss, health, bar, pink, danger, hp, fight",
+    "bosshp3": "boss, health, bar, pink, danger, hp, fight",
+    "bosshp4": "boss, health, bar, pink, danger, hp, fight",
+    "bosshp5": "boss, health, bar, pink, danger, hp, fight",
+    "bosshp6": "boss, health, bar, pink, danger, hp, fight",
+    "cphp1": "penis, slap, photo, big, drop, scene, table, solo",
+    "cphp2": "penis, slap, photo, big, drop, scene, table, solo",
+    "cphp3": "penis, slap, photo, big, drop, scene, table, solo",
+    "cphp4": "penis, slap, photo, big, drop, scene, table, solo",
+    "cphp5": "penis, slap, photo, big, drop, scene, table, solo",
+    "cphp6": "penis, slap, photo, big, drop, scene, table, solo",
+    "bullethole": "bullet, holes, effect",
+    "catkiss": "cat, meme, kiss, cute",
+    "completelykissed": "short, bear, cute, boykisser, kiss, kissed, kiss mark, shortie, many, peppered",
+    "steamin": "steam, mist, fog, cloud, gas, vapour, rising",
+    "steamyl": "steam, mist, fog, cloud, gas, vapour",
+    "steamfarta": "fart, gas, white, cloud, onomatopoeia",
+    "steamfartb": "fart, gas, white, cloud, onomatopoeia",
+    "chaosorange": "chaos, emerald, yellow",
+    "bzzt scribble": "werewire, onomatopoeia, bzzt, pastel, electricity, shock",
+    "bio hazard": "biohazard, button, toxic, chemical, grey",
+    "sandvich": "sandwich, food",
+    "sammyscollar": "collar, choker, pet, leather",
+    "adnotfuckable": "green, x, wrong, symbol",
+    "oricalcos1": "sigil, teal, grey, magic",
+    "stolas yasspills": "pills, pink, drugs, medicine",
+    "kinger pillow": "pillow, pink",
+    "onaholetf2": "onahole, sex toy, pink, toy, cum, transformation, inanimate transformation",
+    "boomcloud": "boom, explosion, detonate, bang, mushroomcloud",
+    "pinkglow": "potion, pink, glow, vial, bottle",
+    "shackles": "shackles, metal, irons, wrist, prisoner, slave, criminal, handcuffs",
+    "xrepost4": "repost, symbol, grey, arrows",
+    "greensiren3": "siren, warning, alarm, green",
+    "barrier1": "hazard, warning, industrial, black, yellow, stripe",
+    "horscock1": "horsecock",
+    "horscock2": "horsecock",
+    "blackhorsedick1": "horsecock, black",
+    "blackhorsedick2": "horsecock, black",
+    "blackhorsedick3": "horsecock, black",
+    "waterhorsecock1": "horsecock, cock shock, throb",
+    "waterhorsecock2": "horsecock, cock shock, throb",
+    "waterhorsecock3": "horsecock, cock shock, throb",
+    "cumbowl": "pet, bowl, doggy, cat, cum, full, feeding",
+    "cumbowl1": "pet, bowl, doggy, cat, cum, full, feeding",
+    "cumbowl2": "pet, bowl, doggy, cat, cum, full, feeding",
+    "cumbrain1": "cum, brain, emoji",
+    "cumcrete": "cum, slime, white, brick",
+    "cumcube": "white, cube",
+    "cumgoo": "cum, drops, dribble, splatter, puddle",
+    "cumic": "cum, heart, slime",
+    "cumheart1": "cum, heart, slime",
+    "cumhearts": "cum, heart, slime",
+    "cumplosion1": "onomatopoeia, cum, bang, splat, impact, orgasm",
+    "cumplosion2": "onomatopoeia, cum, bang, splat, impact, orgasm",
+    "cumpop": "onomatopoeia, cum, bang, splat, impact, orgasm, pop",
+    "cumpop1": "onomatopoeia, cum, bang, splat, impact, orgasm, pop",
+    "cumslosh1": "cum, onomatopoeia, slosh",
+    "cumslosh2": "cum, onomatopoeia, slosh",
+    "cumwalll": "cum, banner, slime, white, drip, dripping, left",
+    "cumwalll2": "cum, banner, slime, white, drip, dripping, left",
+    "auricuml": "cum, cumshot, splatter, blue, orgasm, left",
+    "auricumr": "cum, cumshot, splatter, blue, orgasm, right",
+    "blucummies": "cum, cumshot, splatter, blue, orgasm, right",
+    "bucketofcum": "cum, bucket",
+    "krogancum1": "mug, glass, cum, drink",
+    "krogancum2": "mug, glass, cum, drink",
+    "krogancum3": "mug, glass, cum, drink",
+    "krogancum4": "mug, glass, cum, drink",
+    "manacum": "blue, glow, condom, condom full, cum",
+    "mugocum": "mug, glass, cum, drink",
+    "onausedcum": "onahole, grey, cum, used, sex toy, toy, inanimate transformation",
+    "petrocumdark": "condom, black, condom full, cum",
+    "plantcumcondom": "purple, cum, condom, condom full",
+    "royalskullcum1": "horsecock, black, skull, graphic, cum, cumshot, ooze, slime, cockvore",
+    "royalskullcum2": "horsecock, black, skull, graphic, cum, cumshot, ooze, slime, cockvore",
+    "royalskullcum3": "horsecock, black, skull, graphic, cum, cumshot, ooze, slime, cockvore",
+    "royalskullcum4": "horsecock, black, skull, graphic, cum, cumshot, ooze, slime, cockvore",
+    "scumshot": "yellow, cumshot, orgasm, squirt",
+    "shadcum1": "speech bubble, red, cum",
+    "shadcum2": "speech bubble, red, cum",
+    "questionmarkkk": "?, confusion, red",
+    "freakmoji": "freak, emoji, 3d, wet, suggestive, smug",
+    "iseeyou1": "ascii, code, digital, black, white, creepy, face",
+    "iseeyou2": "ascii, code, digital, black, white, creepy, face",
+    "iseeyou3": "ascii, code, digital, black, white, creepy, face",
+    "iseeyou4": "ascii, code, digital, black, white, creepy, face",
+    "tribal-cbl\nAdded at: 30 Mar 2026, 22:15:24": "purple, spooky, ghost, frame, ooc",
+    "tribal-cbr\nAdded at: 30 Mar 2026, 22:15:24": "purple, spooky, ghost, frame, ooc",
+    "tribal-ctl\nAdded at: 30 Mar 2026, 22:15:24": "purple, spooky, ghost, frame, ooc",
+    "tribal-ctr\nAdded at: 30 Mar 2026, 22:15:24": "purple, spooky, ghost, frame, ooc",
+    "kojob1\nAdded at: 29 Mar 2026, 16:41:53": "cymk, titjob, pazuri, breasts, penis, blue",
+    "kojob2\nAdded at: 29 Mar 2026, 16:41:53": "cymk, titjob, pazuri, breasts, penis, blue",
+    "kojob3\nAdded at: 29 Mar 2026, 16:41:53": "cymk, titjob, pazuri, breasts, penis, blue",
+    "kojob4\nAdded at: 29 Mar 2026, 16:41:53": "cymk, titjob, pazuri, breasts, penis, blue",
+    "tt-1\nAdded at: 29 Mar 2026, 02:35:36": "penis, wag, swing, funny, side to side",
+    "tt-2\nAdded at: 29 Mar 2026, 02:35:36": "penis, wag, swing, funny, side to side",
+    "tt-3\nAdded at: 29 Mar 2026, 02:35:35": "penis, wag, swing, funny, side to side",
+    "greennyoom1": "green, onomatopoeia, nyoom, zoom, rush, fast",
+    "greennyoom2": "green, onomatopoeia, nyoom, zoom, rush, fast",
+    "castellagle": "gurgle, digestion, onomatopoeia, pink, yellow",
+    "castellagur": "gurgle, digestion, onomatopoeia, pink, yellow",
+    "straight up stroking it": "stamp, pattern, red, ink, square",
+    "dom badge": "rosette, award, grey, certified, dominant",
+    "domhealermagic": "healing, magic, heal, green, +",
+    "descondom": "condom, photo, postvore, disposal, clothing, remains, cockvore",
+    "lunacondom": "condom packet, condom, green",
+    "lunacondom2": "condom packet, condom, pink",
+    "meracondom": "condom packet, condom, blue",
+    "pokemon type domn": "dom, button, status, pokemon, type",
+    "typedom": "dom, button, status, pokemon, type",
+    "weddedcondom": "condom, condom full, green",
+    "triforce of dominance": "yellow, triangle, glitch, distortion",
+    "wisdom ring": "purple, ring, jewelry, gem",
+    "t3zi-permaform-condom": "condom, inanimate transformation, pink, transformation, human condom",
+    "t3zi-permaform-condom-p1": "condom, inanimate transformation, pink, transformation, human condom",
+    "t3zi-permaform-condom-p2": "condom, inanimate transformation, pink, transformation, human condom",
+    "t3zi-permaform-condom-p3": "condom, inanimate transformation, pink, transformation, human condom",
+    "t3zi-permaform-condom-p4": "condom, inanimate transformation, pink, transformation, human condom",
+    "nail wisdom score": "d&d, wisdom, stat, failure, critical failure, dumb, idiot",
+    "kingdomhearts3": "dumpster, fire, chaos, failure, catastrophe",
+    "kingdom1": "scene, fantasy, ruins, castle, rain",
+    "kingdom2": "scene, fantasy, ruins, castle, rain",
+    "kingdom3": "scene, fantasy, ruins, castle, rain",
+    "kingdom4": "scene, fantasy, ruins, castle, rain",
+    "shirobot1": "ass, jiggle, wobble",
+    "shirobot2": "ass, jiggle, wobble",
+    "shirobot3": "ass, jiggle, wobble",
+    "shirobot4": "ass, jiggle, wobble",
+    "rediass1": "purple, ass, balls, behind",
+    "rediass2": "purple, ass, balls, behind",
+    "rediass3": "purple, ass, balls, behind",
+    "rediass4": "purple, ass, balls, behind",
+    "aubhc1": "horsecock, balls",
+    "aubhc4": "horsecock, balls",
+    "aubhc2": "horsecock, balls",
+    "aubhc3": "horsecock, balls",
+    "blinker": "blinker, digital, caret, green",
+    "smolblinker": "blinker, digital, caret, green",
+    "cursorgreen": "blinker, digital, caret, green",
+    "cursororange": "blinker, digital, caret, orange",
+    "cursorred": "blinker, digital, caret, red",
+    "cursor": "tiny, pointer, cursor, hand, small, white, glove",
+    "greenexcl": "!, green",
+    "greenexcr": "!, green",
+    "rainn1": "rain",
+    "rainn2": "rain",
+    "rainn3": "rain",
+    "rainn4": "rain",
+    "rainn5": "rain",
+    "rainn6": "rain",
+    "screenspiral2": "hypno, spiral, black, white",
+    "screenspiral3": "hypno, spiral, black, white",
+    "screenspiral1": "hypno, spiral, black, white",
+    "bluescreen": "bluescreen, computer, error, glitch, :(",
+    "compoundv": "vial, blue, chemical, medicine, medical, compound, v",
+    "loadingcomplete": "digital, loading, complete, finished, success, blue",
+    "voreburporange1": "brown, orange, onomatopoeia, burp",
+    "voreburporange2": "brown, orange, onomatopoeia, burp",
+    "voreburporange3": "brown, orange, onomatopoeia, burp"
   },
   "grid": {
     "bambiruby1": {
@@ -2655,14 +2973,6 @@
       "pos": 0
     },
     "latexbutt2": {
-      "spec": "#1x2",
-      "pos": 1
-    },
-    "latexvinyl3": {
-      "spec": "#1x2",
-      "pos": 0
-    },
-    "latexvinyl4": {
       "spec": "#1x2",
       "pos": 1
     },
@@ -3134,10 +3444,6 @@
       "spec": "#2x2",
       "pos": 3
     },
-    "caution-01": {
-      "spec": "#1x2",
-      "pos": 0
-    },
     "caution-02": {
       "spec": "#1x2",
       "pos": 1
@@ -3206,14 +3512,6 @@
       "spec": "#1x2",
       "pos": 1
     },
-    "rdfl": {
-      "spec": "#1x2",
-      "pos": 0
-    },
-    "rdfr": {
-      "spec": "#1x2",
-      "pos": 1
-    },
     "somared1": {
       "spec": "#1x2",
       "pos": 0
@@ -3238,22 +3536,6 @@
       "spec": "#2x2",
       "pos": 3
     },
-    "voided1": {
-      "spec": "#2x2",
-      "pos": 0
-    },
-    "voided2": {
-      "spec": "#2x2",
-      "pos": 1
-    },
-    "voided3": {
-      "spec": "#2x2",
-      "pos": 2
-    },
-    "voided4": {
-      "spec": "#2x2",
-      "pos": 3
-    },
     "speared1": {
       "spec": "#2x2",
       "pos": 0
@@ -3272,11 +3554,11 @@
     },
     "speedl": {
       "spec": "#1x2",
-      "pos": 0
+      "pos": null
     },
     "speedr": {
       "spec": "#1x2",
-      "pos": 1
+      "pos": null
     },
     "spkf1": {
       "spec": "#1x2",
@@ -4225,6 +4507,910 @@
     "ballsof4": {
       "spec": "#2x2",
       "pos": 3
+    },
+    "evburp1": {
+      "spec": "#1x6",
+      "pos": 0
+    },
+    "evburp2": {
+      "spec": "#1x6",
+      "pos": 1
+    },
+    "evburp3": {
+      "spec": "#1x6",
+      "pos": 2
+    },
+    "evburp4": {
+      "spec": "#1x6",
+      "pos": 3
+    },
+    "evburp5": {
+      "spec": "#1x6",
+      "pos": 4
+    },
+    "evburp6": {
+      "spec": "#1x6",
+      "pos": 5
+    },
+    "evburp7": {
+      "spec": "#3x3",
+      "pos": 6
+    },
+    "grglburp1": {
+      "spec": "#1x4",
+      "pos": 0
+    },
+    "grglburp2": {
+      "spec": "#1x4",
+      "pos": 1
+    },
+    "grglburp3": {
+      "spec": "#1x4",
+      "pos": 2
+    },
+    "grglburp4": {
+      "spec": "#1x4",
+      "pos": 3
+    },
+    "burp": {
+      "spec": "#1x4",
+      "pos": 0
+    },
+    "burp1": {
+      "spec": "#1x4",
+      "pos": 1
+    },
+    "burp2": {
+      "spec": "#1x4",
+      "pos": 2
+    },
+    "burp3": {
+      "spec": "#1x4",
+      "pos": 3
+    },
+    "burp11": {
+      "spec": "#1x4",
+      "pos": 0
+    },
+    "burp12": {
+      "spec": "#1x4",
+      "pos": 1
+    },
+    "burp13": {
+      "spec": "#1x4",
+      "pos": 2
+    },
+    "burp14": {
+      "spec": "#1x4",
+      "pos": 3
+    },
+    "blue2x2burp1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "blue2x2burp2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "blue2x2burp3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "blue2x2burp4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "beelzeburp": {
+      "spec": "#1x4",
+      "pos": 0
+    },
+    "beelzeburp1": {
+      "spec": "#1x4",
+      "pos": 1
+    },
+    "beelzeburp2": {
+      "spec": "#1x4",
+      "pos": 2
+    },
+    "beelzeburp3": {
+      "spec": "#1x4",
+      "pos": 3
+    },
+    "twinspring_1": {
+      "spec": "#1x4",
+      "pos": 0
+    },
+    "twinspring_2": {
+      "spec": "#1x4",
+      "pos": 1
+    },
+    "twinspring_3": {
+      "spec": "#1x4",
+      "pos": 2
+    },
+    "twinspring_4": {
+      "spec": "#1x4",
+      "pos": 3
+    },
+    "voidc1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "voidc2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "voidc3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "voidc4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "docuass1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "docuass2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "docuass3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "docuass4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "deleted1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "deleted2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "deleted3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "deleted4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "voided1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "voided2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "voided3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "voided4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "voided5": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "voided6": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "voided7": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "voided8": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "blf1": {
+      "spec": "#3x3",
+      "pos": 0
+    },
+    "blf2": {
+      "spec": "#3x3",
+      "pos": 1
+    },
+    "blf3": {
+      "spec": "#3x3",
+      "pos": 2
+    },
+    "blf4": {
+      "spec": "#3x3",
+      "pos": 3
+    },
+    "blf6": {
+      "spec": "#3x3",
+      "pos": 5
+    },
+    "blf7": {
+      "spec": "#3x3",
+      "pos": 6
+    },
+    "blf8": {
+      "spec": "#3x3",
+      "pos": 7
+    },
+    "blf9": {
+      "spec": "#3x3",
+      "pos": 8
+    },
+    "ftl1": {
+      "spec": "#3x3",
+      "pos": 0
+    },
+    "ftl2": {
+      "spec": "#3x3",
+      "pos": 1
+    },
+    "ftl3": {
+      "spec": "#3x3",
+      "pos": 2
+    },
+    "ftl4": {
+      "spec": "#3x3",
+      "pos": 3
+    },
+    "ftl5": {
+      "spec": "#3x3",
+      "pos": 5
+    },
+    "ftl6": {
+      "spec": "#3x3",
+      "pos": 6
+    },
+    "ftl7": {
+      "spec": "#3x3",
+      "pos": 7
+    },
+    "ftl8": {
+      "spec": "#3x3",
+      "pos": 8
+    },
+    "heartbub1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "heartbub2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "heartbub3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "heartbub4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "1tinynightshadetwitter": {
+      "spec": "#3x2",
+      "pos": 0
+    },
+    "2tinynightshadetwitter": {
+      "spec": "#3x2",
+      "pos": 1
+    },
+    "3tinynightshadetwitter": {
+      "spec": "#3x2",
+      "pos": 2
+    },
+    "4tinynightshadetwitter": {
+      "spec": "#3x2",
+      "pos": 3
+    },
+    "5tinynightshadetwitter": {
+      "spec": "#3x2",
+      "pos": 4
+    },
+    "6tinynightshadetwitter": {
+      "spec": "#3x2",
+      "pos": 5
+    },
+    "aliclench1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "aliclench2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "aliclench3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "aliclench4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "clench1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "clench2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "clencha1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "clencha2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "clencha3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "clencha4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "hypnoclench": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "hypnoclench2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "dezbclench": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "dezbclench1": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "dezbclench2": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "dezbclench3": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "stk1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "stk2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "stk4": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "upperururu1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "upperururu2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "upperururu3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "upperururu4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "lowtier1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "lowtier2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "lowtier3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "lowtier4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "gabutt1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "gabutt2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "gabutt3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "gabutt4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "approved1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "approved2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "mal0p1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "mal0p2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "mal0p3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "mal0p4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "panass1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "panass2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "panass3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "panass4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "callidangle1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "callidangle2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "callidangle3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "callidangle4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "latexvinyl1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "latexvinyl2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "latexvinyl3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "latexvinyl4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "rdfl": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "rdfr": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "crossleg1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "crossleg2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "crossleg3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "crossleg4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "grits1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "grits2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "grits3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "grits4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "cpie21": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "cpie22": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "bosshp1": {
+      "spec": "#1x6",
+      "pos": 0
+    },
+    "bosshp2": {
+      "spec": "#1x6",
+      "pos": 1
+    },
+    "bosshp3": {
+      "spec": "#1x6",
+      "pos": 2
+    },
+    "bosshp4": {
+      "spec": "#1x6",
+      "pos": 3
+    },
+    "bosshp5": {
+      "spec": "#1x6",
+      "pos": 4
+    },
+    "bosshp6": {
+      "spec": "#1x6",
+      "pos": 5
+    },
+    "cphp1": {
+      "spec": "#2x3",
+      "pos": 0
+    },
+    "cphp2": {
+      "spec": "#2x3",
+      "pos": 1
+    },
+    "cphp3": {
+      "spec": "#2x3",
+      "pos": 2
+    },
+    "cphp4": {
+      "spec": "#2x3",
+      "pos": 3
+    },
+    "cphp5": {
+      "spec": "#2x3",
+      "pos": 4
+    },
+    "cphp6": {
+      "spec": "#2x3",
+      "pos": 5
+    },
+    "caution01": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "caution02": {
+      "spec": "#1x2",
+      "pos": null
+    },
+    "steamfarta": {
+      "spec": "#1x2",
+      "pos": null
+    },
+    "steamfartb": {
+      "spec": "#1x2",
+      "pos": null
+    },
+    "dfart1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "dfart2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "dfart3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "dfart4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "braptext1a": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "braptext1b": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "horscock1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "horscock2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "blackhorsedick1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "blackhorsedick2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "blackhorsedick3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "waterhorsecock1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "waterhorsecock2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "waterhorsecock3": {
+      "spec": "#1x3",
+      "pos": 2
+    },
+    "cumbowl": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "cumbowl1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "cumbowl2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "cumplosion1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "cumplosion2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "cumpop": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "cumpop1": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "cumslosh1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "cumslosh2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "krogancum1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "krogancum2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "krogancum3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "krogancum4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "royalskullcum1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "royalskullcum2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "royalskullcum3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "royalskullcum4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "shadcum": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "shadcum1": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "shadcum2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "iseeyou1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "iseeyou2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "iseeyou3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "iseeyou4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "greennyoom1": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "greennyoom2": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "castellagle": {
+      "spec": "#1x2",
+      "pos": 0
+    },
+    "castellagur": {
+      "spec": "#1x2",
+      "pos": 1
+    },
+    "t3zi-permaform-condom-p1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "t3zi-permaform-condom-p2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "t3zi-permaform-condom-p3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "t3zi-permaform-condom-p4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "kingdom1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "kingdom2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "kingdom3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "kingdom4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "shirobot1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "shirobot2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "shirobot3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "shirobot4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "rediass1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "rediass2": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "rediass3": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "rediass4": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "aubhc1": {
+      "spec": "#2x2",
+      "pos": 0
+    },
+    "aubhc2": {
+      "spec": "#2x2",
+      "pos": 2
+    },
+    "aubhc3": {
+      "spec": "#2x2",
+      "pos": 3
+    },
+    "aubhc4": {
+      "spec": "#2x2",
+      "pos": 1
+    },
+    "rainn1": {
+      "spec": "#2x3",
+      "pos": 0
+    },
+    "rainn2": {
+      "spec": "#2x3",
+      "pos": 1
+    },
+    "rainn3": {
+      "spec": "#2x3",
+      "pos": 2
+    },
+    "rainn4": {
+      "spec": "#2x3",
+      "pos": 3
+    },
+    "rainn5": {
+      "spec": "#2x3",
+      "pos": 4
+    },
+    "rainn6": {
+      "spec": "#2x3",
+      "pos": 5
+    },
+    "voreburporange1": {
+      "spec": "#1x3",
+      "pos": 0
+    },
+    "voreburporange2": {
+      "spec": "#1x3",
+      "pos": 1
+    },
+    "voreburporange3": {
+      "spec": "#1x3",
+      "pos": 2
     }
   },
   "synonyms": [
@@ -4320,14 +5506,21 @@
       "slaves": [
         "hypnosis"
       ]
+    },
+    {
+      "master": "cockvore",
+      "slaves": [
+        "cock vore"
+      ]
+    },
+    {
+      "master": "burp",
+      "slaves": [
+        "belch"
+      ]
     }
   ],
   "duplicates": [
-    [
-      "bbrec",
-      "rec",
-      "recording"
-    ],
     [
       "mirrormirror",
       "trueheir"
@@ -4370,6 +5563,131 @@
     [
       "toiletvacancy",
       "toiletvacant"
+    ],
+    [
+      "arinvoidgem",
+      "voidgem"
+    ],
+    [
+      "bbrec",
+      "rec",
+      "recording"
+    ],
+    [
+      "happypills",
+      "stolas yasspills"
+    ],
+    [
+      "barrier1",
+      "barrier2",
+      "barrier3",
+      "barrier4"
+    ],
+    [
+      "horscock1",
+      "horsedick 1",
+      "horsedick-1",
+      "horsedick1",
+      "horsedick12"
+    ],
+    [
+      "horscock2",
+      "horsedick 2",
+      "horsedick-2",
+      "horsedick13",
+      "horsedick2"
+    ],
+    [
+      "cumheart",
+      "cumheart1",
+      "cumhearts",
+      "cumic"
+    ],
+    [
+      "shadcum1",
+      "shadcum2"
+    ],
+    [
+      "kingdom1",
+      "kingdom2",
+      "kingdom3",
+      "kingdom4"
+    ]
+  ],
+  "forcedGrids": [
+    [
+      "voided1",
+      "voided2",
+      "voided3",
+      "voided4"
+    ],
+    [
+      "voided5",
+      "voided6",
+      "voided7",
+      "voided8"
+    ],
+    [
+      "blf1",
+      "blf2",
+      "blf3",
+      "blf4",
+      "blf6",
+      "blf7",
+      "blf8",
+      "blf9"
+    ],
+    [
+      "heartbub1",
+      "heartbub2",
+      "heartbub3",
+      "heartbub4"
+    ],
+    [
+      "1tinynightshadetwitter",
+      "2tinynightshadetwitter",
+      "3tinynightshadetwitter",
+      "4tinynightshadetwitter",
+      "5tinynightshadetwitter",
+      "6tinynightshadetwitter"
+    ],
+    [
+      "tinynightshadetwitter1",
+      "tinynightshadetwitter2",
+      "tinynightshadetwitter3",
+      "tinynightshadetwitter4",
+      "tinynightshadetwitter5",
+      "tinynightshadetwitter6"
+    ],
+    [
+      "clench1",
+      "clench2"
+    ],
+    [
+      "clencha1",
+      "clencha2",
+      "clencha3",
+      "clencha4"
+    ],
+    [
+      "rdfl",
+      "rdfr"
+    ],
+    [
+      "caution01",
+      "caution02"
+    ],
+    [
+      "speedl",
+      "speedr"
+    ],
+    [
+      "steamfarta",
+      "steamfartb"
+    ],
+    [
+      "cumbowl1",
+      "cumbowl2"
     ]
   ]
 }
