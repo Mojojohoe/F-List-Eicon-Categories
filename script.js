@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Xariah Tagger
-// @version      0.0.38
+// @version      0.0.88
 // @description  Alpha version of the tagging & search system for xariah eicon database
 // @author       Jobix
 // @match        *://xariah.net/eicons*
@@ -14,7 +14,8 @@
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '0.0.38';
+    console.log('[XariahTagger] Script starting v0.0.88');
+    const SCRIPT_VERSION = '0.0.88';
 
     // URL of the developer-maintained tag library on GitHub Pages.
     // Update this file in the repo to push new tags to all users.
@@ -54,11 +55,12 @@
     };
 
     const _origAttachShadow = Element.prototype.attachShadow;
+    console.log('[XariahTagger] attachShadow hook installed');
     Element.prototype.attachShadow = function(init) {
         if (init) init.mode = 'open';
         const shadow = _origAttachShadow.call(this, init);
-        // First x-* element confirms the hook is alive — set the favicon
         if (this.tagName && this.tagName.startsWith('X-') && !_shadowHookConfirmed) {
+            console.log('[XariahTagger] First X-* shadow root intercepted:', this.tagName);
             _setTagFavicon();
         }
         if (this.tagName === 'X-POPUPHOST') {
@@ -269,11 +271,12 @@
         localStorage.setItem('x_grid_data', JSON.stringify(d));
     };
 
-    const getIconGrid  = (name) => getAllGridData()[name] || null;
+    const getIconGrid  = (name) => getAllGridData()[name.toLowerCase()] || null;
     const saveIconGrid = (name, spec, pos) => {
+        const key = name.toLowerCase();
         const d = getAllGridData();
-        if (spec) d[name] = { spec, pos: pos ?? null };
-        else delete d[name];
+        if (spec) d[key] = { spec, pos: pos ?? null };
+        else delete d[key];
         saveAllGridData(d);
     };
 
@@ -462,11 +465,54 @@
         localStorage.setItem('x_duplicates', JSON.stringify(groups));
     };
 
+    // Forced grid sets — groups of eicons that form a composite regardless of name similarity.
+    // Storage: x_forced_grids → Array<string[]>  (each inner array = one group, ordered)
+    let _forcedGridCache = null;
+
+    const getAllForcedGrids = () => {
+        if (_forcedGridCache === null) _forcedGridCache = JSON.parse(localStorage.getItem('x_forced_grids') || '[]');
+        return _forcedGridCache;
+    };
+
+    const saveAllForcedGrids = (groups) => {
+        _forcedGridCache = groups;
+        localStorage.setItem('x_forced_grids', JSON.stringify(groups));
+    };
+
+    const getEiconForcedGroup = (name) => {
+        const key = name.toLowerCase();
+        const groups = getAllForcedGrids();
+        for (let i = 0; i < groups.length; i++) {
+            if (groups[i].includes(key)) return { groupIdx: i, group: groups[i] };
+        }
+        return null;
+    };
+
+    // Creates/merges a forced grid group from the given names.
+    const addForcedGridGroup = (names) => {
+        const groups = getAllForcedGrids();
+        const merged = new Set(names.map(n => n.toLowerCase()));
+        const keepGroups = [];
+        groups.forEach(g => {
+            if (g.some(n => merged.has(n))) { g.forEach(n => merged.add(n)); }
+            else keepGroups.push(g);
+        });
+        keepGroups.push([...merged].sort());
+        saveAllForcedGrids(keepGroups);
+    };
+
+    const removeForcedGridGroup = (idx) => {
+        const groups = getAllForcedGrids();
+        groups.splice(idx, 1);
+        saveAllForcedGrids(groups);
+    };
+
     // Returns { groupIdx, group } for the group containing this eicon, or null.
     const getEiconDuplicateGroup = (name) => {
+        const key = name.toLowerCase();
         const groups = getAllDuplicates();
         for (let i = 0; i < groups.length; i++) {
-            if (groups[i].includes(name)) return { groupIdx: i, group: groups[i] };
+            if (groups[i].includes(key)) return { groupIdx: i, group: groups[i] };
         }
         return null;
     };
@@ -715,7 +761,67 @@
         }
         .censor-overlay .cx { font-size: 22px; line-height: 1; color: #e74c3c; font-weight: 900; }
         .censor-overlay .cl { font-size: 8px; color: #aaa; font-family: monospace; letter-spacing: 0.5px; text-transform: uppercase; }
-        #x-tag-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000001; display: none; align-items: center; justify-content: center; }
+        #x-tag-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000001; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px 0; overflow-y: auto; }
+
+        /* Eicon preview panel — sits above the tag modal inside the overlay flex column */
+        #x-eicon-preview {
+            display: none; align-items: center; justify-content: center;
+            flex-wrap: wrap; gap: 4px;
+            background: #111; border: 1px solid #333; border-radius: 10px;
+            padding: 10px; max-width: 600px; width: max-content;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            flex-shrink: 0;
+        }
+        #x-eicon-preview.visible { display: flex; }
+        /* Single large preview */
+        .preview-single {
+            width: 100px; height: 100px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .preview-single img { width: 100px; height: 100px; object-fit: contain; image-rendering: pixelated; }
+        /* Grid cell in the preview */
+        .preview-cell {
+            width: 60px; height: 60px; cursor: pointer; border-radius: 4px;
+            border: 2px solid transparent; transition: border-color 0.15s, opacity 0.15s;
+            display: flex; align-items: center; justify-content: center;
+            background: #1a1a1a; overflow: hidden; flex-shrink: 0;
+            position: relative;
+        }
+        .preview-cell img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+        .preview-cell:hover { border-color: #666; }
+        .preview-cell.active { border-color: gold; box-shadow: 0 0 8px rgba(255,215,0,0.5); }
+        .preview-cell.selected { border-color: gold; box-shadow: 0 0 8px rgba(255,215,0,0.5); opacity: 0.75; }
+        .preview-cell.active.selected { border-color: gold; box-shadow: 0 0 12px rgba(255,215,0,0.8); opacity: 1; }
+        .preview-cell.stacked { cursor: pointer; }
+        .preview-cell.stacked .stack-ghost {
+            position: absolute; border-radius: 3px; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.15);
+            transition: opacity 0.15s, transform 0.15s;
+            pointer-events: none;
+        }
+        .preview-cell.stacked:hover .stack-ghost { opacity: 0.55; }
+        .preview-cell.stacked .stack-ghost:nth-child(2) { bottom: -4px; right: -4px; width: 100%; height: 100%; opacity: 0; transform: translate(3px,3px) scale(0.88); }
+        .preview-cell.stacked .stack-ghost:nth-child(3) { bottom: -8px; right: -8px; width: 100%; height: 100%; opacity: 0; transform: translate(6px,6px) scale(0.76); }
+        .preview-cell.stacked .stack-badge { position: absolute; top: 2px; right: 2px; background: #e67e22; color: #fff; font-size: 8px; font-weight: bold; border-radius: 3px; padding: 0 3px; line-height: 12px; pointer-events: none; }
+        .preview-cell.empty { opacity: 0.15; cursor: default; }
+        /* Unsaved tag chip — faded yellow with dashed border */
+        .chip.yellow.unsaved {
+            opacity: 0.55; border: 1px dashed #a07800;
+            background: #b89000; color: #000;
+        }
+        /* Partial tag: present in some but not all selected eicons */
+        .chip.yellow.partial {
+            background: repeating-linear-gradient(
+                -45deg,
+                gold 0px, gold 5px,
+                #a07800 5px, #a07800 10px
+            );
+            color: #000; border: 1px solid #a07800; opacity: 0.85;
+        }
+        /* Unsaved partial: both effects — dashed border reasserts over .partial's solid */
+        .chip.yellow.partial.unsaved {
+            opacity: 0.55; border: 1px dashed #a07800;
+        }
 
         /* Batch Selection floating bar */
         #x-selection-bar {
@@ -762,87 +868,86 @@
         .chip.green { background: #28a745; color: #fff; cursor: pointer; }
         .chip.red { background: #e74c3c; color: #fff; cursor: default; }
         .chip.grey { background: #555; color: #ccc; cursor: pointer; border: 1px solid #777; }
+        .chip.vermillion { background: #c0522a; color: #fff; cursor: pointer; border: 1px solid #e06030; }
+
+        /* Smart grid hint — base colour is red; forced-grid variant is vermillion */
+        #x-smart-grid-hint { --sg-color: #e74c3c; --sg-bg: #1a0a0a; --sg-border: #e74c3c44; }
         .chip.purple { background: #7c3aed; color: #fff; cursor: pointer; border: 1px solid #9d7ef5; }
 
-        /* Smart grid detection panel */
-        /* Smart grid drag-to-size widget */
+        /* Smart grid drag-to-size widget — uses CSS vars for colour theming.
+           Default: neutral grey suggestion (not yet applied). Forced-grid: vermillion. */
         #x-smart-grid-hint {
-            display: none; margin-top: 10px; padding: 12px 14px;
-            background: #1a0a0a; border: 1px solid #e74c3c44; border-radius: 6px;
+            display: none; margin-top: 10px; padding: 10px 14px 18px 14px;
+            background: #222; border: 1px solid #444;
+            border-radius: 6px; position: relative;
         }
         #x-smart-grid-hint.visible { display: block; }
+        #x-smart-grid-hint.forced { background: #1a0e00; border-color: rgba(192,82,42,0.27); }
+        #x-smart-grid-hint.forced #x-sg-bottom-handle, #x-smart-grid-hint.forced #x-sg-right-handle { background: rgba(192,82,42,0.20); border-color: rgba(192,82,42,0.33); }
+        #x-smart-grid-hint.forced #x-sg-bottom-handle::after, #x-smart-grid-hint.forced #x-sg-right-handle::after { color: #c0522a; }
+        #x-smart-grid-hint.forced .sgc { background: rgba(192,82,42,0.18); border-color: rgba(192,82,42,0.33); }
+        #x-smart-grid-hint.forced .sgc.anchor { background: rgba(192,82,42,0.55); border-color: #c0522a; color: #c0522a; }
+        #x-smart-grid-hint.forced #x-sg-size-label { color: rgba(192,82,42,0.53); }
+        #x-smart-grid-hint.forced #x-sg-confirm { background: #c0522a; }
         #x-smart-grid-hint-label {
-            font-size: 10px; color: #e74c3c88; text-transform: uppercase;
+            font-size: 10px; color: #777; text-transform: uppercase;
             letter-spacing: 1px; margin-bottom: 10px;
         }
-        /* Smart grid hint — position:relative so sidebar can be absolute within it */
-        #x-smart-grid-hint {
-            display: none; margin-top: 10px; padding: 10px 14px;
-            background: #1a0a0a; border: 1px solid #e74c3c44; border-radius: 6px;
-            position: relative;
+        #x-smart-grid-hint.forced #x-smart-grid-hint-label {
+            color: rgba(231,76,60,0.60);
         }
-        #x-smart-grid-hint.visible { display: block; }
-        #x-smart-grid-hint-label {
-            font-size: 10px; color: #e74c3c88; text-transform: uppercase;
-            letter-spacing: 1px; margin-bottom: 10px;
-        }
-        /* Sidebar: absolutely pinned to the right of the hint panel — never moves */
         #x-sg-sidebar {
             position: absolute; top: 10px; right: 14px;
-            display: flex; flex-direction: column;
-            align-items: flex-start; gap: 10px;
+            display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
         }
-        /* Canvas: just holds the grid wrap, padded right to avoid sidebar overlap */
-        #x-smart-grid-canvas {
-            display: inline-block;
-            padding-right: 130px;
-        }
+        #x-smart-grid-canvas { display: inline-block; padding-right: 130px; }
         #x-sg-wrap {
             position: relative; display: inline-block;
-            user-select: none;
-            margin-top: 10px; /* room for top handle */
+            user-select: none; margin-top: 10px;
         }
-        /* Top drag handle */
-        #x-sg-top-handle {
-            position: absolute; top: -10px; left: 0; right: 0; height: 10px;
+        #x-sg-bottom-handle {
+            position: absolute; bottom: -10px; left: 0; right: 0; height: 10px;
             cursor: ns-resize; display: flex; align-items: center; justify-content: center;
-            background: #e74c3c33; border-radius: 3px 3px 0 0;
-            border: 1px solid #e74c3c55; border-bottom: none;
+            background: rgba(231,76,60,0.20);
+            border-radius: 0 0 3px 3px;
+            border: 1px solid rgba(231,76,60,0.33); border-top: none;
             transition: background 0.15s;
         }
-        #x-sg-top-handle:hover { background: #e74c3c55; }
-        #x-sg-top-handle::after { content: '↕'; color: #e74c3c; font-size: 10px; }
-        /* Right drag handle */
+        #x-sg-bottom-handle:hover { background: rgba(231,76,60,0.33); }
+        #x-sg-bottom-handle::after { content: '↕'; color: #e74c3c; font-size: 10px; }
         #x-sg-right-handle {
             position: absolute; top: 0; right: -10px; bottom: 0; width: 10px;
             cursor: ew-resize; display: flex; align-items: center; justify-content: center;
-            background: #e74c3c33; border-radius: 0 3px 3px 0;
-            border: 1px solid #e74c3c55; border-left: none;
+            background: rgba(231,76,60,0.20);
+            border-radius: 0 3px 3px 0;
+            border: 1px solid rgba(231,76,60,0.33); border-left: none;
             transition: background 0.15s;
         }
-        #x-sg-right-handle:hover { background: #e74c3c55; }
+        #x-sg-right-handle:hover { background: rgba(231,76,60,0.33); }
         #x-sg-right-handle::after { content: '↔'; color: #e74c3c; font-size: 10px; }
-        /* Cells */
         #x-sg-cells { display: inline-grid; gap: 4px; }
         .sgc {
             width: 24px; height: 24px; border-radius: 3px;
-            background: rgba(231,76,60,0.18); border: 1px solid #e74c3c55;
+            background: rgba(231,76,60,0.18);
+            border: 1px solid rgba(231,76,60,0.33);
         }
         .sgc.anchor {
-            background: rgba(231,76,60,0.55); border: 1px solid #e74c3c;
+            background: rgba(231,76,60,0.55);
+            border: 1px solid #e74c3c;
             display: flex; align-items: center; justify-content: center;
             font-size: 11px; color: #e74c3c;
         }
+        .sgc.overflow { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); opacity: 0.35; }
         #x-sg-size-label {
-            font-family: monospace; font-size: 15px; color: #e74c3c88;
-            pointer-events: none;
+            font-family: monospace; font-size: 15px;
+            color: rgba(231,76,60,0.53); pointer-events: none;
         }
         #x-sg-confirm {
             background: #e74c3c; color: white; border: none; border-radius: 4px;
             padding: 6px 14px; font-size: 12px; font-weight: bold;
             cursor: pointer; transition: background 0.15s; white-space: nowrap;
         }
-        #x-sg-confirm:hover { background: #c0392b; }
+        #x-sg-confirm:hover { filter: brightness(0.85); }
 
         /* Grid tag widget */
         #x-grid-area { margin-top: 10px; display: none; }
@@ -856,6 +961,8 @@
         }
         .grid-cell:hover { background: #444; }
         .grid-cell.selected { background: #e74c3c; border-color: #c0392b; box-shadow: 0 0 4px rgba(231,76,60,0.6); }
+        .grid-cell.conflict { border-color: #e67e22; box-shadow: 0 0 5px rgba(230,126,34,0.7); cursor: pointer !important; }
+        .grid-cell.cycle-active { outline: 2px solid #e67e22; outline-offset: -2px; }
         /* Dev Tools tabs */
         #x-devtools-tabs {
             display: flex; gap: 4px; padding: 8px 12px;
@@ -1030,7 +1137,14 @@
         @keyframes synFlash { 0%{background:#9d7ef5;color:#fff;} 60%{background:#9d7ef5;color:#fff;} 100%{background:gold;color:#000;} }
         .chip.syn-flash { animation: synFlash 0.55s ease-out forwards; }
     `;
-    document.head.appendChild(style);
+
+    // Style injection — deferred until document.head exists (script runs at document-start)
+    const _injectStyles = () => {
+        if (!document.head) { setTimeout(_injectStyles, 10); return; }
+        document.head.appendChild(style);
+        console.log('[XariahTagger] Styles injected');
+    };
+    _injectStyles();
 
 
 
@@ -1038,6 +1152,15 @@
 
     let currentIconName = '';
     let activeTags = [];
+    let _batchRemovedTags = new Set(); // tags explicitly removed during a batch edit session
+    let _batchIconNames   = new Set(); // eicons in the current batch session (survives preview navigation)
+    let _savedTagsSnapshot = new Set(); // tags as they were on disk when modal opened (for fade comparison)
+    let _conflictCycle    = {};         // pos → current cycle index, for cycling through conflict occupants
+    let _batchTagCache    = {};         // name → {tags, gridSpec, gridPos} — in-memory edits for the whole batch session
+    let _previewStackCycle = {};        // posKey → current cycle index for stacked preview cells
+    let _batchOriginalCommon = null;    // Set<tag> — stored-on-disk intersection when batch session started
+    let _batchOriginalExtras = null;    // { [name]: Set<tag> } — per-eicon stored extras when batch started
+    let _modalOpen = false;             // true while x-tag-modal-overlay is visible
 
     // Stored reference to the search input so we never rely on a fragile class selector.
     let searchInput = null;
@@ -1084,6 +1207,7 @@
                 c.addEventListener('mousedown', e => e.preventDefault());
                 c.onclick = () => {
                     activeTags.push(tag);
+                    syncTagToOverviewBatch(tag);
                     renderModalChips();
                     const input = document.getElementById('x-modal-input');
                     if (input) { input.value = ''; input.focus(); }
@@ -1104,6 +1228,7 @@
                     c.addEventListener('mousedown', e => e.preventDefault());
                     c.onclick = () => {
                         activeTags.push(tag);
+                        syncTagToOverviewBatch(tag);
                         renderModalChips();
                         const input = document.getElementById('x-modal-input');
                         if (input) { input.value = ''; input.focus(); }
@@ -1129,6 +1254,7 @@
                     c.addEventListener('mousedown', e => e.preventDefault());
                     c.onclick = () => {
                         activeTags.push(tag);
+                        syncTagToOverviewBatch(tag);
                         renderModalChips();
                         const input = document.getElementById('x-modal-input');
                         if (input) { input.value = ''; input.focus(); }
@@ -1139,18 +1265,172 @@
         }
     }
 
+    // Parses a grid spec from storage, normalising missing '#' prefix automatically.
+    const parseGridFromStorage = (spec) => spec
+        ? (parseGridTag(spec.startsWith('#') ? spec : '#' + spec) || null)
+        : null;
+
+    const getModalInput = () => document.getElementById('x-modal-input');
+    const refreshSuggestions = () => updateSuggestions(getModalInput()?.value.toLowerCase() || '');
+
+    // Keeps _batchTagCache['__batch__'] in sync when a tag is added/replaced in batch
+    // overview mode (currentIconName === '').  Must be called immediately after every
+    // activeTags.push() so that batchSharedSet in renderModalChips is never stale.
+    function syncTagToOverviewBatch(tag) {
+        if (_batchIconNames.size === 0 || currentIconName) return;
+        const bc = _batchTagCache['__batch__'];
+        if (bc && !bc.tags.includes(tag)) bc.tags.push(tag);
+    }
+
+    // Full-replace variant used by Copy Last and any code that reassigns activeTags wholesale.
+    function syncAllTagsToOverviewBatch() {
+        if (_batchIconNames.size === 0 || currentIconName) return;
+        if (_batchTagCache['__batch__']) {
+            _batchTagCache['__batch__'].tags = [...activeTags];
+        }
+    }
+
     function renderModalChips() {
         const container = document.getElementById('x-active-chips');
         if (!container) return;
         container.innerHTML = '';
-        activeTags.forEach(tag => {
+
+        // ── Build display list ───────────────────────────────────────────────
+        // Each entry: { tag, partial }
+        // partial = true  → tag is not present on every selected eicon
+        // partial = false → tag applies to all selected (or only one eicon is selected)
+        //
+        // Domain = selected eicons that are in the batch, fallback to all batch members.
+        // Helper: will `n` have `tag` after save?
+        //   - currentIconName → check activeTags (not yet flushed to cache)
+        //   - other batch members → check __batch__ union their extras cache
+
+        const batchDomain = (() => {
+            if (_batchIconNames.size === 0) return null;
+            const sel = [...selectedIconNames].filter(n => _batchIconNames.has(n));
+            return sel.length > 0 ? sel : [..._batchIconNames];
+        })();
+
+        const eiconWillHaveTag = (n, tag) => {
+            if (n === currentIconName) return activeTags.includes(tag);
+            const shared = _batchTagCache['__batch__']?.tags || [];
+            const extras = _batchTagCache[n]?.tags || [];
+            return shared.includes(tag) || extras.includes(tag);
+        };
+
+        let displayTags; // Array<{ tag: string, partial: boolean }>
+
+        if (_batchIconNames.size > 0 && !currentIconName) {
+            // ── Batch overview ───────────────────────────────────────────────
+            // activeTags = __batch__ shared set → always non-partial.
+            // Also surface per-eicon extras from selected eicons as partial chips.
+            const sharedSet = new Set(activeTags);
+            displayTags = activeTags.map(tag => ({ tag, partial: false }));
+
+            const seen = new Set(activeTags);
+            batchDomain.forEach(n => {
+                (_batchTagCache[n]?.tags || []).forEach(tag => {
+                    if (seen.has(tag)) return;
+                    seen.add(tag);
+                    const inAll = batchDomain.every(m => eiconWillHaveTag(m, tag));
+                    displayTags.push({ tag, partial: !inAll });
+                });
+            });
+        } else if (_batchIconNames.size > 0 && currentIconName && batchDomain && batchDomain.length > 1) {
+            // ── Individual eicon inside batch, multiple selected ─────────────
+            // Show the union of ALL domain eicons' tags so that extras belonging
+            // to other selected eicons are visible (and correctly marked partial).
+            const seen = new Set();
+            const allTags = [];
+            // Current eicon first (activeTags = __batch__ ∪ this eicon's extras)
+            activeTags.forEach(t => { if (!seen.has(t)) { seen.add(t); allTags.push(t); } });
+            // Other domain eicons: __batch__ already covered; add their per-eicon extras
+            batchDomain.filter(n => n !== currentIconName).forEach(n => {
+                (_batchTagCache[n]?.tags || []).forEach(t => {
+                    if (!seen.has(t)) { seen.add(t); allTags.push(t); }
+                });
+            });
+            displayTags = allTags.map(tag => ({
+                tag,
+                partial: !batchDomain.every(n => eiconWillHaveTag(n, tag))
+            }));
+        } else {
+            // ── Single-eicon or individual with only itself selected ──────────
+            displayTags = activeTags.map(tag => ({ tag, partial: false }));
+        }
+
+        // ── Render chips ─────────────────────────────────────────────────────
+        displayTags.forEach(({ tag, partial: isPartial }) => {
             const chip = document.createElement('div');
-            chip.className = 'chip yellow';
+
+            // isSaved: was this tag already on disk before this session opened?
+            let isSaved;
+            if (_batchIconNames.size > 0 && _batchOriginalCommon) {
+                if (currentIconName && _batchOriginalExtras) {
+                    // Individual eicon in batch
+                    const origAll = new Set([
+                        ..._batchOriginalCommon,
+                        ...(_batchOriginalExtras[currentIconName] || new Set())
+                    ]);
+                    isSaved = origAll.has(tag);
+                } else if (isPartial && _batchOriginalExtras) {
+                    // Partial chip (overview or individual): saved if every domain eicon
+                    // that will have it had it on disk already.
+                    const eiconsThatHaveIt = (batchDomain || []).filter(n => eiconWillHaveTag(n, tag));
+                    isSaved = eiconsThatHaveIt.length > 0 && eiconsThatHaveIt.every(n => {
+                        if (n === currentIconName) {
+                            const origAll = new Set([
+                                ..._batchOriginalCommon,
+                                ...(_batchOriginalExtras[n] || new Set())
+                            ]);
+                            return origAll.has(tag);
+                        }
+                        return (_batchOriginalExtras[n] || new Set()).has(tag)
+                            || _batchOriginalCommon.has(tag);
+                    });
+                } else {
+                    // Shared tag in overview
+                    isSaved = _batchOriginalCommon.has(tag);
+                }
+            } else {
+                isSaved = _savedTagsSnapshot.has(tag);
+            }
+
+            chip.className = 'chip yellow'
+                + (isPartial ? ' partial' : '')
+                + (!isSaved  ? ' unsaved' : '');
+            chip.title = isPartial
+                ? 'Not on all selected eicons — only some will have this tag'
+                : (isSaved ? '' : 'Unsaved — click × to remove, or Save to apply');
             chip.innerHTML = `${tag} <span style="cursor:pointer">×</span>`;
             chip.onclick = () => {
-                activeTags = activeTags.filter(t => t !== tag);
+                if (isPartial && !currentIconName) {
+                    // Overview partial: remove from per-eicon extras of every domain eicon that has it
+                    (batchDomain || []).forEach(n => {
+                        const ec = _batchTagCache[n];
+                        if (ec) ec.tags = ec.tags.filter(t => t !== tag);
+                    });
+                    // activeTags (shared set) doesn't contain this tag — no further action
+                } else if (isPartial && currentIconName) {
+                    // Individual partial: tag is in activeTags for this eicon but not all selected.
+                    // Remove it from activeTags and from this eicon's cache only.
+                    activeTags = activeTags.filter(t => t !== tag);
+                    const ec = _batchTagCache[currentIconName];
+                    if (ec) ec.tags = ec.tags.filter(t => t !== tag);
+                    // Do NOT add to _batchRemovedTags — that would delete it from eicons that DO have it
+                } else {
+                    // Non-partial: remove from shared layer
+                    activeTags = activeTags.filter(t => t !== tag);
+                    if (_batchIconNames.size > 0) {
+                        _batchRemovedTags.add(tag);
+                        const bc = _batchTagCache['__batch__'];
+                        if (bc) bc.tags = bc.tags.filter(t => t !== tag);
+                    } else if (!currentIconName) {
+                        _batchRemovedTags.add(tag);
+                    }
+                }
                 renderModalChips();
-                updateSuggestions(document.getElementById('x-modal-input').value.toLowerCase());
+                refreshSuggestions();
             };
             container.appendChild(chip);
         });
@@ -1228,28 +1508,115 @@
     // After setting a grid spec for `currentIconName`, automatically saves grid data
     // for all detected siblings, assigning positions in sorted order (row-major).
     // Returns the position assigned to `currentIconName` so the modal can pre-select it.
-    function autoApplyGridToSiblings(spec) {
-        const base = getGroupBase(currentIconName);
-
-        // Collect siblings from DOM + library + gridData
-        const sibSet = new Set([currentIconName]);
+    // Returns the set of natural (name-based) siblings for an eicon, excluding any
+    // eicons that are already members of a forced grid group.
+    // Checks DOM, gridData, and tag library.
+    function getNaturalSiblings(name) {
+        const base = getGroupBase(name);
+        const forcedGroups = getAllForcedGrids();
+        const isForced = (n) => forcedGroups.some(g => g.includes(n.toLowerCase()));
+        const sibSet = new Set();
+        // Only include this eicon itself if it's not in a forced group
+        if (!isForced(name)) sibSet.add(name);
         findDeep(document, 'x-eiconview').forEach(el => {
             const n = getIconNameFromElement(el);
-            if (n && getGroupBase(n) === base) sibSet.add(n);
+            if (n && getGroupBase(n) === base && !isForced(n)) sibSet.add(n);
         });
-        Object.keys(getAllGridData()).forEach(n => { if (getGroupBase(n) === base) sibSet.add(n); });
-        Object.keys(getAllTags()).forEach(n => { if (getGroupBase(n) === base) sibSet.add(n); });
+        Object.keys(getAllGridData()).forEach(n => { if (getGroupBase(n) === base && !isForced(n)) sibSet.add(n); });
+        Object.keys(getAllTags()).forEach(n => { if (getGroupBase(n) === base && !isForced(n)) sibSet.add(n); });
+        return sibSet;
+    }
 
+    function autoApplyGridToSiblings(spec) {
+        const sibSet = getNaturalSiblings(currentIconName);
         const sorted = sortSiblings([...sibSet]);
         const total = spec.rows * spec.cols;
-
         sorted.forEach((name, idx) => {
-            if (idx < total) {
-                saveIconGrid(name, spec.raw, idx);
-            }
+            if (idx < total) saveIconGrid(name, spec.raw, idx);
         });
-
         return sorted.indexOf(currentIconName);
+    }
+
+    // Applies a grid spec to all natural siblings of a named group,
+    // seeding with the provided names so off-screen/untagged eicons are included.
+    // Saves a grid spec to all members of a forced group with sequential positions.
+    // Returns the sorted member array.
+    function applyGridToForcedGroup(fg, spec) {
+        const sorted = sortSiblings(fg.group);
+        const total  = spec.rows * spec.cols;
+        sorted.forEach((n, idx) => { if (idx < total) saveIconGrid(n, spec.raw, idx); });
+        return sorted;
+    }
+
+    function applyGridToNaturalGroup(seedNames, spec) {
+        const first = seedNames[0] || '';
+        const seedSet = getNaturalSiblings(first);
+        seedNames.forEach(n => seedSet.add(n));
+        const sorted = sortSiblings([...seedSet]);
+        const total  = spec.rows * spec.cols;
+        sorted.forEach((n, idx) => { if (idx < total) saveIconGrid(n, spec.raw, idx); });
+        return sorted;
+    }
+
+    // Returns sibling eicons that share the same grid spec as `name`,
+    // scoped to natural siblings only (not all eicons with that spec globally).
+    function getSiblingsBySpec(name, spec) {
+        const sibs = getNaturalSiblings(name);
+        sibs.add(name);
+        const matched = [...sibs].filter(n => getAllGridData()[n]?.spec === spec);
+        if (!matched.includes(name)) matched.push(name);
+        return matched;
+    }
+
+    // Shared helpers for the smart grid hint widget ────────────────────────
+    // Returns the recommended initial [rows, cols] for a group of `count` eicons.
+    // Odd count ≤ 7 → single row; even or count > 7 → square-ish.
+    function suggestGridSize(count, MAX) {
+        if (count <= 7 && count % 2 !== 0) return [1, count];
+        const cols = Math.min(MAX, Math.ceil(Math.sqrt(count)));
+        const rows = Math.min(MAX, Math.ceil(count / cols));
+        return [rows, cols];
+    }
+
+    function buildSgCells(cellsEl, sizeLabel, rows, cols, cell, gap, count) {
+        // count = actual number of eicons; cells beyond count are shown greyed
+        cellsEl.style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
+        cellsEl.style.gridTemplateRows    = `repeat(${rows}, ${cell}px)`;
+        cellsEl.style.gap = `${gap}px`;
+        cellsEl.innerHTML = '';
+        const total = rows * cols;
+        for (let i = 0; i < total; i++) {
+            const r = Math.floor(i / cols), c = i % cols;
+            const div = document.createElement('div');
+            const isAnchor = r === 0 && c === 0;
+            const isOverflow = count != null && i >= count;
+            div.className = 'sgc'
+                + (isAnchor   ? ' anchor'   : '')
+                + (isOverflow ? ' overflow' : '');
+            if (isAnchor) div.textContent = '⚓';
+            cellsEl.appendChild(div);
+        }
+        sizeLabel.textContent = `#${rows}×${cols}`;
+    }
+
+    function makeSgDragHandler(axis, getCols, getRows, setCols, setRows, MAX, STEP, rebuild) {
+        return (startEvt) => {
+            startEvt.preventDefault();
+            const startX = startEvt.clientX, startY = startEvt.clientY;
+            const startCols = getCols(), startRows = getRows();
+            const onMove = (e) => {
+                if (axis === 'x') {
+                    const v = Math.max(1, Math.min(MAX, startCols + Math.round((e.clientX - startX) / STEP)));
+                    if (v !== getCols()) { setCols(v); rebuild(); }
+                } else {
+                    const v = Math.max(1, Math.min(MAX, startRows + Math.round((e.clientY - startY) / STEP)));
+                    if (v !== getRows()) { setRows(v); rebuild(); }
+                }
+            };
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        };
     }
 
     function renderSmartGridHint(name) {
@@ -1258,105 +1625,80 @@
 
         if (activeGridSpec || !name) { hint.classList.remove('visible'); return; }
 
+        // If this eicon is in a duplicate (&&) group, don't show a grid hint —
+        // duplicate groups are for variant/alias eicons, not grid composites.
+        if (getEiconDuplicateGroup(name)) { hint.classList.remove('visible'); return; }
+
         const base = getGroupBase(name);
 
-        // Siblings: live DOM first (catches untagged), then library + gridData
-        const siblings = new Set();
-        findDeep(document, 'x-eiconview').forEach(el => {
-            const n = getIconNameFromElement(el);
-            if (n && getGroupBase(n) === base) siblings.add(n);
-        });
-        const gridData = getAllGridData();
-        const lib = getAllTags();
-        Object.keys(gridData).forEach(n => { if (getGroupBase(n) === base) siblings.add(n); });
-        Object.keys(lib).forEach(n => { if (getGroupBase(n) === base) siblings.add(n); });
+        // Natural siblings — excludes eicons already in a forced group (Problem A fix)
+        const siblings = getNaturalSiblings(name);
 
-        if (siblings.size < 2) { hint.classList.remove('visible'); return; }
+        // If this eicon itself is in a forced group, show forced-mode hint
+        // using the exact group count, not an estimated sibling count (Problem B fix)
+        const forcedResult = getEiconForcedGroup(name);
+        if (forcedResult) {
+            hint.classList.add('forced');
+            forcedResult.group.forEach(n => siblings.add(n));
+            // Override count to the exact forced group size — no guesswork
+            const forcedCount = forcedResult.group.length;
+            if (forcedCount < 2) { hint.classList.remove('visible'); return; }
+            hint.classList.add('visible');
 
-        hint.classList.add('visible');
+            const CELL = 22, GAP = 3, MAX = 5;
+            const count = forcedCount;
+            let [curRows, curCols] = suggestGridSize(count, MAX);
 
+            // (falls through to shared widget setup below)
+        }
+
+        if (!forcedResult) {
+            hint.classList.remove('forced');
+            if (siblings.size < 2) { hint.classList.remove('visible'); return; }
+            hint.classList.add('visible');
+        }
+
+        // ── Shared widget setup ───────────────────────────────────────────────
         const CELL = 22, GAP = 3, MAX = 5;
-        const count = siblings.size;
+        const count = forcedResult ? forcedResult.group.length : siblings.size;
+        let [curRows, curCols] = suggestGridSize(count, MAX);
 
-        // Initial suggested size — square-ish
-        let curCols = Math.min(MAX, Math.ceil(Math.sqrt(count)));
-        let curRows = Math.min(MAX, Math.ceil(count / curCols));
-
-        const cellsEl   = document.getElementById('x-sg-cells');
-        const sizeLabel = document.getElementById('x-sg-size-label');
-        const topHandle = document.getElementById('x-sg-top-handle');
+        const cellsEl    = document.getElementById('x-sg-cells');
+        const sizeLabel  = document.getElementById('x-sg-size-label');
+        const topHandle  = document.getElementById('x-sg-bottom-handle');
         const rightHandle = document.getElementById('x-sg-right-handle');
         const confirmBtn = document.getElementById('x-sg-confirm');
         if (!cellsEl || !sizeLabel || !topHandle || !rightHandle || !confirmBtn) return;
 
-        const STEP = CELL + GAP; // px per grid unit
-
-        const rebuild = () => {
-            cellsEl.style.gridTemplateColumns = `repeat(${curCols}, ${CELL}px)`;
-            cellsEl.style.gridTemplateRows    = `repeat(${curRows}, ${CELL}px)`;
-            cellsEl.style.gap = `${GAP}px`;
-            cellsEl.innerHTML = '';
-            for (let r = 0; r < curRows; r++) {
-                for (let c = 0; c < curCols; c++) {
-                    const cell = document.createElement('div');
-                    const isAnchor = r === 0 && c === 0;
-                    cell.className = 'sgc' + (isAnchor ? ' anchor' : '');
-                    if (isAnchor) cell.textContent = '⚓';
-                    cellsEl.appendChild(cell);
-                }
-            }
-            sizeLabel.textContent = `#${curRows}×${curCols}`;
-        };
-
-        // Drag logic — shared between top and right handles
-        const makeDragHandler = (axis) => (startEvt) => {
-            startEvt.preventDefault();
-            const startX = startEvt.clientX;
-            const startY = startEvt.clientY;
-            const startCols = curCols;
-            const startRows = curRows;
-
-            const onMove = (e) => {
-                if (axis === 'x') {
-                    const delta = e.clientX - startX;
-                    const newCols = Math.max(1, Math.min(MAX, startCols + Math.round(delta / STEP)));
-                    if (newCols !== curCols) {
-                        curCols = newCols;
-                        curRows = Math.min(MAX, Math.ceil(count / curCols));
-                        rebuild();
-                    }
-                } else {
-                    const delta = startY - e.clientY; // up = more rows
-                    const newRows = Math.max(1, Math.min(MAX, startRows + Math.round(delta / STEP)));
-                    if (newRows !== curRows) {
-                        curRows = newRows;
-                        curCols = Math.min(MAX, Math.ceil(count / curRows));
-                        rebuild();
-                    }
-                }
-            };
-            const onUp = () => {
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-            };
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-        };
-
-        topHandle.onmousedown   = makeDragHandler('y');
-        rightHandle.onmousedown = makeDragHandler('x');
+        const STEP = CELL + GAP;
+        const rebuild = () => buildSgCells(cellsEl, sizeLabel, curRows, curCols, CELL, GAP, count);
+        const makeDragFn = (axis) => makeSgDragHandler(axis, () => curCols, () => curRows,
+            (v) => { curCols = v; curRows = Math.min(MAX, Math.ceil(count / curCols)); },
+            (v) => { curRows = v; curCols = Math.min(MAX, Math.ceil(count / curRows)); },
+            MAX, STEP, rebuild);
+        topHandle.onmousedown   = makeDragFn('y');
+        rightHandle.onmousedown = makeDragFn('x');
 
         confirmBtn.onclick = () => {
             const spec = parseGridTag(`#${curRows}x${curCols}`);
-            if (spec) {
-                activeGridSpec = spec;
-                // Auto-assign positions to all detected siblings
+            if (!spec) return;
+            activeGridSpec = spec;
+            if (forcedResult) {
+                applyGridToForcedGroup(forcedResult, spec);
+                activeGridPos = currentIconName ? (getAllGridData()[currentIconName]?.pos ?? null) : null;
+            } else if (_batchIconNames.size > 0) {
+                const sorted = sortSiblings([..._batchIconNames]);
+                const total  = spec.rows * spec.cols;
+                sorted.forEach((n, idx) => { if (idx < total) saveIconGrid(n, spec.raw, idx); });
+                activeGridPos = currentIconName ? (getAllGridData()[currentIconName]?.pos ?? null) : null;
+            } else {
                 const myPos = autoApplyGridToSiblings(spec);
                 activeGridPos = myPos >= 0 && myPos < spec.rows * spec.cols ? myPos : null;
-                hint.classList.remove('visible');
-                renderGridArea();
-                updateSuggestions(document.getElementById('x-modal-input')?.value.toLowerCase() || '');
             }
+            hint.classList.remove('visible');
+            renderGridArea();
+            refreshPreview();
+            refreshSuggestions();
         };
 
         rebuild();
@@ -1370,6 +1712,8 @@
 
         chipSlot.innerHTML  = '';
         gridWidget.innerHTML = '';
+        // Clear any previous lock note (not inside gridWidget so must be removed explicitly)
+        gridArea.querySelectorAll('.x-grid-lock-note').forEach(el => el.remove());
 
         if (!activeGridSpec) {
             gridArea.style.display = 'none';
@@ -1387,98 +1731,317 @@
         chip.querySelector('span').onclick = () => {
             activeGridSpec = null;
             activeGridPos  = null;
+            if (!currentIconName) {
+                // Batch mode: clear grid data for the full natural sibling set of every selected eicon,
+                // AND all members of any forced groups represented in the selection.
+                const gridD = getAllGridData();
+                const toDelete = new Set();
+                [...selectedIconNames].forEach(n => {
+                    getNaturalSiblings(n).forEach(sib => toDelete.add(sib));
+                    const fg = getEiconForcedGroup(n);
+                    if (fg) fg.group.forEach(m => toDelete.add(m));
+                });
+                toDelete.forEach(n => { delete gridD[n]; });
+                saveAllGridData(gridD);
+            }
             renderGridArea();
-            // Re-show the smart hint if still relevant
             renderSmartGridHint(currentIconName);
-            updateSuggestions(document.getElementById('x-modal-input')?.value.toLowerCase() || '');
+            refreshSuggestions();
         };
         chipSlot.appendChild(chip);
+
+        // --- Determine which eicons to show dots for ---
+        // In batch mode: all _batchIconNames.
+        // In single-eicon mode with a grid spec: expand to all group members sharing that spec,
+        // so the user can see where every eicon sits and spot conflicts.
+        const isBatchMode = _batchIconNames.size > 0;
+        let batchNames;
+        if (isBatchMode) {
+            batchNames = [..._batchIconNames];
+        } else if (currentIconName && activeGridSpec) {
+            // Scope to the actual group — forced group or natural siblings only.
+            // DO NOT match by spec string alone — many unrelated sets may share the same spec.
+            const fg = getEiconForcedGroup(currentIconName);
+            if (fg) {
+                batchNames = fg.group.slice();
+            } else {
+                // Natural siblings — then intersect with those that actually have this spec saved
+                const specRaw = activeGridSpec.raw;
+                const allGrid = getAllGridData();
+                batchNames = getSiblingsBySpec(currentIconName, specRaw);
+            }
+        } else {
+            batchNames = currentIconName ? [currentIconName] : [];
+        }
+        const gridData    = getAllGridData();
+
+        // Build a map: position → [eicon names] for all selected eicons
+        const posOccupied = {}; // pos → array of names that claim it
+        batchNames.forEach(n => {
+            const gd = gridData[n];
+            if (gd && gd.pos != null) {
+                const p = parseInt(gd.pos, 10);
+                if (!posOccupied[p]) posOccupied[p] = [];
+                posOccupied[p].push(n);
+            }
+        });
+
+        // Lock the grid if: in batch mode AND more than one eicon selected (not focused to a single)
+        // OR if any position has multiple eicons claiming it (conflict)
+        const hasConflict = Object.values(posOccupied).some(arr => arr.length > 1);
+        const isLocked    = isBatchMode && batchNames.length > 1 && !currentIconName;
 
         // Grid widget
         const { rows, cols } = activeGridSpec;
         gridWidget.style.gridTemplateColumns = `repeat(${cols}, 28px)`;
         gridArea.style.display = 'block';
 
+        if (isLocked || hasConflict) {
+            const lockNote = document.createElement('div');
+            lockNote.className = 'x-grid-lock-note';
+            lockNote.style.cssText = 'font-size:10px; color:#888; margin-bottom:4px; font-style:italic;';
+            lockNote.textContent = hasConflict
+                ? '⚠ Conflicts (orange) — click to cycle through eicons sharing a position'
+                : 'Click a preview eicon to assign its position';
+            gridArea.insertBefore(lockNote, gridWidget);
+        }
+
+        // Reset stale cycle indices for positions that no longer have conflicts
+        Object.keys(_conflictCycle).forEach(p => {
+            if (!posOccupied[p] || posOccupied[p].length < 2) delete _conflictCycle[p];
+        });
+
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 const idx = r * cols + c;
                 const cell = document.createElement('div');
-                cell.className = 'grid-cell' + (activeGridPos === idx ? ' selected' : '');
-                cell.title = `Row ${r + 1}, Col ${c + 1}`;
-                cell.onclick = () => {
-                    // Clicking the already-selected cell deselects it
-                    activeGridPos = activeGridPos === idx ? null : idx;
-                    renderGridArea();
-                };
+                const isActivePos = activeGridPos === idx;
+                const occupants   = posOccupied[idx] || [];
+                const isConflict  = occupants.length > 1;
+
+                cell.className = 'grid-cell'
+                    + (isActivePos  ? ' selected'    : '')
+                    + (isConflict   ? ' conflict'    : '');
+
+                // Show the cycling-focused occupant name in the title
+                const cycleIdx  = _conflictCycle[idx] || 0;
+                const focusName = isConflict ? occupants[cycleIdx % occupants.length] : (occupants[0] || null);
+                if (focusName === currentIconName && isConflict) cell.classList.add('cycle-active');
+                cell.title = isConflict
+                    ? `⚠ ${occupants.length} eicons here — click to cycle (${focusName})`
+                    : `Row ${r + 1}, Col ${c + 1}`;
+
+                // Show red dots — one per occupant, spread horizontally
+                if (occupants.length > 0) {
+                    cell.style.position = 'relative';
+                    const dotW = 6, dotGap = 2;
+                    const totalW = occupants.length * dotW + (occupants.length - 1) * dotGap;
+                    occupants.forEach((_, di) => {
+                        const dot = document.createElement('div');
+                        const left = Math.round((28 - totalW) / 2) + di * (dotW + dotGap);
+                        dot.style.cssText = `
+                            position:absolute; bottom:2px; left:${left}px;
+                            width:${dotW}px; height:${dotW}px; border-radius:50%;
+                            background:${isConflict ? '#e67e22' : '#e74c3c'};
+                            box-shadow:${isConflict ? '0 0 4px #e67e22' : 'none'};
+                            pointer-events:none;`;
+                        cell.appendChild(dot);
+                    });
+                }
+
+                if (isConflict) {
+                    // Conflict cell: each click cycles to the next occupant and focuses it
+                    cell.onclick = () => {
+                        const next = ((_conflictCycle[idx] || 0) + 1) % occupants.length;
+                        _conflictCycle[idx] = next;
+                        const targetName = occupants[next];
+                        // Focus this eicon so the next grid-cell click reassigns its position
+                        currentIconName = targetName;
+                        selectedIconNames.clear();
+                        selectedIconNames.add(targetName);
+                        // Load its current state from cache or storage
+                        const cached = _batchTagCache[targetName];
+                        if (cached) {
+                            activeTags     = [...cached.tags];
+                            activeGridSpec = cached.gridSpec;
+                            activeGridPos  = cached.gridPos;
+                        } else {
+                            const gd = getAllGridData()[targetName];
+                            activeGridPos  = gd?.pos ?? null;
+                        }
+                        renderGridArea();
+                        refreshPreview();
+                        renderModalChips();
+                        document.getElementById('x-modal-icon-name').textContent = targetName;
+                    };
+                } else if (!isLocked) {
+                    cell.onclick = () => {
+                        const newPos = activeGridPos === idx ? null : idx;
+                        activeGridPos = newPos;
+                        // Persist immediately so dots and preview update right away
+                        if (currentIconName && activeGridSpec) {
+                            saveIconGrid(currentIconName, activeGridSpec.raw, newPos);
+                            // Also update the batch cache if we're in a session
+                            if (_batchIconNames.has(currentIconName) && _batchTagCache[currentIconName]) {
+                                _batchTagCache[currentIconName].gridPos = newPos;
+                            }
+                        }
+                        renderGridArea();
+                        refreshPreview();
+                    };
+                } else {
+                    cell.style.cursor = 'default';
+                    cell.style.opacity = '0.6';
+                }
+
                 gridWidget.appendChild(cell);
             }
         }
     }
 
     // Renders the left chip slot in the tag modal.
-    // For a single eicon: shows a grey && chip if it's in a duplicate group.
-    // For batch mode: shows a grey && chip if the selected eicons are already in a group together.
+    // For a single eicon: shows grey && chip if in a dup group, grey ## chip if in a forced grid group.
+    // For batch mode: shows chips if ALL selected are in the same group.
     // name = eicon name (single) or '' (batch).
     function renderLeftChipSlot(name) {
         const slot = document.getElementById('x-left-chip-slot');
         if (!slot) return;
         slot.innerHTML = '';
 
-        let inGroup = false;
-        let groupIdx = -1;
+        // Check duplicate group
+        let inDupGroup = false, dupGroupIdx = -1;
+        // Check forced grid group
+        let inForcedGroup = false, forcedGroupIdx = -1;
+
         if (name) {
-            const result = getEiconDuplicateGroup(name);
-            if (result) { inGroup = true; groupIdx = result.groupIdx; }
+            const dupResult = getEiconDuplicateGroup(name);
+            if (dupResult) { inDupGroup = true; dupGroupIdx = dupResult.groupIdx; }
+            const fResult = getEiconForcedGroup(name);
+            if (fResult) { inForcedGroup = true; forcedGroupIdx = fResult.groupIdx; }
         } else {
-            // Batch: check if ALL selected eicons are in the same group
             const names = [...selectedIconNames];
             if (names.length >= 2) {
-                const first = getEiconDuplicateGroup(names[0]);
-                if (first && names.every(n => first.group.includes(n))) {
-                    inGroup = true;
-                    groupIdx = first.groupIdx;
+                const firstDup = getEiconDuplicateGroup(names[0]);
+                if (firstDup && names.every(n => firstDup.group.includes(n))) {
+                    inDupGroup = true; dupGroupIdx = firstDup.groupIdx;
+                }
+                const firstForced = getEiconForcedGroup(names[0]);
+                if (firstForced && names.every(n => firstForced.group.includes(n))) {
+                    inForcedGroup = true; forcedGroupIdx = firstForced.groupIdx;
                 }
             }
         }
 
-        if (!inGroup) return;
+        if (inDupGroup) {
+            const chip = document.createElement('div');
+            chip.className = 'chip grey';
+            chip.title = 'In a linked set — click to manage';
+            chip.textContent = '&&';
+            chip.onclick = () => {
+                const overlay = document.getElementById('x-tag-modal-overlay');
+                if (overlay) overlay.style.display = 'none';
+                stripSelectionVisuals();
+                openDevTools('duplicates');
+                setTimeout(() => scrollToDuplicateGroup(dupGroupIdx), 80);
+            };
+            slot.appendChild(chip);
+        }
 
-        const chip = document.createElement('div');
-        chip.className = 'chip grey';
-        chip.title = 'This eicon is in a duplicate group — click to manage';
-        chip.textContent = '&&';
-        chip.onclick = () => {
-            const overlay = document.getElementById('x-tag-modal-overlay');
-            if (overlay) overlay.style.display = 'none';
-            openDevTools('duplicates');
-            // After tab renders, expand and scroll to the correct group
-            setTimeout(() => scrollToDuplicateGroup(groupIdx), 80);
-        };
-        slot.appendChild(chip);
+        if (inForcedGroup) {
+            const chip = document.createElement('div');
+            chip.className = 'chip vermillion';
+            chip.title = 'In a forced grid set — click to manage';
+            chip.textContent = '##';
+            chip.onclick = () => {
+                const overlay = document.getElementById('x-tag-modal-overlay');
+                if (overlay) overlay.style.display = 'none';
+                stripSelectionVisuals();
+                openDevTools('forcedgrids');
+            };
+            slot.appendChild(chip);
+        }
+    }
+
+    // Flushes the currently-visible eicon's unsaved state into _batchTagCache.
+    // Called before switching eicons and before Save. outgoing = '' means batch-level.
+    function flushBatchOutgoing() {
+        if (_batchIconNames.size === 0) return;
+        const out = currentIconName || '__batch__';
+        if (out === '__batch__') {
+            _batchTagCache['__batch__'] = { ..._batchTagCache['__batch__'], tags: [...activeTags] };
+        } else {
+            const bShared = new Set(_batchTagCache['__batch__']?.tags || []);
+            const extras  = activeTags.filter(t => !bShared.has(t));
+            _batchTagCache[out] = { ..._batchTagCache[out], tags: extras, gridSpec: activeGridSpec, gridPos: activeGridPos };
+        }
+    }
+
+    // Loads grid spec+pos from storage into activeGridSpec/activeGridPos.
+    function loadGridState(name) {
+        const gd = getIconGrid(name);
+        activeGridSpec = gd ? parseGridFromStorage(gd.spec) : null;
+        activeGridPos  = gd ? (gd.pos ?? null) : null;
     }
 
     function openTagModal(name) {
-        currentIconName = name;
-        const raw = getStoredTags(name);
-        activeTags = raw ? raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [];
+      try {
+        // If this eicon is not part of an active batch session, clear stale batch state.
+        if (_batchIconNames.size > 0 && !_batchIconNames.has(name)) {
+            _batchIconNames   = new Set();
+            _batchTagCache    = {};
+            _batchRemovedTags = new Set();
+            _batchOriginalCommon = null;
+            _batchOriginalExtras = null;
+        }
 
-        // Load any existing grid data for this icon
-        const existingGrid = getIconGrid(name);
-        if (existingGrid) {
-            activeGridSpec = parseGridTag(existingGrid.spec.startsWith('#') ? existingGrid.spec : '#' + existingGrid.spec) || parseGridTag('#' + existingGrid.spec);
-            // Normalise: spec may have been stored without '#' historically
-            if (!activeGridSpec) activeGridSpec = null;
-            activeGridPos = existingGrid.pos ?? null;
+        // In a batch session, keep an in-memory cache of all tag edits.
+        // Switching eicons saves the current state into the cache rather than storage,
+        // so nothing is lost until Save (persists all) or Cancel (discards all).
+        if (_batchIconNames.size > 0) {
+            flushBatchOutgoing();
+
+            currentIconName = name;
+            const batchTags = _batchTagCache['__batch__']?.tags || [];
+            const cached = _batchTagCache[name];
+            // activeTags = shared tags + this eicon's extras
+            const extras = cached?.tags || [];
+            activeTags = [...new Set([...batchTags, ...extras])];
+            // Grid from cache or storage
+            if (cached?.gridSpec) {
+                activeGridSpec = cached.gridSpec;
+                activeGridPos  = cached.gridPos;
+            } else {
+                const existingGrid = getIconGrid(name);
+                if (existingGrid) {
+                    activeGridSpec = parseGridFromStorage(existingGrid.spec);
+                    activeGridPos  = existingGrid.pos ?? null;
+                } else {
+                    activeGridSpec = null;
+                    activeGridPos  = null;
+                }
+                if (!_batchTagCache[name]) _batchTagCache[name] = { tags: [], gridSpec: activeGridSpec, gridPos: activeGridPos };
+            }
         } else {
-            activeGridSpec = null;
-            activeGridPos  = null;
+            // Single-eicon mode: load directly from storage as before
+            currentIconName = name;
+            const raw = getStoredTags(name);
+            activeTags = raw ? raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [];
+            loadGridState(name);
         }
 
         if (!document.getElementById('x-tag-modal-overlay')) {
             const overlay = document.createElement('div');
             overlay.id = 'x-tag-modal-overlay';
-            overlay.innerHTML = `
-                <div id="x-tag-modal">
+
+            // Preview lives INSIDE the overlay as the first flex child — hides with it automatically
+            const preview = document.createElement('div');
+            preview.id = 'x-eicon-preview';
+            overlay.appendChild(preview);
+
+            const modalDiv = document.createElement('div');
+            modalDiv.id = 'x-tag-modal';
+            overlay.appendChild(modalDiv);
+            modalDiv.innerHTML = `
                 <div id="x-modal-title">
                     🏷️ Tags for: <span id="x-modal-icon-name"></span>
                     <button id="x-copy-last-btn" title="Copy all tags from last saved eicon"
@@ -1502,14 +2065,14 @@
                     </div>
 
                     <div id="x-smart-grid-hint">
-                        <div id="x-smart-grid-hint-label">⚓ Drag grid to size</div>
+                        <div id="x-smart-grid-hint-label">🔍 Possible grid set detected — drag to size, then confirm</div>
                         <div id="x-sg-sidebar">
                             <div id="x-sg-size-label">#1×1</div>
                             <button id="x-sg-confirm">Confirm ✓</button>
                         </div>
                         <div id="x-smart-grid-canvas">
                             <div id="x-sg-wrap">
-                                <div id="x-sg-top-handle"></div>
+                                <div id="x-sg-bottom-handle"></div>
                                 <div id="x-sg-right-handle"></div>
                                 <div id="x-sg-cells"></div>
                             </div>
@@ -1547,6 +2110,37 @@
                             addDuplicateGroup([...selectedIconNames]);
                             input.value = '';
                             renderLeftChipSlot('');
+                            clearSelection();
+                        }
+                        return;
+                    }
+
+                    // ## — forced grid group. Only valid in batch mode with 2+ eicons selected.
+                    if (v === '##') {
+                        if (_batchIconNames.size > 0 && selectedIconNames.size >= 2) {
+                            addForcedGridGroup([...selectedIconNames]);
+                            input.value = '';
+
+                            // Auto-apply a smart grid immediately: odd≤7 → 1 row, otherwise square-ish
+                            const fg = getEiconForcedGroup(currentIconName || [...selectedIconNames][0]);
+                            if (fg) {
+                                const cnt = fg.group.length;
+                                const [aRows, aCols] = suggestGridSize(cnt, 5);
+                                const spec = parseGridTag(`#${aRows}x${aCols}`);
+                                if (spec) {
+                                    activeGridSpec = spec;
+                                    const sortedMembers = applyGridToForcedGroup(fg, spec);
+                                    sortedMembers.forEach(n => {
+                                        const gd = getAllGridData()[n];
+                                        if (_batchTagCache[n]) _batchTagCache[n].gridSpec = spec;
+                                        if (gd) activeGridPos = (n === currentIconName) ? gd.pos : activeGridPos;
+                                    });
+                                }
+                            }
+                            renderGridArea();
+                            refreshPreview();
+                            renderLeftChipSlot(currentIconName || '');
+                            updateSuggestions('');
                         }
                         return;
                     }
@@ -1558,32 +2152,54 @@
                         input.value = '';
                         const hint = document.getElementById('x-smart-grid-hint');
                         if (hint) hint.classList.remove('visible');
-                        // Auto-assign positions to siblings
-                        if (!currentIconName) {
-                            // Batch mode — use sorted-first of selected eicons as reference
-                            const sorted = sortSiblings([...selectedIconNames]);
-                            if (sorted.length > 0) {
-                                const prevName = currentIconName;
-                                currentIconName = sorted[0];
-                                const myPos = autoApplyGridToSiblings(parsed);
-                                currentIconName = prevName;
-                                activeGridPos = null; // batch — no single position
+
+                        if (_batchIconNames.size > 0) {
+                            // Batch mode — save to all batch eicons regardless of which preview cell is focused
+                            const batchArr = [..._batchIconNames];
+                            const sorted = sortSiblings(batchArr);
+                            const anyForced = sorted.some(n => getEiconForcedGroup(n));
+                            if (anyForced) {
+                                const fg0 = sorted.map(n => getEiconForcedGroup(n)).find(Boolean);
+                                if (fg0) applyGridToForcedGroup(fg0, parsed);
+                            } else if (sorted.length > 0) {
+                                const total = parsed.rows * parsed.cols;
+                                sorted.forEach((n, idx) => { if (idx < total) saveIconGrid(n, parsed.raw, idx); });
+                            }
+                            // Update activeGridPos for the currently-focused preview eicon if any
+                            if (currentIconName) {
+                                const gd = getAllGridData()[currentIconName];
+                                activeGridPos = gd?.pos ?? null;
                             } else {
                                 activeGridPos = null;
                             }
-                        } else if (getGroupBase(currentIconName) !== currentIconName) {
-                            const myPos = autoApplyGridToSiblings(parsed);
-                            activeGridPos = myPos >= 0 && myPos < parsed.rows * parsed.cols ? myPos : null;
+                        } else if (currentIconName) {
+                            const fg = getEiconForcedGroup(currentIconName);
+                            if (fg) {
+                                const sortedMembers = applyGridToForcedGroup(fg, parsed);
+                                const myIdx = sortedMembers.indexOf(currentIconName);
+                                activeGridPos = myIdx >= 0 && myIdx < parsed.rows * parsed.cols ? myIdx : null;
+                            } else if (getGroupBase(currentIconName) !== currentIconName) {
+                                const myPos = autoApplyGridToSiblings(parsed);
+                                activeGridPos = myPos >= 0 && myPos < parsed.rows * parsed.cols ? myPos : null;
+                            } else {
+                                activeGridPos = null;
+                                saveIconGrid(currentIconName, parsed.raw, null);
+                            }
+                            if (fg || getGroupBase(currentIconName) !== currentIconName) {
+                                // Position already saved by the group/sibling save above — read back for display
+                                const gd = getAllGridData()[currentIconName];
+                                activeGridPos = gd?.pos ?? null;
+                            }
                         } else {
                             activeGridPos = null;
                         }
                         renderGridArea();
+                        refreshPreview();
                         updateSuggestions('');
                         return;
                     }
 
                     if (!activeTags.includes(v)) {
-                        // Check if this is a synonym slave — if so, add master instead
                         const synMap = getSynonymMap();
                         const related = synMap.get(v);
                         let masterTag = v;
@@ -1596,6 +2212,7 @@
                         }
                         if (!activeTags.includes(masterTag)) {
                             activeTags.push(masterTag);
+                            syncTagToOverviewBatch(masterTag);
                             input.value = '';
                             renderModalChips();
                             updateSuggestions('');
@@ -1619,6 +2236,7 @@
             overlay.querySelector('#x-copy-last-btn').onclick = () => {
                 if (!lastSavedEntry) return;
                 activeTags = [...lastSavedEntry.tags];
+                syncAllTagsToOverviewBatch();
                 // Only copy the grid spec if there isn't one already set for this eicon.
                 // If we auto-applied a grid position, preserve it — Copy Last is for tags only.
                 if (!activeGridSpec) {
@@ -1635,28 +2253,63 @@
                 updateSuggestions(suggestionQuery);
             };
 
-            overlay.querySelector('#x-modal-cancel').onclick = () => { overlay.style.display = 'none'; };
+            overlay.querySelector('#x-modal-cancel').onclick = () => {
+                _batchRemovedTags    = new Set();
+                _batchIconNames      = new Set();
+                _batchTagCache       = {};
+                _batchOriginalCommon = null;
+                _batchOriginalExtras = null;
+                _modalOpen = false;
+                overlay.style.display = 'none';
+                updateSelectionBar(); // restore bar
+            };
 
             overlay.querySelector('#x-modal-save').onclick = () => {
-                // If currentIconName is empty we're in batch mode (set by openBatchModal).
-                // Otherwise we're saving a single eicon.
-                if (!currentIconName) {
+                // Batch mode: _batchIconNames was populated by openBatchModal and persists
+                // through preview navigation (which changes currentIconName).
+                if (_batchIconNames.size > 0) {
                     // --- BATCH SAVE ---
-                    const names = [...selectedIconNames];
+                    flushBatchOutgoing();
+
+                    const names      = [..._batchIconNames];
+                    const sharedTags = _batchTagCache['__batch__']?.tags || [];
                     const lib = getAllTags();
                     names.forEach(name => {
+                        const extras = _batchTagCache[name]?.tags || [];
                         const existingRaw = lib[name] || '';
                         const existingSet = new Set(existingRaw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean));
-                        activeTags.forEach(t => existingSet.add(t));
+                        _batchRemovedTags.forEach(t => existingSet.delete(t));
+                        sharedTags.forEach(t => existingSet.add(t));
+                        extras.forEach(t => existingSet.add(t));
                         if (existingSet.size > 0) lib[name] = [...existingSet].join(', ');
+                        else delete lib[name];
                     });
                     saveFullLibrary(lib);
+                    // Persist grid positions from cache for each eicon
+                    names.forEach(name => {
+                        const cached = _batchTagCache[name];
+                        if (cached?.gridSpec) {
+                            saveIconGrid(name, cached.gridSpec.raw, cached.gridPos ?? null);
+                        } else if (activeGridSpec) {
+                            // Fallback: use the shared batch grid spec if eicon wasn't individually visited
+                            const gd = getAllGridData()[name];
+                            if (!gd?.spec) saveIconGrid(name, activeGridSpec.raw, null);
+                        }
+                    });
                     activeTags.forEach(saveRecentTag);
-                    lastSavedEntry = { tags: [...activeTags], gridSpec: null };
+                    lastSavedEntry = { tags: [...activeTags], gridSpec: activeGridSpec ? activeGridSpec.raw : null };
+                    _batchRemovedTags    = new Set();
+                    _batchIconNames      = new Set();
+                    _batchTagCache       = {};
+                    _batchOriginalCommon = null;
+                    _batchOriginalExtras = null;
+                    _modalOpen = false;
                     overlay.style.display = 'none';
                     clearSelection();
+                    updateSelectionBar(); // restore bar after batch
                     if (searchInput) renderAllSearch(searchInput.value);
                     if (tagModeActive) applyTagMode();
+                    if (_devToolsActiveTag) renderDevToolsEicons(_devToolsActiveTag);
                 } else {
                     // --- SINGLE EICON SAVE ---
                     const lib = getAllTags();
@@ -1672,15 +2325,35 @@
                         gridSpec: activeGridSpec ? activeGridSpec.raw : null
                     };
                     saveIconGrid(currentIconName, activeGridSpec ? activeGridSpec.raw : null, activeGridPos);
+                    _modalOpen = false;
                     overlay.style.display = 'none';
+                    updateSelectionBar(); // restore bar (was hidden when modal opened)
                     if (searchInput) renderAllSearch(searchInput.value);
                     if (tagModeActive) applyTagMode();
+                    if (_devToolsActiveTag) renderDevToolsEicons(_devToolsActiveTag);
+                    if (_layoutMode === 'legacy') refreshLegacyButtons();
                 }
             };
         }
 
         document.getElementById('x-modal-icon-name').textContent = name;
         document.getElementById('x-tag-modal-overlay').style.display = 'flex';
+        _modalOpen = true;
+        // Ensure the floating selection bar is hidden while the modal is open.
+        const _modalSelBar = document.getElementById('x-selection-bar');
+        if (_modalSelBar) _modalSelBar.classList.remove('visible');
+
+        // Snapshot the tags already on disk — used to distinguish unsaved (faded) chips.
+        // In batch mode we use _batchOriginalCommon / _batchOriginalExtras directly in
+        // renderModalChips(), but also keep _savedTagsSnapshot correct as a fallback.
+        if (_batchIconNames.size > 0 && _batchOriginalCommon) {
+            const origExtras = (name && _batchOriginalExtras)
+                ? (_batchOriginalExtras[name] || new Set())
+                : new Set();
+            _savedTagsSnapshot = new Set([..._batchOriginalCommon, ...origExtras]);
+        } else {
+            _savedTagsSnapshot = new Set(activeTags);
+        }
 
         // Show copy-last button only when there's a previous entry to copy from
         const copyLastBtn = document.getElementById('x-copy-last-btn');
@@ -1688,6 +2361,7 @@
 
         suggestionQuery = '';
         const input = document.getElementById('x-modal-input');
+        if (!input) { console.error('[XariahTagger] x-modal-input not found'); return; }
         input.value = '';
         input.focus();
         updateSuggestions('');
@@ -1695,9 +2369,409 @@
         renderGridArea();
         renderSmartGridHint(name);
         renderLeftChipSlot(name);
+        // If we're inside a batch session, keep the batch preview (showing all selected eicons)
+        // but update the active cell to reflect the currently-editing eicon.
+        // Only fall back to single-eicon preview when not in a batch session.
+        if (_batchIconNames.size > 0) {
+            refreshPreview();
+        } else {
+            renderEiconPreview(name);
+        }
+      } catch(e) {
+        console.error('[XariahTagger] openTagModal error:', e);
+      }
     }
 
 
+
+    // Renders the eicon preview panel above the tag modal.
+    // For a single eicon with no group: shows an enlarged GIF.
+    // For a group (forced or natural): shows a clickable grid of all members.
+    // Clicking a member switches the modal to editing that eicon.
+    // Transitions from single-eicon modal to a full batch session using all members
+    // currently visible in the eicon preview panel. Preserves any tags already added
+    // in the single-eicon session by merging them into the batch shared layer.
+    // Returns true if a batch was successfully initialised (≥2 members), false otherwise.
+    function initBatchFromPreviewMembers() {
+        if (_batchIconNames.size > 0) return true; // already in batch mode
+        const panel = document.getElementById('x-eicon-preview');
+        if (!panel) return false;
+
+        // Collect names from all non-empty preview cells.
+        // cell.title = "eiconname" or "eiconname (editing)" / "(selected)" — name is first token.
+        const allPreviewNames = [];
+        panel.querySelectorAll('.preview-cell:not(.empty)').forEach(pc => {
+            const n = pc.title.split(' ')[0];
+            if (n && !allPreviewNames.includes(n)) allPreviewNames.push(n);
+        });
+        // Ensure currentIconName is present even if its cell is missing from the query
+        if (currentIconName && !allPreviewNames.includes(currentIconName)) {
+            allPreviewNames.push(currentIconName);
+        }
+        if (allPreviewNames.length < 2) return false;
+
+        // Compute the stored-on-disk intersection and per-eicon extras
+        const storedSets = allPreviewNames.map(n => {
+            const raw = getStoredTags(n);
+            return new Set(raw ? raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : []);
+        });
+        const bCommon = new Set(storedSets[0]);
+        storedSets.slice(1).forEach(s => { for (const t of [...bCommon]) { if (!s.has(t)) bCommon.delete(t); } });
+
+        _batchTagCache    = {};
+        _batchRemovedTags = new Set();
+        allPreviewNames.forEach((n, i) => {
+            const extras = [...storedSets[i]].filter(t => !bCommon.has(t));
+            _batchTagCache[n] = { tags: extras, gridSpec: null, gridPos: null };
+            const gd = getAllGridData()[n];
+            if (gd?.spec) {
+                _batchTagCache[n].gridSpec = parseGridFromStorage(gd.spec);
+                _batchTagCache[n].gridPos  = gd.pos ?? null;
+            }
+        });
+
+        // Carry over tags the user already added in the single-eicon session
+        _batchTagCache['__batch__'] = { tags: [...bCommon], gridSpec: null, gridPos: null };
+        // Tags added this session belonged only to the eicon being edited.
+        // Keep them as that eicon's extras — do NOT promote to __batch__ (shared),
+        // otherwise every eicon would appear to have them and partial would never fire.
+        if (currentIconName && _batchTagCache[currentIconName]) {
+            const addedThisSession = activeTags.filter(t => !bCommon.has(t));
+            addedThisSession.forEach(t => {
+                if (!_batchTagCache[currentIconName].tags.includes(t)) {
+                    _batchTagCache[currentIconName].tags.push(t);
+                }
+            });
+        }
+
+        // Immutable snapshots of on-disk state for accurate isSaved chip colouring
+        _batchOriginalCommon = new Set(bCommon);
+        _batchOriginalExtras = {};
+        allPreviewNames.forEach((n, i) => { _batchOriginalExtras[n] = storedSets[i]; });
+
+        _batchIconNames = new Set(allPreviewNames);
+        // Seed selectedIconNames with the eicon we were just editing so it is
+        // included in the partial-detection domain from the very first ctrl-click.
+        if (currentIconName) selectedIconNames.add(currentIconName);
+        // The caller (ctrl-click / select-all) adds further members on top of this.
+
+        // Switch to batch overview state
+        activeTags    = [..._batchTagCache['__batch__'].tags];
+        _savedTagsSnapshot = new Set(bCommon);
+        currentIconName    = '';
+
+        document.getElementById('x-modal-icon-name').textContent = `${_batchIconNames.size} eicons`;
+        renderGridArea();
+        renderLeftChipSlot('');
+        updateSuggestions(suggestionQuery);
+        return true;
+    }
+
+    // Module-level preview cell builder — shared by renderEiconPreview and renderEiconPreviewBatch.
+    function makePreviewCell(cellName, isActive) {
+        const cell = document.createElement('div');
+        // Only show selected state when actually in a batch session — prevents stale
+        // selectedIconNames entries from a previous session bleeding into single-eicon preview.
+        const isSelected = _batchIconNames.size > 0 && selectedIconNames.has(cellName);
+        cell.className = 'preview-cell'
+            + (isActive   ? ' active'   : '')
+            + (isSelected ? ' selected' : '');
+        cell.title = cellName + (isActive ? ' (editing)' : isSelected ? ' (selected)' : '');
+        const img = document.createElement('img');
+        img.src = `https://static.f-list.net/images/eicon/${cellName}.gif`;
+        img.alt = cellName;
+        cell.appendChild(img);
+        cell.onclick = (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                // Ctrl+click: toggle this eicon in/out of selection.
+                // In single-eicon mode with siblings visible, auto-promote to batch first
+                // so that Save will apply to all selected, not just currentIconName.
+                e.preventDefault();
+                if (_batchIconNames.size === 0) initBatchFromPreviewMembers();
+                if (selectedIconNames.has(cellName)) { selectedIconNames.delete(cellName); cell.classList.remove('selected'); }
+                else { selectedIconNames.add(cellName); cell.classList.add('selected'); }
+                updateSelectionBar();
+                refreshPreview();
+                renderModalChips();
+            } else {
+                // Plain click: navigate to (or stay on) this eicon.
+                // In single-eicon mode with siblings, promote to batch first so the whole
+                // group stays visible in preview rather than being replaced by a fresh session.
+                if (_batchIconNames.size === 0 && currentIconName !== cellName) {
+                    initBatchFromPreviewMembers();
+                }
+                // openTagModal handles both single and batch navigation correctly.
+                selectedIconNames.clear();
+                selectedIconNames.add(cellName);
+                openTagModal(cellName);
+            }
+        };
+        return cell;
+    }
+
+    // Builds a preview cell that holds multiple eicons stacked at the same position.
+    // Clicking cycles through occupants; hovering reveals ghost layers beneath.
+    function makeStackedPreviewCell(stackNames, activeCell, posKey) {
+        const cycleIdx = _previewStackCycle[posKey] || 0;
+        const topName  = stackNames[cycleIdx % stackNames.length];
+        const isActive = stackNames.includes(activeCell);
+
+        const cell = document.createElement('div');
+        cell.className = 'preview-cell stacked conflict'
+            + (isActive ? ' active' : '')
+            + (stackNames.some(n => selectedIconNames.has(n)) ? ' selected' : '');
+        cell.style.position = 'relative';
+        cell.title = `${stackNames.length} eicons here — click to cycle (${topName})`;
+
+        // Top image
+        const topImg = document.createElement('img');
+        topImg.src = `https://static.f-list.net/images/eicon/${topName}.gif`;
+        topImg.alt = topName;
+        topImg.style.cssText = 'width:100%; height:100%; object-fit:contain; display:block;';
+        cell.appendChild(topImg);
+
+        // Ghost layers (up to 2 extras) — revealed on hover via CSS
+        stackNames.slice(1, 3).forEach((ghostName, gi) => {
+            const ghost = document.createElement('div');
+            ghost.className = 'stack-ghost';
+            const ghostImg = document.createElement('img');
+            ghostImg.src = `https://static.f-list.net/images/eicon/${ghostName}.gif`;
+            ghostImg.style.cssText = 'width:100%; height:100%; object-fit:contain;';
+            ghost.appendChild(ghostImg);
+            cell.appendChild(ghost);
+        });
+
+        // Orange badge showing count
+        const badge = document.createElement('div');
+        badge.className = 'stack-badge';
+        badge.textContent = `×${stackNames.length}`;
+        cell.appendChild(badge);
+
+        cell.onclick = (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                // Ctrl: toggle all in stack
+                const allSel = stackNames.every(n => selectedIconNames.has(n));
+                stackNames.forEach(n => allSel ? selectedIconNames.delete(n) : selectedIconNames.add(n));
+                updateSelectionBar();
+                refreshPreview();
+                return;
+            }
+            // Cycle to next occupant and focus it
+            const next = ((_previewStackCycle[posKey] || 0) + 1) % stackNames.length;
+            _previewStackCycle[posKey] = next;
+            const targetName = stackNames[next];
+            selectedIconNames.clear();
+            selectedIconNames.add(targetName);
+            openTagModal(targetName);
+        };
+        return cell;
+    }
+
+    // Refreshes the preview panel respecting current mode (batch vs single).
+    function refreshPreview() {
+        if (_batchIconNames.size > 0) {
+            // Pass activeGridSpec directly — re-verifying from storage causes false negatives
+            // when not all batch eicons fit in the grid or positions are null (forced groups).
+            renderEiconPreviewBatch([..._batchIconNames].slice(0, 25), activeGridSpec || null);
+        } else {
+            renderEiconPreview(currentIconName);
+        }
+    }
+
+    // Renders the preview for a batch selection — shows exactly the given names,
+    // laid out using their stored grid positions if a shared spec is provided.
+    // No sibling auto-discovery; what you selected is what you see.
+    function renderEiconPreviewBatch(names, sharedSpec) {
+        const panel = document.getElementById('x-eicon-preview');
+        if (!panel) return;
+        panel.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:4px;';
+        panel.innerHTML = '';
+        panel.classList.remove('visible');
+
+        if (!names || names.length === 0) return;
+
+        panel.classList.add('visible');
+
+        const activeCell = currentIconName || null;
+
+        // Inner container holds the cells — separate from panel so select-all sits below it
+        const cellsWrap = document.createElement('div');
+
+        if (sharedSpec && names.length > 1) {
+            const gridData = getAllGridData();
+            // posMap: pos → [name, ...] (array to handle conflicts)
+            const posMap = {};
+            names.forEach(n => {
+                const gd = gridData[n];
+                if (gd && gd.pos != null) {
+                    const p = parseInt(gd.pos, 10);
+                    if (!posMap[p]) posMap[p] = [];
+                    posMap[p].push(n);
+                }
+            });
+            const hasPos = Object.keys(posMap).length > 0;
+            const rows = sharedSpec.rows, cols = sharedSpec.cols;
+
+            cellsWrap.style.cssText = `display:grid; grid-template-columns:repeat(${cols},60px); grid-template-rows:repeat(${rows},60px); gap:4px;`;
+
+            // Reset stale cycle indices for positions that no longer have stacks
+            Object.keys(_previewStackCycle).forEach(k => {
+                const arr = posMap[k];
+                if (!arr || arr.length < 2) delete _previewStackCycle[k];
+            });
+
+            for (let i = 0; i < rows * cols; i++) {
+                const occupants = hasPos ? (posMap[i] || []) : (names[i] ? [names[i]] : []);
+                if (occupants.length > 1) {
+                    cellsWrap.appendChild(makeStackedPreviewCell(occupants, activeCell, String(i)));
+                } else if (occupants.length === 1) {
+                    cellsWrap.appendChild(makePreviewCell(occupants[0], occupants[0] === activeCell));
+                } else {
+                    const empty = document.createElement('div');
+                    empty.className = 'preview-cell empty';
+                    cellsWrap.appendChild(empty);
+                }
+            }
+        } else {
+            cellsWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; justify-content:center;';
+            names.forEach(n => cellsWrap.appendChild(makePreviewCell(n, n === activeCell)));
+        }
+
+        panel.appendChild(cellsWrap);
+
+        // Select-all toggle — below the cell grid, always visible when >1 eicons
+        if (names.length > 1) {
+            const allSelected = names.every(n => selectedIconNames.has(n));
+            const btn = document.createElement('div');
+            btn.style.cssText = 'font-size:9px; color:#888; text-align:center; width:100%; cursor:pointer; padding:2px 0; letter-spacing:0.5px; text-transform:uppercase;';
+            btn.textContent = allSelected ? '✓ all selected' : '⊞ select all';
+            btn.title       = allSelected ? 'Ctrl+click to deselect individually' : 'Select all eicons in this batch';
+            btn.onclick = () => {
+                if (allSelected) { names.forEach(n => selectedIconNames.delete(n)); }
+                else             { names.forEach(n => selectedIconNames.add(n)); }
+                updateSelectionBar();
+                refreshPreview();
+                renderModalChips();
+            };
+            panel.appendChild(btn);
+        }
+    }
+
+    function renderEiconPreview(name) {
+        const panel = document.getElementById('x-eicon-preview');
+        if (!panel) return;
+        // Clear all inline styles first, then content, then visibility class
+        panel.style.cssText = '';
+        panel.innerHTML = '';
+        panel.classList.remove('visible');
+
+        if (!name) return;
+
+        // Determine group: forced first, then natural siblings
+        const forcedResult = getEiconForcedGroup(name);
+        const naturalSibs  = getNaturalSiblings(name);
+        const hasGroup = forcedResult || naturalSibs.size >= 2;
+
+        if (!hasGroup) {
+            // Single eicon — show enlarged preview
+            panel.classList.add('visible');
+            const wrap = document.createElement('div');
+            wrap.className = 'preview-single';
+            const img = document.createElement('img');
+            img.src = `https://static.f-list.net/images/eicon/${name}.gif`;
+            img.alt = name;
+            wrap.appendChild(img);
+            panel.appendChild(wrap);
+            return;
+        }
+
+        // Build ordered member list
+        // Priority: forced group > spec-matched eicons in storage > natural DOM siblings
+        let members;
+        const gridData = getAllGridData();
+        if (forcedResult) {
+            members = forcedResult.group;
+        } else {
+            // Scope to natural siblings that actually have this spec — not ALL eicons with same spec
+            const myGd  = gridData[name];
+            const spec  = activeGridSpec?.raw || myGd?.spec;
+            if (spec) {
+                members = sortSiblings(getSiblingsBySpec(name, spec));
+            } else {
+                members = sortSiblings([...naturalSibs]);
+            }
+        }
+
+        // Determine grid layout from activeGridSpec, then current eicon's stored spec, then any member
+        const currentGd = gridData[name];
+        const specEntry = activeGridSpec
+            ? { spec: activeGridSpec.raw }
+            : (currentGd?.spec ? currentGd : members.map(n => gridData[n]).find(d => d?.spec));
+        let rows = 1, cols = members.length;
+        if (specEntry) {
+            const parsed = parseGridFromStorage(specEntry.spec);
+            if (parsed) { rows = parsed.rows; cols = parsed.cols; }
+        }
+
+        panel.classList.add('visible');
+        panel.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:4px;';
+
+        const cellsWrap2 = document.createElement('div');
+
+        // posMap: pos → [name, ...] to handle conflicts
+        const posMap = {};
+        members.forEach(n => {
+            const gd = gridData[n];
+            if (gd && gd.pos != null) {
+                const p = parseInt(gd.pos, 10);
+                if (!posMap[p]) posMap[p] = [];
+                posMap[p].push(n);
+            }
+        });
+
+        const total = rows * cols;
+        const hasPositions = Object.keys(posMap).length > 0;
+
+        if (hasPositions) {
+            cellsWrap2.style.cssText = `display:grid; grid-template-columns:repeat(${cols},60px); grid-template-rows:repeat(${rows},60px); gap:4px;`;
+            for (let i = 0; i < total; i++) {
+                const occupants = posMap[i] || [];
+                if (occupants.length > 1) {
+                    cellsWrap2.appendChild(makeStackedPreviewCell(occupants, name, `sv_${i}`));
+                } else if (occupants.length === 1) {
+                    cellsWrap2.appendChild(makePreviewCell(occupants[0], occupants[0] === name));
+                } else {
+                    const empty = document.createElement('div');
+                    empty.className = 'preview-cell empty';
+                    cellsWrap2.appendChild(empty);
+                }
+            }
+        } else {
+            cellsWrap2.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; justify-content:center;';
+            members.forEach(n => cellsWrap2.appendChild(makePreviewCell(n, n === name)));
+        }
+        panel.appendChild(cellsWrap2);
+
+        // Select-all toggle — mirrors the one in renderEiconPreviewBatch.
+        // Clicking promotes to a batch session so all siblings can be tagged together.
+        if (members.length > 1) {
+            const btn = document.createElement('div');
+            btn.style.cssText = 'font-size:9px; color:#888; text-align:center; width:100%; cursor:pointer; padding:2px 0; letter-spacing:0.5px; text-transform:uppercase;';
+            btn.textContent = '⊞ select all';
+            btn.title = 'Tag all eicons in this group together';
+            btn.onclick = () => {
+                // Promote to batch using all visible group members, then select all
+                const promoted = initBatchFromPreviewMembers();
+                if (promoted) {
+                    members.forEach(n => selectedIconNames.add(n));
+                    updateSelectionBar();
+                    refreshPreview();
+                    renderModalChips();
+                }
+            };
+            panel.appendChild(btn);
+        }
+    }
 
     // --- 6. RENDER ENGINE ---
 
@@ -1710,7 +2784,7 @@
     // members: [{ name, spec, pos }]
     // Returns null if no valid spec can be determined.
     function buildGridComposite(members) {
-        const specSource = members.find(m => m.spec && m.pos !== null) || members.find(m => m.spec);
+        const specSource = members.find(m => m.spec);
         if (!specSource) return null;
 
         const specStr = specSource.spec.startsWith('#') ? specSource.spec : '#' + specSource.spec;
@@ -1720,8 +2794,16 @@
         const { rows, cols } = spec;
 
         // Map flat index → icon name
+        // If all members have null positions (forced group awaiting manual placement),
+        // fall back to sequential order so the composite still renders usefully.
         const posMap = {};
-        members.forEach(m => { if (m.pos !== null && m.pos !== undefined) posMap[m.pos] = m.name; });
+        members.forEach(m => {
+            if (m.pos !== null && m.pos !== undefined) posMap[parseInt(m.pos, 10)] = m.name;
+        });
+        const hasExplicitPositions = Object.keys(posMap).length > 0;
+        if (!hasExplicitPositions) {
+            members.forEach((m, idx) => { if (m.name) posMap[idx] = m.name; });
+        }
 
         const wrap = document.createElement('div');
         wrap.className = 'grid-composite-wrap';
@@ -1758,9 +2840,21 @@
                 cell.appendChild(tagBtn);
             }
 
-            // Build BBCode fresh from cell data attributes at click time.
-            // This avoids any closure, precomputed string, or dataset encoding issue.
-            cell.onclick = () => {
+            // Build BBCode at click time. Alt+click = copy just this cell. Plain click = copy whole set.
+            cell.onclick = (e) => {
+                if (e.altKey) {
+                    // Alt+click: copy just this single eicon
+                    if (eiconName) {
+                        navigator.clipboard.writeText(`[eicon]${eiconName}[/eicon]`);
+                        const flash = document.createElement('div');
+                        flash.textContent = '✓';
+                        flash.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);color:gold;font-size:12px;pointer-events:none;border-radius:3px;';
+                        cell.style.position = 'relative';
+                        cell.appendChild(flash);
+                        setTimeout(() => flash.remove(), 600);
+                    }
+                    return;
+                }
                 const r = parseInt(inner.dataset.rows, 10);
                 const c = parseInt(inner.dataset.cols, 10);
                 const allCells = inner.querySelectorAll('.grid-composite-cell');
@@ -1788,28 +2882,26 @@
         wrap.appendChild(inner);
         wrap.appendChild(flash);
 
-        // Ctrl+Click on the composite selects the representative eicon (first named member).
+        // Ctrl+Click on the composite toggles ALL named members into/out of the selection.
         // Uses capture phase so it fires before the cell's copy handler.
-        const representative = members.find(m => m.name)?.name;
-        if (representative) {
+        const namedMembers = members.map(m => m.name).filter(Boolean);
+        if (namedMembers.length > 0) {
             wrap.addEventListener('click', (e) => {
                 if (!(e.ctrlKey || e.metaKey)) return;
                 e.preventDefault();
                 e.stopImmediatePropagation();
-                if (selectedIconNames.has(representative)) {
-                    selectedIconNames.delete(representative);
-                    wrap.classList.remove('dt-selected');
-                    wrap.style.outline = '';
-                } else {
-                    selectedIconNames.add(representative);
-                    wrap.classList.add('dt-selected');
-                    wrap.style.outline = '2px solid gold';
-                    wrap.style.boxShadow = '0 0 8px rgba(255,215,0,0.4)';
-                }
-                // Restore selection appearance if deselected
-                if (!selectedIconNames.has(representative)) {
-                    wrap.style.outline = '';
+                // Toggle: if ALL are selected → deselect all; otherwise → select all
+                const allSelected = namedMembers.every(n => selectedIconNames.has(n));
+                if (allSelected) {
+                    namedMembers.forEach(n => selectedIconNames.delete(n));
+                    wrap.style.outline   = '';
                     wrap.style.boxShadow = '';
+                    wrap.classList.remove('dt-selected');
+                } else {
+                    namedMembers.forEach(n => selectedIconNames.add(n));
+                    wrap.style.outline   = '2px solid gold';
+                    wrap.style.boxShadow = '0 0 8px rgba(255,215,0,0.4)';
+                    wrap.classList.add('dt-selected');
                 }
                 updateSelectionBar();
             }, true);
@@ -1825,27 +2917,42 @@
     // across different result sections.
     function renderEiconOrComposite(name, renderedBases) {
         const gridData = getAllGridData();
-        const gd = gridData[name];
+        const gd = gridData[name.toLowerCase()];
 
         if (gd) {
-            const base = getGroupBase(name);
-            if (renderedBases.has(base)) return null;
-            renderedBases.add(base);
+            // Determine composite identity:
+            // - Eicons in a forced group use "forced:<idx>" as the key so each forced group
+            //   renders as its own composite, even when members share a name-base.
+            // - Natural eicons use their name-base as before.
+            const forcedResult = getEiconForcedGroup(name);
+            const compositeKey = forcedResult ? `forced:${forcedResult.groupIdx}` : getGroupBase(name);
 
-            // Collect ALL members of this group from the full grid data store
-            const members = Object.entries(gridData)
-                .filter(([n]) => getGroupBase(n) === base)
-                .map(([n, d]) => ({ name: n, ...d }));
+            if (renderedBases.has(compositeKey)) return null;
+            renderedBases.add(compositeKey);
+
+            let members;
+            if (forcedResult) {
+                // Forced group: include any member that has grid data (spec required, pos may be null)
+                members = forcedResult.group
+                    .filter(n => gridData[n] && gridData[n].spec)
+                    .map(n => ({ name: n, ...gridData[n] }));
+            } else {
+                // Natural group: collect by name-base, excluding any forced-group members
+                const base = getGroupBase(name);
+                const forcedGroups = getAllForcedGrids();
+                const isForced = (n) => forcedGroups.some(g => g.includes(n.toLowerCase()));
+                members = Object.entries(gridData)
+                    .filter(([n]) => getGroupBase(n) === base && !isForced(n))
+                    .map(([n, d]) => ({ name: n, ...d }));
+            }
 
             const composite = buildGridComposite(members);
             if (composite) {
-                // Censor the whole composite if any member is censored
                 const anyCensored = members.some(m => m.name && isEiconCensored(m.name));
                 if (anyCensored) {
                     composite.classList.add('x-censored');
                     composite.style.border      = '4px solid transparent';
                     composite.style.borderImage = 'repeating-linear-gradient(45deg,#111 0px,#111 8px,#f5c842 8px,#f5c842 16px) 4';
-                    // Blur all images inside
                     composite.querySelectorAll('img').forEach(img => { img.style.filter = 'blur(9px)'; });
                     const overlay = document.createElement('div');
                     overlay.className = 'censor-overlay';
@@ -1910,6 +3017,7 @@
                 return;
             }
             navigator.clipboard.writeText(`[eicon]${name}[/eicon]`);
+            if (selectedIconNames.size > 0) clearSelection();
             flashCopied(ghost);
         });
 
@@ -2142,6 +3250,7 @@
                         <div class="dt-tab active" data-tab="browser">📂 Tag Browser</div>
                         <div class="dt-tab" data-tab="synonyms">🔗 Synonyms</div>
                         <div class="dt-tab" data-tab="duplicates">🔁 Duplicates</div>
+                        <div class="dt-tab" data-tab="forcedgrids">🔲 Forced Grids</div>
                         <div class="dt-tab" data-tab="blocked">🚫 Blocked</div>
                     </div>
                     <div id="x-dt-browser" class="dt-tab-panel active">
@@ -2204,6 +3313,19 @@
                                 </p>
                             </div>
                             <div id="x-dup-list"></div>
+                        </div>
+                    </div>
+                    <div id="x-dt-forcedgrids" class="dt-tab-panel">
+                        <div id="x-fg-panel" style="flex-direction:column; overflow-y:auto; padding:20px; gap:12px; display:flex;">
+                            <div style="background:#1a0a00; border:1px solid #c0522a44; border-radius:8px; padding:14px 18px; flex-shrink:0;">
+                                <div style="color:#c0522a; font-weight:bold; margin-bottom:6px; font-size:14px;">🔲 Forced Grid Sets</div>
+                                <p style="font-size:13px; color:#666; margin:0;">
+                                    Eicons in the same forced set form a grid composite regardless of their filenames.
+                                    Select 2+ eicons and type <strong style="color:#ccc;">##</strong> in the batch tag modal to create a set.
+                                    Deleting a set restores normal name-based grid detection.
+                                </p>
+                            </div>
+                            <div id="x-fg-list"></div>
                         </div>
                     </div>
                     <div id="x-dt-blocked" class="dt-tab-panel">
@@ -2347,15 +3469,16 @@
     function switchDevTab(tabName) {
         const overlay = document.getElementById('x-devtools-overlay');
         if (!overlay) return;
-        const panelMap = { browser: 'x-dt-browser', synonyms: 'x-dt-synonyms', duplicates: 'x-dt-duplicates', blocked: 'x-dt-blocked' };
+        const panelMap = { browser: 'x-dt-browser', synonyms: 'x-dt-synonyms', duplicates: 'x-dt-duplicates', forcedgrids: 'x-dt-forcedgrids', blocked: 'x-dt-blocked' };
         overlay.querySelectorAll('.dt-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
         overlay.querySelectorAll('.dt-tab-panel').forEach(p => p.classList.remove('active'));
         const panelEl = overlay.querySelector('#' + (panelMap[tabName] || 'x-dt-browser'));
         if (panelEl) panelEl.classList.add('active');
         overlay.querySelector('#x-devtools-search').style.display = tabName === 'browser' ? '' : 'none';
-        if (tabName === 'synonyms')   renderSynonymRules();
-        if (tabName === 'duplicates') renderDuplicatesList();
-        if (tabName === 'blocked')    renderBlockedTagsList();
+        if (tabName === 'synonyms')    renderSynonymRules();
+        if (tabName === 'duplicates')  renderDuplicatesList();
+        if (tabName === 'forcedgrids') renderForcedGridsList();
+        if (tabName === 'blocked')     renderBlockedTagsList();
         if (tabName === 'browser')    renderDevToolsTagList('');
     }
 
@@ -2575,39 +3698,118 @@
             container.appendChild(row);
         });
     }
-    function renderDuplicatesList() {
-        const container = document.getElementById('x-dup-list');
+    // Generic group list renderer used by both Duplicates and Forced Grids tabs.
+    // opts: { containerId, getAllFn, removeFn, rerenderFn, emptyMsg, deleteConfirm,
+    //         accentColor, bgColor, headerBg, bodyBg, labelSingular, labelPlural,
+    //         deleteBtnClass, toggleClass }
+    function renderGroupList(opts) {
+        const container = document.getElementById(opts.containerId);
         if (!container) return;
         container.innerHTML = '';
-        const groups = getAllDuplicates();
+        const groups = opts.getAllFn();
         if (groups.length === 0) {
-            container.innerHTML = '<div style="color:#444; font-size:13px; font-style:italic; padding:12px 0;">No duplicate groups defined yet. Select 2+ eicons and type && in the batch tag modal.</div>';
+            container.innerHTML = `<div style="color:#444; font-size:13px; font-style:italic; padding:12px 0;">${opts.emptyMsg}</div>`;
             return;
         }
         groups.forEach((group, idx) => {
             const wrap = document.createElement('div');
-            wrap.dataset.dupIdx = idx;
-            wrap.style.cssText = 'background:#1a1a1a; border:1px solid #2a2a2a; border-radius:8px; overflow:hidden; margin-bottom:8px;';
+            wrap.style.cssText = `background:${opts.bgColor}; border:1px solid ${opts.accentColor}33; border-radius:8px; overflow:hidden; margin-bottom:8px;`;
+            if (opts.dupIdx) wrap.dataset.dupIdx = idx;
 
             const header = document.createElement('div');
-            header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px 16px; cursor:pointer; user-select:none; background:#1f1f1f;';
+            header.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:10px 16px; cursor:pointer; user-select:none; background:${opts.headerBg};`;
             const firstName = group[0] || `group-${idx + 1}`;
+            const extras = group.length - 1;
             header.innerHTML = `
-                <span style="color:#ccc; font-size:13px;"><strong style="color:gold;">${firstName}</strong> <span style="color:#555;font-size:11px;">+${group.length - 1} duplicate${group.length - 1 === 1 ? '' : 's'}</span> &nbsp;<span style="color:#444; font-size:11px;">${group.slice(1,4).join(', ')}${group.length > 4 ? '…' : ''}</span></span>
+                <span style="color:#ccc; font-size:13px;"><strong style="color:${opts.accentColor};">${firstName}</strong> <span style="color:#555;font-size:11px;">+${extras} ${extras === 1 ? opts.labelSingular : opts.labelPlural}</span> &nbsp;<span style="color:#444; font-size:11px;">${group.slice(1,4).join(', ')}${group.length > 4 ? '…' : ''}</span></span>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <button class="dup-delete-btn" style="background:none; border:1px solid #444; color:#666; border-radius:4px; padding:3px 10px; font-size:11px; cursor:pointer;">🗑 Delete Group</button>
-                    <span class="dup-toggle" style="color:#555; font-size:14px;">▸</span>
+                    <button class="${opts.deleteBtnClass}" style="background:none; border:1px solid #444; color:#666; border-radius:4px; padding:3px 10px; font-size:11px; cursor:pointer;">🗑 ${opts.deleteLabel}</button>
+                    <span class="${opts.toggleClass}" style="color:#555; font-size:14px;">▸</span>
                 </div>`;
 
             const body = document.createElement('div');
-            body.className = 'dup-body';
-            body.style.cssText = 'display:none; padding:10px; background:#111; grid-template-columns:repeat(auto-fill,85px); grid-auto-rows:85px; grid-auto-flow:row dense; gap:4px;';
+            body.style.cssText = `display:none; padding:10px; background:${opts.bodyBg}; grid-template-columns:repeat(auto-fill,85px); grid-auto-rows:85px; grid-auto-flow:row dense; gap:4px;`;
 
             header.onclick = (e) => {
-                if (e.target.classList.contains('dup-delete-btn')) return;
+                if (e.target.classList.contains(opts.deleteBtnClass)) return;
                 const open = body.style.display !== 'grid';
                 body.style.display = open ? 'grid' : 'none';
-                header.querySelector('.dup-toggle').textContent = open ? '▾' : '▸';
+                header.querySelector('.' + opts.toggleClass).textContent = open ? '▾' : '▸';
+                if (open && !body._populated) {
+                    body._populated = true;
+                    const rendered = new Set();
+                    group.forEach(name => { const el = renderEiconOrComposite(name, rendered); if (el) body.appendChild(el); });
+                }
+            };
+
+            header.querySelector('.' + opts.deleteBtnClass).onclick = () => {
+                if (!confirm(opts.deleteConfirm(group))) return;
+                opts.removeFn(idx);
+                opts.rerenderFn();
+            };
+
+            wrap.appendChild(header);
+            wrap.appendChild(body);
+            container.appendChild(wrap);
+        });
+    }
+
+    function renderDuplicatesList() {
+        renderGroupList({
+            containerId: 'x-dup-list', getAllFn: getAllDuplicates, removeFn: removeDuplicateGroup,
+            rerenderFn: renderDuplicatesList, dupIdx: true,
+            accentColor: 'gold', bgColor: '#1a1a1a', headerBg: '#1f1f1f', bodyBg: '#111',
+            labelSingular: 'duplicate', labelPlural: 'duplicates',
+            deleteBtnClass: 'dup-delete-btn', toggleClass: 'dup-toggle', deleteLabel: 'Delete Group',
+            emptyMsg: 'No duplicate groups defined yet. Select 2+ eicons and type && in the batch tag modal.',
+            deleteConfirm: (g) => `Delete duplicate group containing ${g.length} eicons?\n\nThis removes the grouping rule. Eicons and their tags are not changed.`,
+        });
+    }
+
+    function renderForcedGridsList() {
+        renderGroupList({
+            containerId: 'x-fg-list', getAllFn: getAllForcedGrids, removeFn: removeForcedGridGroup,
+            rerenderFn: renderForcedGridsList,
+            accentColor: '#c0522a', bgColor: '#1a0e00', headerBg: '#1f1200', bodyBg: '#110800',
+            labelSingular: 'eicon', labelPlural: 'eicons',
+            deleteBtnClass: 'fg-delete-btn', toggleClass: 'fg-toggle', deleteLabel: 'Delete Set',
+            emptyMsg: 'No forced grid sets defined yet. Select 2+ eicons and type ## in the batch tag modal.',
+            deleteConfirm: (g) => `Delete forced grid set containing ${g.length} eicons?\n\nThis removes the forced grouping. The eicons and their tags are not changed.\nNormal name-based grid detection will apply again.`,
+        });
+    }
+
+    // Deterministic colour from tag string — cycles through a palette.
+    function renderForcedGridsList() {
+        const container = document.getElementById('x-fg-list');
+        if (!container) return;
+        container.innerHTML = '';
+        const groups = getAllForcedGrids();
+        if (groups.length === 0) {
+            container.innerHTML = '<div style="color:#444; font-size:13px; font-style:italic; padding:12px 0;">No forced grid sets defined yet. Select 2+ eicons and type ## in the batch tag modal.</div>';
+            return;
+        }
+        groups.forEach((group, idx) => {
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'background:#1a0e00; border:1px solid #c0522a33; border-radius:8px; overflow:hidden; margin-bottom:8px;';
+
+            const header = document.createElement('div');
+            header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px 16px; cursor:pointer; user-select:none; background:#1f1200;';
+            const firstName = group[0] || `forced-${idx + 1}`;
+            header.innerHTML = `
+                <span style="color:#ccc; font-size:13px;"><strong style="color:#c0522a;">${firstName}</strong> <span style="color:#555; font-size:11px;">+${group.length - 1} eicon${group.length - 1 === 1 ? '' : 's'}</span> &nbsp;<span style="color:#444; font-size:11px;">${group.slice(1,4).join(', ')}${group.length > 4 ? '…' : ''}</span></span>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="fg-delete-btn" style="background:none; border:1px solid #444; color:#666; border-radius:4px; padding:3px 10px; font-size:11px; cursor:pointer;">🗑 Delete Set</button>
+                    <span class="fg-toggle" style="color:#555; font-size:14px;">▸</span>
+                </div>`;
+
+            const body = document.createElement('div');
+            body.style.cssText = 'display:none; padding:10px; background:#110800; grid-template-columns:repeat(auto-fill,85px); grid-auto-rows:85px; grid-auto-flow:row dense; gap:4px;';
+
+            header.onclick = (e) => {
+                if (e.target.classList.contains('fg-delete-btn')) return;
+                const open = body.style.display !== 'grid';
+                body.style.display = open ? 'grid' : 'none';
+                header.querySelector('.fg-toggle').textContent = open ? '▾' : '▸';
                 if (open && !body._populated) {
                     body._populated = true;
                     const rendered = new Set();
@@ -2618,10 +3820,10 @@
                 }
             };
 
-            header.querySelector('.dup-delete-btn').onclick = () => {
-                if (!confirm(`Delete duplicate group containing ${group.length} eicons?\n\nThis removes the grouping rule. Eicons and their tags are not changed.`)) return;
-                removeDuplicateGroup(idx);
-                renderDuplicatesList();
+            header.querySelector('.fg-delete-btn').onclick = () => {
+                if (!confirm(`Delete forced grid set containing ${group.length} eicons?\n\nThis removes the forced grouping. The eicons and their tags are not changed.\nNormal name-based grid detection will apply again.`)) return;
+                removeForcedGridGroup(idx);
+                renderForcedGridsList();
             };
 
             wrap.appendChild(header);
@@ -2739,51 +3941,7 @@
     // Creates a ghost eicon for the dev tools panel.
     // Supports Ctrl+Click selection (using the shared selectedIconNames set)
     // and direct tag editing. Visual selection state is managed via .dt-selected class.
-    function createDevGhost(name) {
-        const ghost = document.createElement('div');
-        ghost.className = 'ghost-eicon' + (selectedIconNames.has(name) ? ' dt-selected' : '');
-        ghost.innerHTML = `
-            <img src="https://static.f-list.net/images/eicon/${name}.gif">
-            <span class="ghost-name">${name}</span>
-            <div class="copy-flash">✓ Copied</div>`;
-
-        const gBtn = document.createElement('button');
-        gBtn.className = 'tag-btn';
-        gBtn.innerHTML = '🏷️';
-        gBtn.style.cssText = `
-            position: absolute !important; bottom: 2px !important; left: 2px !important;
-            z-index: 1000 !important; background: rgba(0,0,0,0.8) !important; color: white !important;
-            border: 1px solid gold !important; border-radius: 4px !important; padding: 2px !important;
-            font-size: 12px !important; width: 20px !important; height: 20px !important;
-            display: flex !important; align-items: center !important; justify-content: center !important;
-            opacity: 0; transition: opacity 0.2s; cursor: pointer !important;`;
-        gBtn.onclick = (e) => { e.stopPropagation(); openTagModal(name); };
-
-        ghost.appendChild(gBtn);
-        ghost.onmouseenter = () => gBtn.style.opacity = '1';
-        ghost.onmouseleave = () => gBtn.style.opacity = '0';
-
-        ghost.addEventListener('click', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (selectedIconNames.has(name)) {
-                    selectedIconNames.delete(name);
-                    ghost.classList.remove('dt-selected');
-                } else {
-                    selectedIconNames.add(name);
-                    ghost.classList.add('dt-selected');
-                }
-                updateSelectionBar();
-            } else {
-                // Plain click = copy BBCode
-                navigator.clipboard.writeText(`[eicon]${name}[/eicon]`);
-                flashCopied(ghost);
-            }
-        });
-
-        return ghost;
-    }
+    const createDevGhost = (name) => createGhost(name); // alias: dev panel never has censored eicons
 
 
 
@@ -2860,7 +4018,23 @@
                 <div id="tag-list-anchor"></div>
             </div>`;
 
-        document.body.prepend(manager);
+        // In legacy mode, insert after Xariah's own #divUi so we don't overlap it.
+        // In modern mode, prepend to body as usual.
+        const divUi = document.getElementById('divUi');
+        if (divUi && divUi.parentNode) {
+            divUi.parentNode.insertBefore(manager, divUi.nextSibling);
+            // divUi is position:fixed with z-index:100. Make our manager also fixed,
+            // sitting directly below it, and add body padding so page content isn't hidden.
+            const positionLegacyManager = () => {
+                const divUiH = divUi.offsetHeight;
+                manager.style.cssText += `; position: fixed !important; top: ${divUiH}px !important; left: 0 !important; right: 0 !important; z-index: 99 !important; max-height: 40vh !important; overflow-y: auto !important;`;
+                document.body.style.paddingTop = (divUiH + manager.offsetHeight) + 'px';
+            };
+            // Wait one tick for the manager to render and get a measurable height
+            setTimeout(positionLegacyManager, 100);
+        } else {
+            document.body.prepend(manager);
+        }
 
         // Push page content down by the exact height of our bar
         const updateOffset = () => {
@@ -2902,10 +4076,11 @@
         manager.querySelector('#x-export').onclick = () => {
             const payload = JSON.stringify({
                 version: 1,
-                tags:       getAllTags(),
-                grid:       getAllGridData(),
-                synonyms:   getAllSynonyms(),
-                duplicates: getAllDuplicates()
+                tags:        getAllTags(),
+                grid:        getAllGridData(),
+                synonyms:    getAllSynonyms(),
+                duplicates:  getAllDuplicates(),
+                forcedGrids: getAllForcedGrids()
             }, null, 2);
             const b = new Blob([payload], { type: 'text/plain' });
             const a = document.createElement('a');
@@ -2927,22 +4102,24 @@
                     try { parsed = JSON.parse(ev.target.result); }
                     catch { alert('Invalid tag file — could not parse JSON.'); return; }
 
-                    let importedTags, importedGrid, importedSynonyms, importedDuplicates;
+                    let importedTags, importedGrid, importedSynonyms, importedDuplicates, importedForcedGrids;
                     if (parsed.version === 1 && parsed.tags) {
                         // New combined format
-                        importedTags       = parsed.tags;
-                        importedGrid       = parsed.grid       || {};
-                        importedSynonyms   = parsed.synonyms   || [];
-                        importedDuplicates = parsed.duplicates || [];
+                        importedTags        = parsed.tags;
+                        importedGrid        = parsed.grid        || {};
+                        importedSynonyms    = parsed.synonyms    || [];
+                        importedDuplicates  = parsed.duplicates  || [];
+                        importedForcedGrids = parsed.forcedGrids || [];
                     } else {
                         // Old format — plain tag object, no supplemental data
-                        importedTags       = parsed;
-                        importedGrid       = {};
-                        importedSynonyms   = [];
-                        importedDuplicates = [];
+                        importedTags        = parsed;
+                        importedGrid        = {};
+                        importedSynonyms    = [];
+                        importedDuplicates  = [];
+                        importedForcedGrids = [];
                     }
 
-                    showImportDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates);
+                    showImportDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates, importedForcedGrids);
                 };
                 reader.readAsText(e.target.files[0]);
             };
@@ -2965,21 +4142,23 @@
                     return r.json();
                 })
                 .then(parsed => {
-                    let importedTags, importedGrid, importedSynonyms, importedDuplicates;
+                    let importedTags, importedGrid, importedSynonyms, importedDuplicates, importedForcedGrids;
                     if (parsed.version === 1 && parsed.tags) {
-                        importedTags       = parsed.tags;
-                        importedGrid       = parsed.grid       || {};
-                        importedSynonyms   = parsed.synonyms   || [];
-                        importedDuplicates = parsed.duplicates || [];
+                        importedTags        = parsed.tags;
+                        importedGrid        = parsed.grid        || {};
+                        importedSynonyms    = parsed.synonyms    || [];
+                        importedDuplicates  = parsed.duplicates  || [];
+                        importedForcedGrids = parsed.forcedGrids || [];
                     } else {
-                        importedTags       = parsed;
-                        importedGrid       = {};
-                        importedSynonyms   = [];
-                        importedDuplicates = [];
+                        importedTags        = parsed;
+                        importedGrid        = {};
+                        importedSynonyms    = [];
+                        importedDuplicates  = [];
+                        importedForcedGrids = [];
                     }
                     btn.textContent = '📡';
                     btn.disabled = false;
-                    showDevTagsDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates);
+                    showDevTagsDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates, importedForcedGrids);
                 })
                 .catch(err => {
                     btn.textContent = '📡';
@@ -3052,7 +4231,34 @@
     }
 
     // Inline import dialog — handles tags, grid data, synonyms, and duplicates.
-    function showImportDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates) {
+    // Applies a merge of all imported data stores into the current user library.
+    // Called by both showImportDialog (Merge button) and showDevTagsDialog (Merge button).
+    function commitMerge(importedTags, importedGrid, importedSynonyms, importedDuplicates, importedForcedGrids) {
+        saveFullLibrary(mergeLibraries(getAllTags(), importedTags));
+        saveAllGridData({ ...importedGrid, ...getAllGridData() });
+        const existingSyn = getAllSynonyms();
+        (importedSynonyms || []).forEach(({ master, slaves }) => {
+            const existing = existingSyn.find(r => r.master === master);
+            if (existing) { slaves.forEach(s => { if (!existing.slaves.includes(s)) existing.slaves.push(s); }); }
+            else existingSyn.push({ master, slaves });
+        });
+        saveSynonyms(existingSyn);
+        invalidateSynonymMap();
+        const existingDup = getAllDuplicates();
+        (importedDuplicates || []).forEach(group => {
+            const alreadyCovered = group.some(n => existingDup.some(g => g.includes(n)));
+            if (!alreadyCovered) existingDup.push(group);
+        });
+        saveAllDuplicates(existingDup);
+        const existingFg = getAllForcedGrids();
+        (importedForcedGrids || []).forEach(group => {
+            const alreadyCovered = group.some(n => existingFg.some(g => g.includes(n)));
+            if (!alreadyCovered) existingFg.push(group);
+        });
+        saveAllForcedGrids(existingFg);
+    }
+
+    function showImportDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates, importedForcedGrids = []) {
         if (document.getElementById('x-import-dialog')) return;
 
         const importTagCount  = Object.keys(importedTags).length;
@@ -3060,11 +4266,13 @@
         const existingCount   = Object.keys(getAllTags()).length;
         const synCount  = importedSynonyms.length;
         const dupCount  = importedDuplicates.length;
+        const fgCount   = importedForcedGrids.length;
 
         const extraNote = [
             importGridCount > 0 ? `<strong style="color:#eee;">${importGridCount}</strong> grid positions` : '',
             synCount  > 0 ? `<strong style="color:#eee;">${synCount}</strong> synonym rules` : '',
-            dupCount  > 0 ? `<strong style="color:#eee;">${dupCount}</strong> linked sets` : ''
+            dupCount  > 0 ? `<strong style="color:#eee;">${dupCount}</strong> linked sets` : '',
+            fgCount   > 0 ? `<strong style="color:#eee;">${fgCount}</strong> forced grid sets` : ''
         ].filter(Boolean).join(', ');
 
         const dialog = document.createElement('div');
@@ -3095,32 +4303,14 @@
             saveAllGridData(importedGrid);
             saveSynonyms(importedSynonyms);
             saveAllDuplicates(importedDuplicates);
+            saveAllForcedGrids(importedForcedGrids);
             invalidateSynonymMap();
             dialog.remove();
             location.reload();
         };
 
         dialog.querySelector('#x-import-merge').onclick = () => {
-            // Tags: merge at tag level
-            saveFullLibrary(mergeLibraries(getAllTags(), importedTags));
-            // Grid: existing positions win on conflict
-            saveAllGridData({ ...importedGrid, ...getAllGridData() });
-            // Synonyms: merge by master — imported slaves added to existing rules, new rules appended
-            const existingSyn = getAllSynonyms();
-            importedSynonyms.forEach(({ master, slaves }) => {
-                const existing = existingSyn.find(r => r.master === master);
-                if (existing) { slaves.forEach(s => { if (!existing.slaves.includes(s)) existing.slaves.push(s); }); }
-                else existingSyn.push({ master, slaves });
-            });
-            saveSynonyms(existingSyn);
-            invalidateSynonymMap();
-            // Duplicates: merge groups — any new group not already covered is appended
-            const existingDup = getAllDuplicates();
-            importedDuplicates.forEach(group => {
-                const alreadyCovered = group.some(n => existingDup.some(g => g.includes(n)));
-                if (!alreadyCovered) existingDup.push(group);
-            });
-            saveAllDuplicates(existingDup);
+            commitMerge(importedTags, importedGrid, importedSynonyms, importedDuplicates, importedForcedGrids);
             dialog.remove();
             location.reload();
         };
@@ -3130,7 +4320,7 @@
 
     // Dev tags dialog — merge-only, no Replace option.
     // Shows what will be added before committing, lets user cancel safely.
-    function showDevTagsDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates) {
+    function showDevTagsDialog(importedTags, importedGrid, importedSynonyms, importedDuplicates, importedForcedGrids = []) {
         if (document.getElementById('x-dev-dialog')) return;
 
         const importTagCount  = Object.keys(importedTags).length;
@@ -3185,24 +4375,7 @@
         dialog.querySelector('#x-dev-cancel').onclick = () => dialog.remove();
 
         dialog.querySelector('#x-dev-merge').onclick = () => {
-            saveFullLibrary(mergeLibraries(getAllTags(), importedTags));
-            saveAllGridData({ ...importedGrid, ...getAllGridData() });
-            // Merge synonyms by master
-            const existingSyn = getAllSynonyms();
-            (importedSynonyms || []).forEach(({ master, slaves }) => {
-                const existing = existingSyn.find(r => r.master === master);
-                if (existing) { slaves.forEach(s => { if (!existing.slaves.includes(s)) existing.slaves.push(s); }); }
-                else existingSyn.push({ master, slaves });
-            });
-            saveSynonyms(existingSyn);
-            invalidateSynonymMap();
-            // Merge linked sets
-            const existingDup = getAllDuplicates();
-            (importedDuplicates || []).forEach(group => {
-                const alreadyCovered = group.some(n => existingDup.some(g => g.includes(n)));
-                if (!alreadyCovered) existingDup.push(group);
-            });
-            saveAllDuplicates(existingDup);
+            commitMerge(importedTags, importedGrid, importedSynonyms, importedDuplicates, importedForcedGrids);
             dialog.remove();
             location.reload();
         };
@@ -3210,7 +4383,7 @@
 
 
 
-    // --- 8. TAG MODE ENGINE ---
+    // --- 11. TAG MODE ENGINE ---
     // x-eiconview lives inside shadow roots, so page CSS cannot reach it.
     // We apply dimming via inline styles and wire hover with JS listeners.
 
@@ -3218,7 +4391,7 @@
         const shadow = el.shadowRoot;
         if (!shadow) return null;
         const rootDiv = shadow.querySelector('.root');
-        return rootDiv ? rootDiv.getAttribute('data-tooltip') : null;
+        return rootDiv ? (rootDiv.getAttribute('data-tooltip') || '').split('\n')[0].trim() : null;
     }
 
     function applyTagMode() {
@@ -3307,7 +4480,7 @@
 
 
 
-    // --- 9. BATCH SELECTION ENGINE ---
+    // --- 12. BATCH SELECTION ENGINE ---
 
     // Applies or removes the gold selection highlight on an x-eiconview host element.
     // Inline styles are used because CSS cannot pierce the shadow boundary.
@@ -3326,11 +4499,13 @@
     }
 
     // Updates the floating selection bar visibility and count.
+    // Never shown while the tag modal is open — its Tag Selected / Clear buttons
+    // must not be reachable while the user is mid-edit.
     function updateSelectionBar() {
         const bar = document.getElementById('x-selection-bar');
         if (!bar) return;
         const count = selectedIconNames.size;
-        if (count === 0) {
+        if (count === 0 || _modalOpen) {
             bar.classList.remove('visible');
         } else {
             bar.classList.add('visible');
@@ -3353,10 +4528,27 @@
     }
 
     // Clears all selections and removes highlights from all visible elements.
+    // Strips gold-border visuals from all modern eicon elements without clearing the Set.
+    // Used when navigating away (e.g. to dev tools) — selection is preserved, display is reset.
+    function stripSelectionVisuals() {
+        findDeep(document, 'x-eiconview').forEach(el => {
+            el.style.outline = el.style.boxShadow = el.style.zIndex = '';
+            el._xSelected = false;
+        });
+    }
+
     function clearSelection() {
         selectedIconNames.clear();
+        // Modern: clear shadow-DOM host elements
         findDeep(document, 'x-eiconview').forEach(el => {
             if (el._xSelected) applySelectionVisual(el, false);
+        });
+        // Legacy: clear inline styles on flat containers
+        document.querySelectorAll('.eicon-container[data-name]').forEach(el => {
+            el.style.outline   = '';
+            el.style.boxShadow = '';
+            el.style.zIndex    = '';
+            el._xSelected      = false;
         });
         updateSelectionBar();
     }
@@ -3378,86 +4570,96 @@
     function openBatchModal() {
         if (selectedIconNames.size === 0) return;
 
-        currentIconName = '';  // not editing a single icon
+        currentIconName = '';
         activeTags = [];
         activeGridSpec = null;
         activeGridPos  = null;
+        _batchRemovedTags = new Set();
+        _batchIconNames   = new Set(selectedIconNames);
+        _batchTagCache    = {};
 
-        // Seed with tags common to ALL selected eicons (intersection)
+        // Build per-eicon tag sets from storage
         const names = [...selectedIconNames];
-        const tagSets = names.map(n => {
+        const storedSets = names.map(n => {
             const raw = getStoredTags(n);
             return new Set(raw ? raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : []);
         });
-        const common = tagSets[0];
-        tagSets.slice(1).forEach(set => {
+
+        // __batch__ = intersection (tags ALL eicons share)
+        const common = new Set(storedSets[0]);
+        storedSets.slice(1).forEach(set => {
             for (const t of [...common]) { if (!set.has(t)) common.delete(t); }
         });
+
+        // Per-eicon cache = only their additional tags beyond the shared set
+        names.forEach((n, i) => {
+            const extras = [...storedSets[i]].filter(t => !common.has(t));
+            _batchTagCache[n] = { tags: extras, gridSpec: null, gridPos: null };
+            const gd = getAllGridData()[n];
+            if (gd?.spec) {
+                _batchTagCache[n].gridSpec = parseGridFromStorage(gd.spec);
+                _batchTagCache[n].gridPos  = gd.pos ?? null;
+            }
+        });
+
+        // __batch__ holds the shared tags — what's shown when viewing "all"
+        _batchTagCache['__batch__'] = { tags: [...common], gridSpec: null, gridPos: null };
         activeTags = [...common];
 
-        // Grid detection: if all selected eicons share the same group base, try to
-        // detect the grid size and auto-assign positions.
-        // Uses the first eicon as the representative (for autoApplyGridToSiblings).
-        const bases = names.map(n => getGroupBase(n));
-        const allSameBase = bases.length > 1 && bases.every(b => b === bases[0]) && bases[0] !== names[0].toLowerCase();
-
-        let batchGridApplied = false;
-        if (allSameBase) {
-            // Count total siblings visible in DOM + library + gridData
-            const base = bases[0];
-            const sibSet = new Set(names);
-            findDeep(document, 'x-eiconview').forEach(el => {
-                const n = getIconNameFromElement(el);
-                if (n && getGroupBase(n) === base) sibSet.add(n);
-            });
-            Object.keys(getAllGridData()).forEach(n => { if (getGroupBase(n) === base) sibSet.add(n); });
-            Object.keys(getAllTags()).forEach(n => { if (getGroupBase(n) === base) sibSet.add(n); });
-            const count = sibSet.size;
-
-            if (count >= 2) {
-                // Suggest a grid spec based on sibling count
-                const sugCols = Math.min(5, Math.ceil(Math.sqrt(count)));
-                const sugRows = Math.min(5, Math.ceil(count / sugCols));
-                const spec = parseGridTag(`#${sugRows}x${sugCols}`);
-                if (spec) {
-                    // Temporarily set currentIconName to the sorted-first sibling so
-                    // autoApplyGridToSiblings has a reference point.
-                    const sorted = sortSiblings([...sibSet]);
-                    const prevName = currentIconName;
-                    currentIconName = sorted[0];
-                    autoApplyGridToSiblings(spec);
-                    currentIconName = prevName; // restore batch mode flag
-                    activeGridSpec = spec;
-                    batchGridApplied = true;
-                }
-            }
-        }
+        // Immutable snapshots of on-disk state for accurate isSaved chip colouring.
+        // These must be set before openTagModal is called below.
+        _batchOriginalCommon = new Set(common);
+        _batchOriginalExtras = {};
+        names.forEach((n, i) => { _batchOriginalExtras[n] = storedSets[i]; });
 
         if (!document.getElementById('x-tag-modal-overlay')) {
             openTagModal(names[0]);
             currentIconName = '';
-            activeTags = [...common];
+            activeTags      = [...common];
+            activeGridSpec  = null;
+            activeGridPos   = null;
         }
+        // After the state reset, _savedTagsSnapshot must reflect batch overview (common only)
+        _savedTagsSnapshot = new Set(common);
 
-        // Set modal state and show
-        const countLabel = batchGridApplied
-            ? `${names.length} eicons (grid auto-assigned)`
-            : `${names.length} eicons`;
-        document.getElementById('x-modal-icon-name').textContent = countLabel;
+        document.getElementById('x-modal-icon-name').textContent = `${names.length} eicons`;
         document.getElementById('x-tag-modal-overlay').style.display = 'flex';
+        const _selBar = document.getElementById('x-selection-bar');
+        if (_selBar) _selBar.classList.remove('visible'); // hidden while modal is open
 
         const input = document.getElementById('x-modal-input');
         if (input) { input.value = ''; input.focus(); }
 
-        if (batchGridApplied) {
-            // Show the grid area pre-filled — don't show smart hint
-            const hint = document.getElementById('x-smart-grid-hint');
-            if (hint) hint.classList.remove('visible');
-            renderGridArea();
-        } else {
+        renderGridArea();
+
+        // Detect existing grid assignment: if all selected share the same spec, pre-load it
+        const allGridData = getAllGridData();
+        const existingSpecs = names.map(n => allGridData[n]?.spec).filter(Boolean);
+        const allShareSpec  = existingSpecs.length === names.length
+            && existingSpecs.every(s => s === existingSpecs[0]);
+
+        // Also detect forced group membership
+        const sharedForcedGroup = (() => {
+            const fg = getEiconForcedGroup(names[0]);
+            if (!fg) return null;
+            return names.every(n => fg.group.includes(n.toLowerCase())) ? fg : null;
+        })();
+
+        if (allShareSpec) {
+            // All selected eicons already have the same grid spec — load it, suppress hint
+            activeGridSpec = parseGridTag(existingSpecs[0].startsWith('#') ? existingSpecs[0] : '#' + existingSpecs[0]);
             renderGridArea();
             renderSmartGridHint('');
+        } else {
+            // Show name-base smart hint as a suggestion (non-destructive)
+            const bases = names.map(n => getGroupBase(n));
+            const allSameBase = bases.length > 1 && bases.every(b => b === bases[0]) && bases[0] !== names[0].toLowerCase();
+            renderSmartGridHint(allSameBase ? names[0] : '');
         }
+
+        // Show preview of exactly the selected eicons (max 25, no auto-discovery)
+        const previewNames = [..._batchIconNames].slice(0, 25);
+        renderEiconPreviewBatch(previewNames, allShareSpec ? activeGridSpec : null);
 
         suggestionQuery = '';
         updateSuggestions('');
@@ -3495,7 +4697,7 @@
 
 
 
-    // --- 10. LIVE EICON BUTTONS ---
+    // --- 13. LIVE EICON BUTTONS ---
     // Injects a tag button into each eicon's shadow root.
     // Also wires Ctrl+Click selection and restores selection highlight
     // when a previously-selected eicon is re-rendered by the virtual scroll.
@@ -3507,7 +4709,7 @@
         const rootDiv = shadow.querySelector('.root');
         if (!rootDiv) return;
 
-        const iconName = rootDiv.getAttribute('data-tooltip');
+        const iconName = (rootDiv.getAttribute('data-tooltip') || '').split('\n')[0].trim();
         if (!iconName) return;
 
         ensureSelectionBar();
@@ -3552,7 +4754,105 @@
 
 
 
-    // --- 9. DEEP SHADOW QUERY ---
+    // --- 14. LAYOUT DETECTION ---
+    // Two distinct page layouts exist on xariah.net/eicons:
+    //   Modern: web-component grid with <x-eiconview> elements and shadow DOM
+    //   Legacy: paginated flat layout with .eicon-container[data-name] divs
+    // We detect which one is active once the DOM is ready and branch accordingly.
+
+    let _layoutMode = null; // 'modern' | 'legacy' | null (not yet detected)
+
+    function detectLayout() {
+        if (document.getElementById('divResults')) return 'legacy';
+        if (findDeep(document, 'x-eiconview').length > 0) return 'modern';
+        // DOM might not be ready yet
+        if (document.body) {
+            // If we have x-mainapp or x-eicon-grid it's modern even before eicons load
+            if (document.querySelector('x-mainapp, x-eicon-grid')) return 'modern';
+            // divResults will exist immediately in legacy mode
+            return null; // not determinable yet
+        }
+        return null;
+    }
+
+    // Adds tag button and ctrl-click selection to a legacy .eicon-container element.
+    const processLegacyIcon = (el) => {
+        if (_processedIcons.has(el)) return;
+        const iconName = el.getAttribute('data-name');
+        if (!iconName) return;
+
+        _processedIcons.add(el);
+        ensureSelectionBar();
+
+        // Make container relative so the tag button can be positioned inside it
+        el.style.position = 'relative';
+        el.style.display  = 'inline-block'; // containers are divs; ensure image stays inside
+
+        // Restore selection highlight if previously selected
+        if (selectedIconNames.has(iconName)) {
+            el.style.outline   = '2px solid gold';
+            el.style.boxShadow = '0 0 10px rgba(255,215,0,0.5)';
+            el._xSelected = true;
+        }
+
+        // Ctrl+click = toggle selection; plain click = copy BBCode (existing behaviour)
+        if (!el._xSelectionBound) {
+            el._xSelectionBound = true;
+            el.addEventListener('click', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    toggleSelection(el, iconName);
+                } else {
+                    if (selectedIconNames.size > 0) clearSelection();
+                    // Don't override Xariah's own copy handler — just clear selection
+                }
+            }, true);
+        }
+
+        const hasTags = getStoredTags(iconName);
+        const btn = document.createElement('button');
+        btn.className = 'x-legacy-tag-btn';
+        btn.innerHTML = '🏷️';
+        btn.title     = `Tag: ${iconName}`;
+        btn.style.cssText = `
+            position: absolute; bottom: 2px; left: 2px;
+            z-index: 9999; background: rgba(0,0,0,0.8); color: white;
+            border: 1px solid ${hasTags ? 'gold' : '#444'}; border-radius: 4px;
+            padding: 2px; cursor: pointer; font-size: 12px;
+            width: 20px; height: 20px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s;
+            box-shadow: ${hasTags ? '0 0 5px gold' : 'none'};`;
+        // Use capture phase to beat Xariah's click handler on the container
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            openTagModal(iconName);
+        }, true);
+
+        el.addEventListener('mouseenter', () => { btn.style.opacity = '1'; });
+        el.addEventListener('mouseleave', () => { btn.style.opacity = '0'; });
+
+        el.appendChild(btn);
+    };
+
+    // Refresh all visible legacy tag buttons (e.g. after save)
+    function refreshLegacyButtons() {
+        document.querySelectorAll('.eicon-container[data-name]').forEach(el => {
+            const name = el.getAttribute('data-name');
+            const btn  = el.querySelector('.x-legacy-tag-btn');
+            if (!btn || !name) return;
+            const hasTags = getStoredTags(name);
+            btn.style.border    = `1px solid ${hasTags ? 'gold' : '#444'}`;
+            btn.style.boxShadow = hasTags ? '0 0 5px gold' : 'none';
+        });
+    }
+
+
+
+    // --- 15. DEEP SHADOW QUERY ---
 
     function findDeep(root, selector, results = []) {
         if (!root) return results;
@@ -3563,7 +4863,7 @@
 
 
 
-    // --- 10. BOOT LOOP ---
+    // --- 16. BOOT LOOP ---
     // initExplorer and initTooltipPatch only need to run until they succeed once.
     // processIcon is guarded by a WeakSet — O(1) lookup per element vs querying
     // the shadow DOM every tick. The interval is kept (rather than replaced with
@@ -3584,15 +4884,48 @@
     };
 
     setInterval(() => {
+        // Detect layout mode once the DOM is ready
+        if (!_layoutMode) {
+            _layoutMode = detectLayout();
+            if (_layoutMode === 'legacy') {
+                // In legacy mode the favicon hook never fires (no X-* web components)
+                // so set the favicon immediately here instead.
+                console.log('[XariahTagger] Legacy layout detected — setting favicon directly');
+                _setTagFavicon();
+            } else if (_layoutMode === 'modern') {
+                console.log('[XariahTagger] Modern layout detected');
+            }
+        }
+
         if (!_explorerReady) {
-            initExplorer();
-            if (document.getElementById('x-tag-manager')) _explorerReady = true;
+            try {
+                initExplorer();
+            } catch(e) {
+                console.error('[XariahTagger] initExplorer error:', e);
+            }
+            if (document.getElementById('x-tag-manager')) {
+                _explorerReady = true;
+                console.log('[XariahTagger] Explorer ready');
+            }
         }
-        if (!_tooltipReady) {
-            initTooltipPatch();
-            if (window._xTooltipHandlerBound) _tooltipReady = true;
+
+        if (_layoutMode === 'modern') {
+            if (!_tooltipReady) {
+                try {
+                    initTooltipPatch();
+                } catch(e) {
+                    console.error('[XariahTagger] initTooltipPatch error:', e);
+                }
+                if (window._xTooltipHandlerBound) {
+                    _tooltipReady = true;
+                    console.log('[XariahTagger] Tooltip patch ready');
+                }
+            }
+            findDeep(document, 'x-eiconview').forEach(_processIcon_guarded);
+        } else if (_layoutMode === 'legacy') {
+            document.querySelectorAll('.eicon-container[data-name]').forEach(processLegacyIcon);
         }
-        findDeep(document, 'x-eiconview').forEach(_processIcon_guarded);
+
         if (tagModeActive) applyTagMode();
         applyCensorMode();
     }, 1000);
