@@ -127,7 +127,7 @@
     <div class="hero-eyebrow">Tampermonkey Script · xariah.net</div>
     <h1>Xariah<span>Tagger</span><br>User Guide</h1>
     <p class="hero-sub">Tag eicons by description, find them instantly, and copy BBCode in one click.</p>
-    <div class="version-badge">v0.0.38 — Alpha</div>
+    <div class="version-badge">v0.0.88 — Alpha</div>
   </div>
 
   <div class="toc">
@@ -140,6 +140,7 @@
       <li><a href="#search">Searching</a></li>
       <li><a href="#grids">Grid Tags &amp; Eicon Sets</a></li>
       <li><a href="#dupes">Linked Sets (&&)</a></li>
+      <li><a href="#forcedgrids">Forced Grid Groups (##)</a></li>
       <li><a href="#blocked">Blocked Tags</a></li>
       <li><a href="#tagmode">Tag Mode</a></li>
       <li><a href="#io">Import &amp; Export</a></li>
@@ -175,7 +176,7 @@
     <p>A dark panel pinned to the top of Xariah. Type to search — results appear instantly.</p>
     <div class="ui-mockup">
       <div>🏷️ <strong style="color:var(--gold)">Tag Search</strong></div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#555;">v0.0.38</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#555;">v0.0.88</div>
       <div class="ui-badge">Collapse</div>
       <div class="ui-badge red">Tag Mode</div>
       <div style="flex:1;min-width:140px;background:#000;border:1px solid #444;border-radius:4px;padding:6px 12px;color:#888;font-size:13px;">Search tags… or "exact phrase"</div>
@@ -223,6 +224,28 @@
         <p>If you type a tag that has a synonym rule, it is silently replaced with the master tag and the new chip briefly flashes purple to signal the substitution.</p>
       </div>
     </details>
+
+    <h3>What the yellow chip styles mean</h3>
+    <p>Yellow chips reflect both save state and how the tag sits across your current selection:</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin:12px 0;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="chip yellow" style="min-width:90px;justify-content:center;">nature ×</div>
+        <span style="color:var(--text-dim);font-size:14px;"><strong style="color:var(--text)">Solid gold</strong> — already saved, present on all selected eicons.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="chip yellow" style="min-width:90px;justify-content:center;opacity:0.55;border:1px dashed #a07800;background:#b89000;">nature ×</div>
+        <span style="color:var(--text-dim);font-size:14px;"><strong style="color:var(--text)">Dim + dashed</strong> — added this session, not yet saved.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="chip yellow" style="min-width:90px;justify-content:center;background:repeating-linear-gradient(-45deg,gold 0px,gold 5px,#a07800 5px,#a07800 10px);border:1px solid #a07800;opacity:0.85;">nature ×</div>
+        <span style="color:var(--text-dim);font-size:14px;"><strong style="color:var(--text)">Striped</strong> — saved, but not present on every eicon currently selected in preview.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="chip yellow" style="min-width:90px;justify-content:center;background:repeating-linear-gradient(-45deg,gold 0px,gold 5px,#a07800 5px,#a07800 10px);border:1px dashed #a07800;opacity:0.55;">nature ×</div>
+        <span style="color:var(--text-dim);font-size:14px;"><strong style="color:var(--text)">Striped + dim + dashed</strong> — added this session and only on some selected eicons.</span>
+      </div>
+    </div>
+    <p>A striped chip is called <strong>partial</strong>. It's only possible when you have multiple eicons selected in the preview panel — it tells you which tags aren't shared across the whole selection.</p>
   </div>
 
   <!-- BATCH -->
@@ -230,12 +253,34 @@
   <div class="section" id="batch">
     <div class="section-label">Productivity</div>
     <h2><span class="icon">☑️</span>Batch Tagging &amp; Selection</h2>
-    <p>Hold <kbd>Ctrl</kbd> and click multiple eicons to select them. Works on the main browse grid, search results, and the Dev Tools tag browser. A floating gold bar appears at the bottom.</p>
-    <p>Click <strong>🏷️ Tag Selected</strong> to tag all of them at once. Tags you add are <em>merged in</em> — existing tags on each eicon are preserved. Tags shared by all selected eicons are pre-loaded as yellow chips.</p>
+    <p>There are two ways to tag multiple eicons at once. Both end up in the same tag editor.</p>
+
+    <h3>From the browse grid</h3>
+    <p>Hold <kbd>Ctrl</kbd> and click eicons anywhere on the page — the main grid, search results, or Dev Tools. A floating gold bar appears at the bottom. Click <strong>🏷️ Tag Selected</strong> to open the batch editor. Tags you add are merged in — existing tags on each eicon are preserved, and any tags already shared by all selected eicons are pre-loaded as yellow chips.</p>
+
+    <h3>From inside the tag editor — group preview</h3>
+    <p>When you open the tag editor for an eicon that belongs to a set, a <strong>preview panel</strong> appears above the modal showing all members of that set. From here you can work without leaving the editor:</p>
+    <ol class="steps">
+      <li><span>Click any cell in the preview to focus that eicon and edit its tags.</span></li>
+      <li><span><kbd>Ctrl</kbd>+click cells to build a selection across the group. The eicon you opened with is automatically included.</span></li>
+      <li><span>With multiple cells selected, any tag you add is shared across all of them. Tags that don't exist on every selected eicon appear as <strong>striped (partial)</strong> chips.</span></li>
+      <li><span>Click <strong>⊞ Select all</strong> under the preview to select every member of the set at once.</span></li>
+      <li><span>Press <strong>Save</strong> — all changes apply to all selected eicons in one go.</span></li>
+    </ol>
+
     <div class="callout">
       <div class="callout-icon">💡</div>
-      <p>If you select eicons that belong to the same naming group (e.g. <code>banner1</code>, <code>banner2</code>, <code>banner3</code>), the batch modal will auto-detect the grid layout and assign positions to all of them automatically.</p>
+      <p>The partial chip state is how you know a tag gap exists. If you see a striped chip, at least one selected eicon doesn't have that tag. Add the tag to cover everyone, or leave it as-is if the difference is intentional.</p>
     </div>
+
+    <details>
+      <summary>How tags are applied in batch</summary>
+      <div class="details-body">
+        <p>Tags added while all or most eicons are selected go into a shared layer — they apply to everyone. Tags added while only one eicon is focused go into that eicon's individual layer. On Save, each eicon receives the shared tags plus any of its own extras.</p>
+        <p>If you select eicons that belong to the same naming group (e.g. <code>banner1</code>, <code>banner2</code>, <code>banner3</code>), the batch modal will auto-detect the grid layout and assign positions to all of them automatically.</p>
+      </div>
+    </details>
+
     <details>
       <summary>Marking linked sets with &&</summary>
       <div class="details-body">
@@ -291,6 +336,19 @@
           <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
         </div>
         <p>When any set member appears in results, the full composite preview renders. Click it to copy all rows as BBCode. Ctrl+Click a composite to add it to your batch selection.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Forced grid groups (##)</summary>
+      <div class="details-body">
+        <p>Sometimes a grid is made of eicons with unrelated names — the smart detection won't pick them up automatically. You can force them into a group manually.</p>
+        <ol class="steps">
+          <li><span>Open the tag editor for the set. Ctrl+click all members in the preview panel.</span></li>
+          <li><span>Type <code>##</code> and press <kbd>Enter</kbd>.</span></li>
+          <li><span>A grid size is assigned automatically. The <span class="chip" style="background:#c0522a;color:#fff;font-size:11px;padding:2px 8px;border-radius:100px;">##</span> chip appears left of the input whenever you're editing any member.</span></li>
+        </ol>
+        <p>Forced groups are managed in <strong>🛠️ Dev Tools → Forced Grids</strong>. Clicking the <span class="chip" style="background:#c0522a;color:#fff;font-size:11px;padding:2px 8px;border-radius:100px;">##</span> chip in the editor jumps there directly.</p>
       </div>
     </details>
   </div>
@@ -395,6 +453,14 @@
     </details>
 
     <details>
+      <summary>📐 Forced Grids</summary>
+      <div class="details-body">
+        <p>Same interface as Duplicates — collapsible accordion rows, each showing the eicons in that forced group. Click <strong>🗑 Delete Group</strong> to disband the group without affecting the eicons or their tags.</p>
+        <p>Clicking the <span class="chip" style="background:#c0522a;color:#fff;font-size:11px;padding:2px 8px;border-radius:100px;">##</span> chip in any tag editor jumps directly here.</p>
+      </div>
+    </details>
+
+    <details>
       <summary>🚫 Blocked Tags</summary>
       <div class="details-body">
         <p>Type a tag and press Enter or click <strong>Block Tag</strong> to add it to your block list. Active blocked tags are listed below with individual <strong>✕ Unblock</strong> buttons. Changes apply immediately. Blocked tags are never exported.</p>
@@ -424,7 +490,8 @@
       <table class="ref-table" style="margin:8px 0 0;">
         <tr><th>Input</th><th>What it does</th></tr>
         <tr><td>#2x3</td><td>Grid tag — this eicon's position in a 2-row, 3-col set</td></tr>
-        <tr><td>&&</td><td>Batch only — marks selected eicons as a linked set</td></tr>
+        <tr><td>&&</td><td>Batch only — marks selected eicons as a linked set (identical artwork)</td></tr>
+        <tr><td>##</td><td>Batch only — forces selected eicons into a grid group regardless of name</td></tr>
       </table>
     </div>
 
@@ -450,6 +517,10 @@
         <strong style="color:#aaa;">Ghost</strong> — quoted phrase in the search bar<br>
         <strong style="color:#666;">Dim</strong> — top 5 tags in current search results
       </p>
+      <p style="font-size:13px;margin:10px 0 0;color:var(--text-dim);border-top:1px solid var(--border);padding-top:10px;">
+        <strong style="color:var(--text)">Yellow chip states</strong> (tag editor only):<br>
+        Solid gold = saved · Dim + dashed = unsaved · Striped = partial (not on all selected) · Striped + dim = unsaved and partial
+      </p>
     </div>
 
     <div class="card gold" style="margin-top:12px;">
@@ -465,7 +536,7 @@
   </div>
 
   <div class="footer">
-    XariahTagger · v0.0.38 · Alpha · xariah.net/eicons<br>
+    XariahTagger · v0.0.88 · Alpha · xariah.net/eicons<br>
     All data stored locally · Blocked tags never leave your browser
   </div>
 
