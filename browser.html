@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eicon Browser</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --header-h: 54px;
+      --status-h: 24px;
+      --bg:     #141414;
+      --bg2:    #1e1e1e;
+      --border: #282828;
+      --text:   #c8c8c8;
+      --dim:    #505050;
+      --accent: #4a7a4a;
+    }
+
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: sans-serif; }
+
+    /* ── Header ── */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 14px;
+      z-index: 100;
+    }
+
+    .logo { display: flex; flex-direction: column; line-height: 1.2; flex-shrink: 0; }
+    .logo-title  { font-size: 0.95rem; font-weight: 500; color: #fff; }
+    .logo-credit { font-size: 0.62rem; color: var(--dim); }
+    .logo-credit a { color: #5a9a5a; text-decoration: none; }
+    .logo-credit a:hover { text-decoration: underline; }
+
+    .search-wrap { flex: 1; max-width: 480px; position: relative; }
+    .search-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.38rem 0.75rem;
+      color: var(--text);
+      font-size: 0.88rem;
+      outline: none;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--dim); }
+
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+    .btn {
+      background: #232323;
+      color: #999;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.32rem 0.7rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.1s, color 0.1s;
+    }
+    .btn:hover:not(:disabled) { background: #2a2a2a; color: #ccc; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* ── Grid scroller ── */
+    #scroller {
+      position: fixed;
+      top: var(--header-h);
+      left: 0; right: 0;
+      bottom: var(--status-h);
+      overflow-y: scroll;
+      overflow-x: hidden;
+    }
+
+    #canvas { position: relative; width: 100%; }
+
+    /* ── Cells ── */
+    .cell {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #1a1a1a;
+      cursor: pointer;
+    }
+
+    .cell:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .cell.copied { outline: 2px solid #7ab87a; }
+
+    .cell img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* ── Tooltip ── */
+    #tooltip {
+      position: fixed;
+      background: rgba(0,0,0,0.88);
+      color: #ddd;
+      font-size: 0.76rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+      display: none;
+      z-index: 9999;
+      white-space: nowrap;
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Loading overlay ── */
+    #loading {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--dim);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    /* ── Status bar ── */
+    #statusbar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: var(--status-h);
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 20px;
+      font-size: 0.7rem;
+      color: var(--dim);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <span class="logo-title">Eicon Browser</span>
+      <span class="logo-credit">powered by <a href="https://xariah.net/eicons" target="_blank" rel="noopener">Xariah Dailstone</a></span>
+    </div>
+
+    <div class="search-wrap">
+      <input class="search-input" type="text" placeholder="Search tags… (coming soon)" disabled>
+    </div>
+
+    <div class="header-right">
+      <button class="btn" id="btn-shuffle" onclick="newRandomSet()" disabled>↺ New random set</button>
+    </div>
+  </header>
+
+  <div id="scroller">
+    <div id="canvas"></div>
+  </div>
+
+  <div id="loading">Loading index…</div>
+  <div id="tooltip"></div>
+
+  <div id="statusbar">
+    <span id="stat-count">—</span>
+    <span id="stat-pos">—</span>
+    <span id="stat-hint" style="margin-left:auto">click an eicon to copy its code</span>
+  </div>
+
+  <script>
+    // ── Config ────────────────────────────────────────────────────────
+    const WORKER_BASE = 'https://eicon-status-worker.joepurple.workers.dev';
+    const IDB_NAME    = 'eicon-browser';
+    const IDB_VER     = 1;
+    const IDB_STORE   = 'index';
+    const CACHE_MAX   = 7 * 24 * 3600; // seconds
+
+    const CELL      = 90;        // cell size (square, px)
+    const GAP       = 5;         // gap between cells (px)
+    const PITCH     = CELL + GAP; // 95px
+    const POOL      = 450;       // recycled DOM cells (enough for ~3 viewports at 1440p)
+    const ABOVE     = 2;         // buffer rows above viewport
+    const BELOW     = 5;         // buffer+prefetch rows below viewport
+
+    // ── State ─────────────────────────────────────────────────────────
+    let allNames     = [];
+    let displayNames = [];
+    let cols         = 1;
+    let totalRows    = 0;
+    let poolCells    = [];
+    let rafPending   = false;
+
+    // ── DOM ───────────────────────────────────────────────────────────
+    const scroller  = document.getElementById('scroller');
+    const canvas    = document.getElementById('canvas');
+    const loading   = document.getElementById('loading');
+    const tooltip   = document.getElementById('tooltip');
+    const statCount = document.getElementById('stat-count');
+    const statPos   = document.getElementById('stat-pos');
+    const btnShuffle = document.getElementById('btn-shuffle');
+
+    // ── IndexedDB ─────────────────────────────────────────────────────
+    function openDB() {
+      return new Promise((res, rej) => {
+        const r = indexedDB.open(IDB_NAME, IDB_VER);
+        r.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+        r.onsuccess = e => res(e.target.result);
+        r.onerror   = e => rej(e.target.error);
+      });
+    }
+    function idbGet(db, key) {
+      return new Promise((res, rej) => {
+        const r = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+        r.onsuccess = e => res(e.target.result);
+        r.onerror   = e => rej(e.target.error);
+      });
+    }
+    function idbSet(db, key, val) {
+      return new Promise((res, rej) => {
+        const r = db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(val, key);
+        r.onsuccess = () => res();
+        r.onerror   = e => rej(e.target.error);
+      });
+    }
+
+    // ── Web Worker ────────────────────────────────────────────────────
+    const WK_SRC = `
+self.onmessage = async (e) => {
+  try {
+    const ds = new DecompressionStream('gzip');
+    const stream = new Blob([e.data]).stream().pipeThrough(ds);
+    const reader = stream.getReader();
+    const chunks = [];
+    while (true) { const {value,done} = await reader.read(); if (done) break; chunks.push(value); }
+    const total = chunks.reduce((n,c) => n+c.length, 0);
+    const buf = new Uint8Array(total);
+    let off = 0;
+    for (const c of chunks) { buf.set(c, off); off += c.length; }
+    const names = new TextDecoder().decode(buf).split('\\n').filter(n => n.length > 0);
+    self.postMessage({ ok: true, names });
+  } catch(err) { self.postMessage({ ok: false, error: err.message }); }
+};`;
+
+    function decompress(buffer) {
+      return new Promise((res, rej) => {
+        const url = URL.createObjectURL(new Blob([WK_SRC], {type:'application/javascript'}));
+        const w = new Worker(url);
+        w.onmessage = e => { w.terminate(); URL.revokeObjectURL(url); e.data.ok ? res(e.data.names) : rej(new Error(e.data.error)); };
+        w.onerror   = e => { w.terminate(); URL.revokeObjectURL(url); rej(e); };
+        w.postMessage(buffer, [buffer]);
+      });
+    }
+
+    // ── Seeded shuffle + grouping ─────────────────────────────────────
+    function rng(seed) {
+      return () => {
+        seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function shuffle(arr, seed) {
+      const rand = rng(seed);
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function groupShuffle(names, seed) {
+      // Group by name base (strip trailing digits)
+      const groups = new Map();
+      for (const name of names) {
+        const base = name.replace(/\d+$/, '') || name;
+        if (!groups.has(base)) groups.set(base, []);
+        groups.get(base).push(name);
+      }
+      // Shuffle groups, not individual names — siblings stay adjacent
+      return shuffle([...groups.values()], seed).flat();
+    }
+
+    function getSeed() {
+      let s = sessionStorage.getItem('browse-seed');
+      if (!s) { s = (Math.random() * 2 ** 32) >>> 0; sessionStorage.setItem('browse-seed', String(s)); }
+      return parseInt(s, 10);
+    }
+
+    function newRandomSet() {
+      const s = (Math.random() * 2 ** 32) >>> 0;
+      sessionStorage.setItem('browse-seed', String(s));
+      displayNames = groupShuffle(allNames, s);
+      recalc();
+      scroller.scrollTop = 0;
+      scheduleUpdate();
+    }
+
+    // ── Pool creation ─────────────────────────────────────────────────
+    function createPool() {
+      for (let i = 0; i < POOL; i++) {
+        const el  = document.createElement('div');
+        el.className = 'cell';
+        el.style.display = 'none';
+        const img = document.createElement('img');
+        img.alt = '';
+        img.draggable = false;
+        el.appendChild(img);
+        canvas.appendChild(el);
+        poolCells.push({ el, img, idx: -1 });
+      }
+    }
+
+    // ── Layout ────────────────────────────────────────────────────────
+    function recalc() {
+      cols      = Math.max(1, Math.floor(scroller.clientWidth / PITCH));
+      totalRows = Math.ceil(displayNames.length / cols);
+      // Left offset to centre the grid
+      canvas._left = Math.max(0, Math.floor((scroller.clientWidth - cols * PITCH) / 2));
+      canvas.style.height = (totalRows * PITCH + 40) + 'px';
+    }
+
+    // ── Update (hot path — called every rAF during scroll) ────────────
+    function update() {
+      rafPending = false;
+      if (!displayNames.length) return;
+
+      const scrollTop = scroller.scrollTop;
+      const vh        = scroller.clientHeight;
+      const left0     = canvas._left || 0;
+
+      const firstRow  = Math.max(0, Math.floor(scrollTop / PITCH) - ABOVE);
+      const lastRow   = Math.min(totalRows - 1, Math.ceil((scrollTop + vh) / PITCH) + BELOW);
+      const firstIdx  = firstRow * cols;
+      const lastIdx   = Math.min(displayNames.length - 1, (lastRow + 1) * cols - 1);
+      const needed    = lastIdx - firstIdx + 1;
+
+      for (let i = 0; i < POOL; i++) {
+        const cell = poolCells[i];
+        if (i < needed) {
+          const nameIdx = firstIdx + i;
+          const row = Math.floor(nameIdx / cols);
+          const col = nameIdx % cols;
+
+          cell.el.style.display = '';
+          cell.el.style.top  = (row  * PITCH) + 'px';
+          cell.el.style.left = (left0 + col * PITCH) + 'px';
+          cell.el.dataset.name = displayNames[nameIdx];
+
+          if (cell.idx !== nameIdx) {
+            cell.idx = nameIdx;
+            cell.img.src = `https://static.f-list.net/images/eicon/${encodeURIComponent(displayNames[nameIdx])}.gif`;
+          }
+        } else {
+          if (cell.el.style.display !== 'none') {
+            cell.el.style.display = 'none';
+            cell.idx = -1;
+          }
+        }
+      }
+
+      // Status
+      const pct = totalRows > 0 ? Math.round((scrollTop / (canvas.clientHeight - vh)) * 100) : 0;
+      statPos.textContent = `${Math.min(100, Math.max(0, pct))}% scrolled`;
+    }
+
+    function scheduleUpdate() {
+      if (!rafPending) { rafPending = true; requestAnimationFrame(update); }
+    }
+
+    // ── Tooltip ───────────────────────────────────────────────────────
+    let tooltipTarget = null;
+
+    scroller.addEventListener('mouseover', e => {
+      const cell = e.target.closest?.('.cell');
+      if (!cell || !cell.dataset.name) { tooltip.style.display = 'none'; return; }
+      tooltipTarget = cell;
+      tooltip.textContent = cell.dataset.name;
+      tooltip.style.display = 'block';
+    }, { passive: true });
+
+    scroller.addEventListener('mousemove', e => {
+      if (tooltip.style.display === 'none') return;
+      const tx = e.clientX + 14;
+      const ty = e.clientY - 34;
+      // Keep tooltip on screen
+      tooltip.style.left = Math.min(tx, window.innerWidth - 280) + 'px';
+      tooltip.style.top  = Math.max(4, ty) + 'px';
+    }, { passive: true });
+
+    scroller.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; }, { passive: true });
+
+    // ── Click to copy ─────────────────────────────────────────────────
+    scroller.addEventListener('click', e => {
+      const cell = e.target.closest?.('.cell');
+      if (!cell || !cell.dataset.name) return;
+      const name = cell.dataset.name;
+      const bbcode = `[eicon]${name}[/eicon]`;
+      navigator.clipboard?.writeText(bbcode).then(() => {
+        cell.classList.add('copied');
+        document.getElementById('stat-hint').textContent = `Copied: ${bbcode}`;
+        setTimeout(() => {
+          cell.classList.remove('copied');
+          document.getElementById('stat-hint').textContent = 'click an eicon to copy its code';
+        }, 1200);
+      });
+    });
+
+    // ── Scroll + resize ───────────────────────────────────────────────
+    scroller.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', () => { recalc(); scheduleUpdate(); });
+
+    // ── Boot ──────────────────────────────────────────────────────────
+    async function boot() {
+      let names;
+      try {
+        const db        = await openDB();
+        const cached    = await idbGet(db, 'names');
+        const fetchedAt = await idbGet(db, 'fetchedAt');
+        const age       = fetchedAt ? (Date.now() / 1000) - fetchedAt : Infinity;
+
+        if (cached && age < CACHE_MAX) {
+          names = cached;
+        } else {
+          loading.textContent = 'Downloading index…';
+          const res = await fetch(WORKER_BASE + '/index');
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const buf = await res.arrayBuffer();
+          loading.textContent = 'Decompressing…';
+          names = await decompress(buf);
+          await idbSet(db, 'names', names);
+          await idbSet(db, 'fetchedAt', Math.floor(Date.now() / 1000));
+        }
+      } catch (err) {
+        loading.textContent = `Failed to load index: ${err.message}`;
+        return;
+      }
+
+      allNames     = names;
+      displayNames = groupShuffle(allNames, getSeed());
+
+      loading.style.display = 'none';
+      statCount.textContent  = `${allNames.length.toLocaleString()} eicons`;
+      btnShuffle.disabled    = false;
+
+      createPool();
+      recalc();
+      scheduleUpdate();
+    }
+
+    boot();
+  </script>
+
+</body>
+</html>
