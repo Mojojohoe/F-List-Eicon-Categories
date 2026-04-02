@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eicon Browser — Sync Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 500;
+      margin-bottom: 2rem;
+      color: #fff;
+    }
+
+    .section {
+      background: #242424;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .section h2 {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+
+    .meta-row {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+
+    .meta-item label {
+      display: block;
+      font-size: 0.72rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .meta-item span {
+      font-size: 0.95rem;
+      color: #ccc;
+    }
+
+    .eicons {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .eicon-card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      min-width: 140px;
+    }
+
+    .eicon-card label {
+      display: block;
+      font-size: 0.72rem;
+      color: #555;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .eicon-card img {
+      display: block;
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      margin-bottom: 0.4rem;
+      image-rendering: pixelated;
+    }
+
+    .eicon-card .name {
+      font-size: 0.85rem;
+      color: #aaa;
+      word-break: break-all;
+    }
+
+    .op-add  { color: #4caf7d; }
+    .op-remove { color: #e05c5c; }
+
+    .status-loading { color: #666; font-style: italic; }
+    .status-error   { color: #e05c5c; }
+
+    .timestamp { font-size: 0.8rem; color: #555; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+
+  <h1>Eicon Browser — Sync Status</h1>
+
+  <div id="base-section" class="section">
+    <h2>Base Index</h2>
+    <p class="status-loading">Loading…</p>
+  </div>
+
+  <div id="delta-section" class="section">
+    <h2>Delta</h2>
+    <p class="status-loading">Loading…</p>
+  </div>
+
+  <p class="timestamp" id="page-time"></p>
+
+  <script>
+    // ---------------------------------------------------------------
+    // REPLACE this URL with your actual Worker URL once it is deployed
+    // e.g. https://eicon-status.yourname.workers.dev/status
+    // ---------------------------------------------------------------
+    const WORKER_URL = 'https://eicon-status-worker.joepurple.workers.dev/status';
+
+    function formatTime(unixSeconds) {
+      if (!unixSeconds) return '—';
+      return new Date(unixSeconds * 1000).toUTCString();
+    }
+
+    function eiconImg(name) {
+      return `https://static.f-list.net/images/eicon/${encodeURIComponent(name)}.gif`;
+    }
+
+    function renderEiconCard(label, entry, showOp = false) {
+      const op = showOp
+        ? `<span class="${entry.op === '+' ? 'op-add' : 'op-remove'}">${entry.op === '+' ? '+ added' : '− removed'}</span> `
+        : '';
+      return `
+        <div class="eicon-card">
+          <label>${label}</label>
+          <img src="${eiconImg(entry.name)}" alt="${entry.name}" title="${entry.name}">
+          <div class="name">${op}${entry.name}</div>
+          <div class="name" style="font-size:0.75rem;color:#444;margin-top:2px">${formatTime(entry.addedAt || entry.modifiedAt)}</div>
+        </div>`;
+    }
+
+    function renderBase(data) {
+      if (!data) {
+        return '<p class="status-error">Base sync has not run yet.</p>';
+      }
+      return `
+        <div class="meta-row">
+          <div class="meta-item">
+            <label>Pulled at</label>
+            <span>${formatTime(data.pulledAt)}</span>
+          </div>
+          <div class="meta-item">
+            <label>Index as of</label>
+            <span>${formatTime(data.asOf)}</span>
+          </div>
+          <div class="meta-item">
+            <label>Total eicons</label>
+            <span>${data.total ? data.total.toLocaleString() : '—'}</span>
+          </div>
+        </div>
+        <div class="eicons">
+          ${data.first ? renderEiconCard('First in index', data.first) : ''}
+          ${data.last  ? renderEiconCard('Last in index',  data.last)  : ''}
+        </div>`;
+    }
+
+    function renderDelta(data) {
+      if (!data) {
+        return '<p class="status-error">Delta sync has not run yet.</p>';
+      }
+      return `
+        <div class="meta-row">
+          <div class="meta-item">
+            <label>Pulled at</label>
+            <span>${formatTime(data.pulledAt)}</span>
+          </div>
+          <div class="meta-item">
+            <label>Delta since</label>
+            <span>${formatTime(data.since)}</span>
+          </div>
+          <div class="meta-item">
+            <label>As of</label>
+            <span>${formatTime(data.asOf)}</span>
+          </div>
+          <div class="meta-item">
+            <label>Records</label>
+            <span>${data.count ?? '—'}${data.hasMore ? ' (truncated)' : ''}</span>
+          </div>
+        </div>
+        <div class="eicons">
+          ${data.first ? renderEiconCard('First in delta', data.first, true) : ''}
+          ${data.last  ? renderEiconCard('Last in delta',  data.last,  true) : ''}
+        </div>`;
+    }
+
+    async function load() {
+      document.getElementById('page-time').textContent =
+        'Page loaded: ' + new Date().toUTCString();
+
+      try {
+        const res = await fetch(WORKER_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { base, delta } = await res.json();
+
+        document.getElementById('base-section').innerHTML =
+          '<h2>Base Index</h2>' + renderBase(base);
+
+        document.getElementById('delta-section').innerHTML =
+          '<h2>Delta</h2>' + renderDelta(delta);
+
+      } catch (err) {
+        const msg = `<p class="status-error">Failed to fetch from Worker: ${err.message}</p>
+                     <p style="color:#555;font-size:0.85rem;margin-top:0.5rem">
+                       Check that WORKER_URL is set correctly in test.html and that the Worker is deployed.
+                     </p>`;
+        document.getElementById('base-section').innerHTML  = '<h2>Base Index</h2>'  + msg;
+        document.getElementById('delta-section').innerHTML = '<h2>Delta</h2>' + msg;
+      }
+    }
+
+    load();
+  </script>
+
+</body>
+</html>

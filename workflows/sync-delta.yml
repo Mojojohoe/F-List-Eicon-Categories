@@ -1,0 +1,141 @@
+name: Sync Eicon Delta
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # Every hour at :00
+  workflow_dispatch:        # Allow manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Read highwater mark and check staleness
+        env:
+          CF_API_TOKEN:       ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID:      ${{ secrets.CF_ACCOUNT_ID }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+        run: |
+          # Try delta highwater first, fall back to base highwater
+          HIGHWATER=$(curl -s \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_KV_NAMESPACE_ID/values/delta:highwater" \
+            -H "Authorization: Bearer $CF_API_TOKEN")
+
+          if ! echo "$HIGHWATER" | grep -qE '^[0-9]+$'; then
+            HIGHWATER=$(curl -s \
+              "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_KV_NAMESPACE_ID/values/base:highwater" \
+              -H "Authorization: Bearer $CF_API_TOKEN")
+          fi
+
+          # No highwater at all — base sync hasn't run yet
+          if ! echo "$HIGHWATER" | grep -qE '^[0-9]+$'; then
+            echo "No valid highwater found — base sync has not run yet. Skipping."
+            echo "SKIP=true" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          NOW=$(date -u +%s)
+          AGE=$(( NOW - HIGHWATER ))
+          MAX_DELTA_AGE=$(( 72 * 3600 ))   # 72 hours in seconds
+
+          echo "Highwater: $HIGHWATER | Age: ${AGE}s | Limit: ${MAX_DELTA_AGE}s"
+
+          if [ "$AGE" -gt "$MAX_DELTA_AGE" ]; then
+            echo "Highwater is more than 72 hours stale. Delta would be too large."
+            echo "The weekly base sync will recover this. Skipping delta this run."
+            echo "SKIP=true" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          echo "HIGHWATER=$HIGHWATER" >> $GITHUB_ENV
+          echo "SKIP=false" >> $GITHUB_ENV
+
+      - name: Fetch delta
+        if: env.SKIP != 'true'
+        run: |
+          HTTP_STATUS=$(curl -sL \
+            -H "User-Agent: EiconBrowser/1.0 (github.com/Mojojohoe/F-List-Eicon-Categories)" \
+            -o delta.txt \
+            -w "%{http_code}" \
+            "https://xariah.net/eicons/Home/EiconsDataDeltaSince/${{ env.HIGHWATER }}?n=400000")
+
+          echo "HTTP status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" = "429" ]; then
+            echo "Rate limited. Exiting cleanly — next hourly run will retry."
+            exit 0
+          fi
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Unexpected HTTP status $HTTP_STATUS. Failing."
+            exit 1
+          fi
+
+          echo "Downloaded delta: $(wc -c < delta.txt) bytes"
+
+      - name: Parse delta and write to KV
+        if: env.SKIP != 'true'
+        env:
+          CF_API_TOKEN:       ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID:      ${{ secrets.CF_ACCOUNT_ID }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+        run: |
+          AS_OF=$(grep "^# As Of:" delta.txt | head -1 | sed 's/# As Of: //' | tr -d '[:space:]')
+          HAS_MORE=$(grep "^# Has More Data:" delta.txt | head -1 | sed 's/# Has More Data: //' | tr -d '[:space:]')
+
+          grep -v "^#" delta.txt | grep $'\t' > delta_data.txt
+          COUNT=$(wc -l < delta_data.txt | tr -d ' ')
+
+          echo "As Of: $AS_OF | Count: $COUNT | Has More: $HAS_MORE"
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No delta records. Updating highwater to $AS_OF."
+            curl -s -X PUT \
+              "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_KV_NAMESPACE_ID/values/delta:highwater" \
+              -H "Authorization: Bearer $CF_API_TOKEN" \
+              -H "Content-Type: text/plain" \
+              -d "$AS_OF"
+            exit 0
+          fi
+
+          FIRST_LINE=$(head -1 delta_data.txt)
+          FIRST_OP=$(echo "$FIRST_LINE" | cut -f1)
+          FIRST_NAME=$(echo "$FIRST_LINE" | cut -f2)
+          FIRST_TS=$(echo "$FIRST_LINE" | cut -f3 | tr -d '[:space:]')
+
+          LAST_LINE=$(tail -1 delta_data.txt)
+          LAST_OP=$(echo "$LAST_LINE" | cut -f1)
+          LAST_NAME=$(echo "$LAST_LINE" | cut -f2)
+          LAST_TS=$(echo "$LAST_LINE" | cut -f3 | tr -d '[:space:]')
+
+          PULLED_AT=$(date -u +%s)
+
+          python3 -c "
+          import json
+          data = {
+            'pulledAt': $PULLED_AT,
+            'since': ${{ env.HIGHWATER }},
+            'asOf': $AS_OF,
+            'count': $COUNT,
+            'hasMore': '$HAS_MORE' == 'true',
+            'first': {'op': '$FIRST_OP', 'name': '$FIRST_NAME', 'modifiedAt': $FIRST_TS},
+            'last':  {'op': '$LAST_OP',  'name': '$LAST_NAME',  'modifiedAt': $LAST_TS}
+          }
+          print(json.dumps(data))
+          " > delta_meta.json
+
+          cat delta_meta.json
+
+          curl -s -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_KV_NAMESPACE_ID/values/delta:meta" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @delta_meta.json
+
+          curl -s -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_KV_NAMESPACE_ID/values/delta:highwater" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: text/plain" \
+            -d "$AS_OF"
+
+          echo "KV write complete"

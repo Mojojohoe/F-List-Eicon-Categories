@@ -1,0 +1,94 @@
+name: Sync Eicon Base
+
+on:
+  schedule:
+    - cron: '0 1 * * 0'   # Weekly, Sunday at 01:00 UTC
+  workflow_dispatch:        # Manual trigger for first-run initialisation
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch base.doc
+        run: |
+          HTTP_STATUS=$(curl -sL \
+            -H "User-Agent: EiconBrowser/1.0 (github.com/Mojojohoe/F-List-Eicon-Categories)" \
+            -o base.doc \
+            -w "%{http_code}" \
+            "https://xariah.net/eicons/Home/EIconsData/base.doc")
+
+          echo "HTTP status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" = "429" ]; then
+            echo "Rate limited. Exiting cleanly — next scheduled run will retry."
+            exit 0
+          fi
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Unexpected HTTP status $HTTP_STATUS. Failing."
+            exit 1
+          fi
+
+          echo "Downloaded: $(wc -c < base.doc) bytes"
+
+      - name: Parse base.doc and write to KV
+        env:
+          CF_API_TOKEN:       ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID:      ${{ secrets.CF_ACCOUNT_ID }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+        run: |
+          if [ ! -s base.doc ]; then
+            echo "base.doc is empty or missing, skipping KV write."
+            exit 0
+          fi
+
+          AS_OF=$(grep "^# As Of:" base.doc | head -1 | sed 's/# As Of: //' | tr -d '[:space:]')
+
+          if ! echo "$AS_OF" | grep -qE '^[0-9]+$'; then
+            AS_OF=$(grep -v "^#" base.doc | awk -F'\t' 'NF>=2{print $2}' | sort -n | tail -1 | tr -d '[:space:]')
+          fi
+
+          grep -v "^#" base.doc | grep $'\t' > data.txt
+          TOTAL=$(wc -l < data.txt | tr -d ' ')
+
+          FIRST_NAME=$(head -1 data.txt | cut -f1)
+          FIRST_TS=$(head -1 data.txt | cut -f2 | tr -d '[:space:]')
+          LAST_NAME=$(tail -1 data.txt | cut -f1)
+          LAST_TS=$(tail -1 data.txt | cut -f2 | tr -d '[:space:]')
+          PULLED_AT=$(date -u +%s)
+
+          echo "As Of: $AS_OF | Total: $TOTAL | First: $FIRST_NAME | Last: $LAST_NAME"
+
+          python3 -c "
+          import json
+          data = {
+            'pulledAt': $PULLED_AT,
+            'asOf': $AS_OF,
+            'total': $TOTAL,
+            'first': {'name': '$FIRST_NAME', 'addedAt': $FIRST_TS},
+            'last':  {'name': '$LAST_NAME',  'addedAt': $LAST_TS}
+          }
+          print(json.dumps(data))
+          " > meta.json
+
+          cat meta.json
+
+          curl -s -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_KV_NAMESPACE_ID/values/base:meta" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @meta.json
+
+          curl -s -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_KV_NAMESPACE_ID/values/base:highwater" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: text/plain" \
+            -d "$AS_OF"
+
+          # Reset delta highwater so next delta run starts fresh from this base
+          curl -s -X DELETE \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_KV_NAMESPACE_ID/values/delta:highwater" \
+            -H "Authorization: Bearer $CF_API_TOKEN"
+
+          echo "KV write complete"
