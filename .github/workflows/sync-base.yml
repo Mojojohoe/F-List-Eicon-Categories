@@ -32,15 +32,15 @@ jobs:
 
           echo "Downloaded: $(wc -c < base.doc) bytes"
 
-      - name: Parse base.doc and write to KV
+      - name: Parse base.doc
         env:
           CF_API_TOKEN:       ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID:      ${{ secrets.CF_ACCOUNT_ID }}
           CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
         run: |
           if [ ! -s base.doc ]; then
-            echo "base.doc is empty or missing, skipping KV write."
-            exit 0
+            echo "base.doc is empty or missing, aborting."
+            exit 1
           fi
 
           AS_OF=$(grep "^# As Of:" base.doc | head -1 | sed 's/# As Of: //' | tr -d '[:space:]')
@@ -49,6 +49,7 @@ jobs:
             AS_OF=$(grep -v "^#" base.doc | awk -F'\t' 'NF>=2{print $2}' | sort -n | tail -1 | tr -d '[:space:]')
           fi
 
+          # Extract data rows (strip metadata lines and blanks)
           grep -v "^#" base.doc | grep $'\t' > data.txt
           TOTAL=$(wc -l < data.txt | tr -d ' ')
 
@@ -60,6 +61,7 @@ jobs:
 
           echo "As Of: $AS_OF | Total: $TOTAL | First: $FIRST_NAME | Last: $LAST_NAME"
 
+          # Write KV metadata (server-side bookkeeping only, not sent to users)
           python3 -c "
           import json
           data = {
@@ -71,8 +73,6 @@ jobs:
           }
           print(json.dumps(data))
           " > meta.json
-
-          cat meta.json
 
           curl -s -X PUT \
             "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_KV_NAMESPACE_ID/values/base:meta" \
@@ -92,3 +92,39 @@ jobs:
             -H "Authorization: Bearer $CF_API_TOKEN"
 
           echo "KV write complete"
+
+          # Pass data.txt to next step
+          echo "AS_OF=$AS_OF" >> $GITHUB_ENV
+
+      - name: Build and upload index to R2
+        env:
+          CF_API_TOKEN:      ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID:     ${{ secrets.CF_ACCOUNT_ID }}
+          CF_R2_BUCKET_NAME: ${{ secrets.CF_R2_BUCKET_NAME }}
+        run: |
+          # Extract names only — users need nothing else
+          cut -f1 data.txt > names.txt
+          echo "Names extracted: $(wc -l < names.txt | tr -d ' ')"
+          echo "Uncompressed size: $(wc -c < names.txt) bytes"
+
+          # Gzip
+          gzip -c names.txt > index.gz
+          echo "Compressed size: $(wc -c < index.gz) bytes"
+
+          # Upload to R2
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/r2/buckets/$CF_R2_BUCKET_NAME/objects/index.gz" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/gzip" \
+            --data-binary @index.gz)
+
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -1)
+          echo "R2 upload HTTP status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "R2 upload failed. Response:"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          echo "R2 upload complete — index.gz is live"
