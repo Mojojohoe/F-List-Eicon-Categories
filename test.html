@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Eicon Browser — Sync Test</title>
+  <title>Eicon Browser — Pipeline Test</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -15,12 +15,7 @@
       min-height: 100vh;
     }
 
-    h1 {
-      font-size: 1.4rem;
-      font-weight: 500;
-      margin-bottom: 2rem;
-      color: #fff;
-    }
+    h1 { font-size: 1.4rem; font-weight: 500; margin-bottom: 2rem; color: #fff; }
 
     .section {
       background: #242424;
@@ -39,12 +34,7 @@
       margin-bottom: 1rem;
     }
 
-    .meta-row {
-      display: flex;
-      gap: 2rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.25rem;
-    }
+    .meta-row { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
 
     .meta-item label {
       display: block;
@@ -55,16 +45,9 @@
       margin-bottom: 0.2rem;
     }
 
-    .meta-item span {
-      font-size: 0.95rem;
-      color: #ccc;
-    }
+    .meta-item span { font-size: 0.95rem; color: #ccc; }
 
-    .eicons {
-      display: flex;
-      gap: 2rem;
-      flex-wrap: wrap;
-    }
+    .eicons { display: flex; gap: 2rem; flex-wrap: wrap; }
 
     .eicon-card {
       background: #1a1a1a;
@@ -91,146 +74,365 @@
       image-rendering: pixelated;
     }
 
-    .eicon-card .name {
-      font-size: 0.85rem;
-      color: #aaa;
-      word-break: break-all;
-    }
+    .eicon-card .name { font-size: 0.85rem; color: #aaa; word-break: break-all; }
 
-    .op-add  { color: #4caf7d; }
+    .op-add    { color: #4caf7d; }
     .op-remove { color: #e05c5c; }
 
     .status-loading { color: #666; font-style: italic; }
     .status-error   { color: #e05c5c; }
 
+    .pipeline { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.25rem; }
+
+    .pipeline-step { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; }
+
+    .step-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+
+    .step-icon.waiting { background: #333; color: #555; }
+    .step-icon.running { background: #5a4a00; color: #ffa; animation: pulse 1s infinite; }
+    .step-icon.done    { background: #1a3d2b; color: #4caf7d; }
+    .step-icon.cached  { background: #1a2d3d; color: #5bc0eb; }
+    .step-icon.error   { background: #3d1a1a; color: #e05c5c; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    .step-label { color: #ccc; flex: 1; }
+    .step-time  { color: #555; font-size: 0.8rem; font-family: monospace; min-width: 60px; text-align: right; }
+
+    .highlight    { color: #4caf7d; font-weight: 500; }
+    .cached-label { color: #5bc0eb; font-size: 0.75rem; margin-left: 0.5rem; }
+
     .timestamp { font-size: 0.8rem; color: #555; margin-top: 1.5rem; }
+
+    button.action {
+      background: #333;
+      color: #ccc;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-top: 1.25rem;
+    }
+
+    button.action:hover { background: #3a3a3a; }
   </style>
 </head>
 <body>
 
-  <h1>Eicon Browser — Sync Status</h1>
+  <h1>Eicon Browser — Pipeline Test</h1>
 
   <div id="base-section" class="section">
-    <h2>Base Index</h2>
+    <h2>Server — Base Index</h2>
     <p class="status-loading">Loading…</p>
   </div>
 
   <div id="delta-section" class="section">
-    <h2>Delta</h2>
+    <h2>Server — Delta</h2>
     <p class="status-loading">Loading…</p>
+  </div>
+
+  <div id="index-section" class="section">
+    <h2>Local Index Pipeline</h2>
+
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="step-icon waiting" id="icon-idb-check">·</div>
+        <div class="step-label">Check IndexedDB for cached index</div>
+        <div class="step-time" id="time-idb-check">—</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-icon waiting" id="icon-fetch">·</div>
+        <div class="step-label">Fetch index.gz from Worker</div>
+        <div class="step-time" id="time-fetch">—</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-icon waiting" id="icon-decompress">·</div>
+        <div class="step-label">Decompress + parse in Web Worker</div>
+        <div class="step-time" id="time-decompress">—</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-icon waiting" id="icon-idb-write">·</div>
+        <div class="step-label">Write to IndexedDB</div>
+        <div class="step-time" id="time-idb-write">—</div>
+      </div>
+    </div>
+
+    <div id="index-result" class="meta-row"></div>
+    <div id="index-eicons" class="eicons"></div>
+
+    <button class="action" onclick="clearAndRefetch()">Clear cache &amp; re-fetch</button>
   </div>
 
   <p class="timestamp" id="page-time"></p>
 
   <script>
-    // ---------------------------------------------------------------
-    // REPLACE this URL with your actual Worker URL once it is deployed
-    // e.g. https://eicon-status.yourname.workers.dev/status
-    // ---------------------------------------------------------------
-    const WORKER_URL = 'https://eicon-status-worker.joepurple.workers.dev/status';
+    const WORKER_BASE       = 'https://eicon-status-worker.joepurple.workers.dev';
+    const IDB_NAME          = 'eicon-browser';
+    const IDB_VERSION       = 1;
+    const IDB_STORE         = 'index';
+    const CACHE_MAX_AGE_SEC = 7 * 24 * 3600;
 
-    function formatTime(unixSeconds) {
-      if (!unixSeconds) return '—';
-      return new Date(unixSeconds * 1000).toUTCString();
+    // ── Helpers ───────────────────────────────────────────────────────
+
+    const formatTime = s => s ? new Date(s * 1000).toUTCString() : '—';
+    const elapsed    = t => ((performance.now() - t) / 1000).toFixed(2) + 's';
+    const eiconImg   = n => `https://static.f-list.net/images/eicon/${encodeURIComponent(n)}.gif`;
+
+    function setStep(id, state, timeText) {
+      const icon  = document.getElementById('icon-' + id);
+      const timer = document.getElementById('time-' + id);
+      const glyph = { done:'✓', cached:'⚡', error:'✗', running:'…', waiting:'·' };
+      icon.className   = 'step-icon ' + state;
+      icon.textContent = glyph[state] || '·';
+      if (timeText !== undefined) timer.textContent = timeText;
     }
 
-    function eiconImg(name) {
-      return `https://static.f-list.net/images/eicon/${encodeURIComponent(name)}.gif`;
+    // ── IndexedDB ─────────────────────────────────────────────────────
+
+    function openDB() {
+      return new Promise((res, rej) => {
+        const r = indexedDB.open(IDB_NAME, IDB_VERSION);
+        r.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+        r.onsuccess = e => res(e.target.result);
+        r.onerror   = e => rej(e.target.error);
+      });
     }
 
-    function renderEiconCard(label, entry, showOp = false) {
+    function idbGet(db, key) {
+      return new Promise((res, rej) => {
+        const r = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+        r.onsuccess = e => res(e.target.result);
+        r.onerror   = e => rej(e.target.error);
+      });
+    }
+
+    function idbSet(db, key, value) {
+      return new Promise((res, rej) => {
+        const r = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(value, key);
+        r.onsuccess = () => res();
+        r.onerror   = e => rej(e.target.error);
+      });
+    }
+
+    function idbDel(db, key) {
+      return new Promise((res, rej) => {
+        const r = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).delete(key);
+        r.onsuccess = () => res();
+        r.onerror   = e => rej(e.target.error);
+      });
+    }
+
+    // ── Web Worker (inline blob) ──────────────────────────────────────
+
+    const WORKER_SRC = `
+self.onmessage = async (e) => {
+  try {
+    const ds     = new DecompressionStream('gzip');
+    const stream = new Blob([e.data]).stream().pipeThrough(ds);
+    const reader = stream.getReader();
+    const chunks = [];
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const buf   = new Uint8Array(total);
+    let off = 0;
+    for (const c of chunks) { buf.set(c, off); off += c.length; }
+    const names = new TextDecoder().decode(buf).split('\\n').filter(n => n.length > 0);
+    self.postMessage({ ok: true, names });
+  } catch (err) {
+    self.postMessage({ ok: false, error: err.message });
+  }
+};`;
+
+    function decompressInWorker(buffer) {
+      return new Promise((res, rej) => {
+        const url = URL.createObjectURL(new Blob([WORKER_SRC], { type: 'application/javascript' }));
+        const w   = new Worker(url);
+        w.onmessage = e => { w.terminate(); URL.revokeObjectURL(url); e.data.ok ? res(e.data.names) : rej(new Error(e.data.error)); };
+        w.onerror   = e => { w.terminate(); URL.revokeObjectURL(url); rej(e); };
+        w.postMessage(buffer, [buffer]);
+      });
+    }
+
+    // ── Render ────────────────────────────────────────────────────────
+
+    function eiconCard(label, name) {
+      return `<div class="eicon-card">
+        <label>${label}</label>
+        <img src="${eiconImg(name)}" alt="${name}">
+        <div class="name">${name}</div>
+      </div>`;
+    }
+
+    function showIndexResult(names, source, totalTime) {
+      const src = source === 'cache'
+        ? '<span class="cached-label">⚡ served from cache</span>'
+        : '<span class="cached-label" style="color:#4caf7d">↓ freshly fetched</span>';
+
+      document.getElementById('index-result').innerHTML = `
+        <div class="meta-item"><label>Total names</label><span class="highlight">${names.length.toLocaleString()}</span></div>
+        <div class="meta-item"><label>First</label><span>${names[0]}</span></div>
+        <div class="meta-item"><label>Last</label><span>${names[names.length - 1]}</span></div>
+        <div class="meta-item"><label>Total time</label><span class="highlight">${totalTime}</span>${src}</div>`;
+
+      document.getElementById('index-eicons').innerHTML =
+        eiconCard('First in index', names[0]) +
+        eiconCard('Last in index',  names[names.length - 1]);
+    }
+
+    // ── Pipeline ──────────────────────────────────────────────────────
+
+    async function runIndexPipeline() {
+      const t0 = performance.now();
+      const db = await openDB();
+
+      // Step 1: check cache
+      setStep('idb-check', 'running');
+      const t1      = performance.now();
+      const cached   = await idbGet(db, 'names');
+      const fetchedAt = await idbGet(db, 'fetchedAt');
+      const age      = fetchedAt ? (Date.now() / 1000) - fetchedAt : Infinity;
+      const fresh    = cached && age < CACHE_MAX_AGE_SEC;
+      setStep('idb-check', fresh ? 'cached' : 'done', elapsed(t1));
+
+      if (fresh) {
+        setStep('fetch',      'cached', 'skipped');
+        setStep('decompress', 'cached', 'skipped');
+        setStep('idb-write',  'cached', 'skipped');
+        showIndexResult(cached, 'cache', elapsed(t0));
+        return;
+      }
+
+      // Step 2: fetch
+      setStep('fetch', 'running');
+      const t2 = performance.now();
+      let buffer;
+      try {
+        const res = await fetch(WORKER_BASE + '/index');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        buffer = await res.arrayBuffer();
+        setStep('fetch', 'done', elapsed(t2));
+      } catch (err) {
+        setStep('fetch', 'error', 'failed');
+        document.getElementById('index-result').innerHTML =
+          `<p class="status-error">Fetch failed: ${err.message}</p>`;
+        return;
+      }
+
+      // Step 3: decompress + parse
+      setStep('decompress', 'running');
+      const t3 = performance.now();
+      let names;
+      try {
+        names = await decompressInWorker(buffer);
+        setStep('decompress', 'done', elapsed(t3));
+      } catch (err) {
+        setStep('decompress', 'error', 'failed');
+        document.getElementById('index-result').innerHTML =
+          `<p class="status-error">Decompress failed: ${err.message}</p>`;
+        return;
+      }
+
+      // Step 4: write to IDB
+      setStep('idb-write', 'running');
+      const t4 = performance.now();
+      try {
+        await idbSet(db, 'names', names);
+        await idbSet(db, 'fetchedAt', Math.floor(Date.now() / 1000));
+        setStep('idb-write', 'done', elapsed(t4));
+      } catch (err) {
+        setStep('idb-write', 'error', 'failed (non-fatal)');
+      }
+
+      showIndexResult(names, 'fresh', elapsed(t0));
+    }
+
+    // ── Server status ─────────────────────────────────────────────────
+
+    function eiconCardFull(label, entry, showOp) {
       const op = showOp
         ? `<span class="${entry.op === '+' ? 'op-add' : 'op-remove'}">${entry.op === '+' ? '+ added' : '− removed'}</span> `
         : '';
-      return `
-        <div class="eicon-card">
-          <label>${label}</label>
-          <img src="${eiconImg(entry.name)}" alt="${entry.name}" title="${entry.name}">
-          <div class="name">${op}${entry.name}</div>
-          <div class="name" style="font-size:0.75rem;color:#444;margin-top:2px">${formatTime(entry.addedAt || entry.modifiedAt)}</div>
-        </div>`;
+      return `<div class="eicon-card">
+        <label>${label}</label>
+        <img src="${eiconImg(entry.name)}" alt="${entry.name}">
+        <div class="name">${op}${entry.name}</div>
+        <div class="name" style="font-size:0.75rem;color:#444;margin-top:2px">${formatTime(entry.addedAt || entry.modifiedAt)}</div>
+      </div>`;
     }
 
-    function renderBase(data) {
-      if (!data) {
-        return '<p class="status-error">Base sync has not run yet.</p>';
-      }
-      return `
-        <div class="meta-row">
-          <div class="meta-item">
-            <label>Pulled at</label>
-            <span>${formatTime(data.pulledAt)}</span>
-          </div>
-          <div class="meta-item">
-            <label>Index as of</label>
-            <span>${formatTime(data.asOf)}</span>
-          </div>
-          <div class="meta-item">
-            <label>Total eicons</label>
-            <span>${data.total ? data.total.toLocaleString() : '—'}</span>
-          </div>
-        </div>
-        <div class="eicons">
-          ${data.first ? renderEiconCard('First in index', data.first) : ''}
-          ${data.last  ? renderEiconCard('Last in index',  data.last)  : ''}
-        </div>`;
+    function renderBase(d) {
+      if (!d) return '<p class="status-error">Base sync has not run yet.</p>';
+      return `<div class="meta-row">
+        <div class="meta-item"><label>Pulled at</label><span>${formatTime(d.pulledAt)}</span></div>
+        <div class="meta-item"><label>Index as of</label><span>${formatTime(d.asOf)}</span></div>
+        <div class="meta-item"><label>Total eicons</label><span>${d.total?.toLocaleString() ?? '—'}</span></div>
+      </div>
+      <div class="eicons">
+        ${d.first ? eiconCardFull('First in index', d.first) : ''}
+        ${d.last  ? eiconCardFull('Last in index',  d.last)  : ''}
+      </div>`;
     }
 
-    function renderDelta(data) {
-      if (!data) {
-        return '<p class="status-error">Delta sync has not run yet.</p>';
-      }
-      return `
-        <div class="meta-row">
-          <div class="meta-item">
-            <label>Pulled at</label>
-            <span>${formatTime(data.pulledAt)}</span>
-          </div>
-          <div class="meta-item">
-            <label>Delta since</label>
-            <span>${formatTime(data.since)}</span>
-          </div>
-          <div class="meta-item">
-            <label>As of</label>
-            <span>${formatTime(data.asOf)}</span>
-          </div>
-          <div class="meta-item">
-            <label>Records</label>
-            <span>${data.count ?? '—'}${data.hasMore ? ' (truncated)' : ''}</span>
-          </div>
-        </div>
-        <div class="eicons">
-          ${data.first ? renderEiconCard('First in delta', data.first, true) : ''}
-          ${data.last  ? renderEiconCard('Last in delta',  data.last,  true) : ''}
-        </div>`;
+    function renderDelta(d) {
+      if (!d) return '<p class="status-error">Delta sync has not run yet.</p>';
+      return `<div class="meta-row">
+        <div class="meta-item"><label>Pulled at</label><span>${formatTime(d.pulledAt)}</span></div>
+        <div class="meta-item"><label>Delta since</label><span>${formatTime(d.since)}</span></div>
+        <div class="meta-item"><label>As of</label><span>${formatTime(d.asOf)}</span></div>
+        <div class="meta-item"><label>Records</label><span>${d.count ?? '—'}${d.hasMore ? ' (truncated)' : ''}</span></div>
+      </div>
+      <div class="eicons">
+        ${d.first ? eiconCardFull('First in delta', d.first, true) : ''}
+        ${d.last  ? eiconCardFull('Last in delta',  d.last,  true) : ''}
+      </div>`;
     }
 
-    async function load() {
-      document.getElementById('page-time').textContent =
-        'Page loaded: ' + new Date().toUTCString();
-
+    async function loadServerStatus() {
       try {
-        const res = await fetch(WORKER_URL);
+        const res = await fetch(WORKER_BASE + '/status');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const { base, delta } = await res.json();
-
-        document.getElementById('base-section').innerHTML =
-          '<h2>Base Index</h2>' + renderBase(base);
-
-        document.getElementById('delta-section').innerHTML =
-          '<h2>Delta</h2>' + renderDelta(delta);
-
+        document.getElementById('base-section').innerHTML  = '<h2>Server — Base Index</h2>'  + renderBase(base);
+        document.getElementById('delta-section').innerHTML = '<h2>Server — Delta</h2>' + renderDelta(delta);
       } catch (err) {
-        const msg = `<p class="status-error">Failed to fetch from Worker: ${err.message}</p>
-                     <p style="color:#555;font-size:0.85rem;margin-top:0.5rem">
-                       Check that WORKER_URL is set correctly in test.html and that the Worker is deployed.
-                     </p>`;
-        document.getElementById('base-section').innerHTML  = '<h2>Base Index</h2>'  + msg;
-        document.getElementById('delta-section').innerHTML = '<h2>Delta</h2>' + msg;
+        const m = `<p class="status-error">Worker fetch failed: ${err.message}</p>`;
+        document.getElementById('base-section').innerHTML  = '<h2>Server — Base Index</h2>'  + m;
+        document.getElementById('delta-section').innerHTML = '<h2>Server — Delta</h2>' + m;
       }
     }
 
-    load();
+    // ── Clear cache ───────────────────────────────────────────────────
+
+    async function clearAndRefetch() {
+      const db = await openDB();
+      await idbDel(db, 'names');
+      await idbDel(db, 'fetchedAt');
+      ['idb-check','fetch','decompress','idb-write'].forEach(id => setStep(id, 'waiting', '—'));
+      document.getElementById('index-result').innerHTML = '';
+      document.getElementById('index-eicons').innerHTML = '';
+      runIndexPipeline();
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────
+
+    document.getElementById('page-time').textContent = 'Page loaded: ' + new Date().toUTCString();
+    loadServerStatus();
+    runIndexPipeline();
   </script>
 
 </body>
