@@ -85,8 +85,8 @@
     /* ── Cells ── */
     .cell {
       position: absolute;
-      width: 90px;
-      height: 90px;
+      width: 100px;
+      height: 100px;
       border-radius: 4px;
       overflow: hidden;
       background: #1a1a1a;
@@ -185,10 +185,9 @@
     const IDB_STORE   = 'index';
     const CACHE_MAX   = 7 * 24 * 3600; // seconds
 
-    const CELL      = 90;        // cell size (square, px)
+    const CELL      = 100;       // cell size (square, px) — native eicon size
     const GAP       = 5;         // gap between cells (px)
-    const PITCH     = CELL + GAP; // 95px
-    const POOL      = 450;       // recycled DOM cells (enough for ~3 viewports at 1440p)
+    const PITCH     = CELL + GAP; // 105px
     const ABOVE     = 2;         // buffer rows above viewport
     const BELOW     = 5;         // buffer+prefetch rows below viewport
 
@@ -308,9 +307,9 @@ self.onmessage = async (e) => {
       scheduleUpdate();
     }
 
-    // ── Pool creation ─────────────────────────────────────────────────
-    function createPool() {
-      for (let i = 0; i < POOL; i++) {
+    // ── Pool — grows dynamically to fit any viewport/resolution ──────
+    function growPool(target) {
+      while (poolCells.length < target) {
         const el  = document.createElement('div');
         el.className = 'cell';
         el.style.display = 'none';
@@ -327,9 +326,12 @@ self.onmessage = async (e) => {
     function recalc() {
       cols      = Math.max(1, Math.floor(scroller.clientWidth / PITCH));
       totalRows = Math.ceil(displayNames.length / cols);
-      // Left offset to centre the grid
       canvas._left = Math.max(0, Math.floor((scroller.clientWidth - cols * PITCH) / 2));
       canvas.style.height = (totalRows * PITCH + 40) + 'px';
+      // Grow pool to cover viewport + buffers at current resolution
+      const visRows  = Math.ceil(scroller.clientHeight / PITCH);
+      const needed   = cols * (visRows + ABOVE + BELOW + 2);
+      growPool(needed);
     }
 
     // ── Update (hot path — called every rAF during scroll) ────────────
@@ -347,7 +349,7 @@ self.onmessage = async (e) => {
       const lastIdx   = Math.min(displayNames.length - 1, (lastRow + 1) * cols - 1);
       const needed    = lastIdx - firstIdx + 1;
 
-      for (let i = 0; i < POOL; i++) {
+      for (let i = 0; i < poolCells.length; i++) {
         const cell = poolCells[i];
         if (i < needed) {
           const nameIdx = firstIdx + i;
@@ -455,9 +457,7 @@ self.onmessage = async (e) => {
       statCount.textContent  = `${allNames.length.toLocaleString()} eicons`;
       btnShuffle.disabled    = false;
 
-      createPool();
       recalc();
-      scheduleUpdate();
     }
 
     boot();
