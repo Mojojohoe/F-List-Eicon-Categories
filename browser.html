@@ -193,6 +193,7 @@
 
     // ── State ─────────────────────────────────────────────────────────
     let allNames     = [];
+    let nameGroups   = []; // pre-computed groups — built once, never again
     let displayNames = [];
     let cols         = 1;
     let totalRows    = 0;
@@ -246,7 +247,18 @@ self.onmessage = async (e) => {
     let off = 0;
     for (const c of chunks) { buf.set(c, off); off += c.length; }
     const names = new TextDecoder().decode(buf).split('\\n').filter(n => n.length > 0);
-    self.postMessage({ ok: true, names });
+
+    // Pre-compute groups while still in the worker — strip trailing digits to find siblings.
+    // Doing this here means newRandomSet() only needs a cheap shuffle+flat, never regex again.
+    const groupMap = new Map();
+    for (const name of names) {
+      const base = name.replace(/\\d+$/, '') || name;
+      if (!groupMap.has(base)) groupMap.set(base, []);
+      groupMap.get(base).push(name);
+    }
+    const groups = [...groupMap.values()];
+
+    self.postMessage({ ok: true, names, groups });
   } catch(err) { self.postMessage({ ok: false, error: err.message }); }
 };`;
 
@@ -254,13 +266,14 @@ self.onmessage = async (e) => {
       return new Promise((res, rej) => {
         const url = URL.createObjectURL(new Blob([WK_SRC], {type:'application/javascript'}));
         const w = new Worker(url);
-        w.onmessage = e => { w.terminate(); URL.revokeObjectURL(url); e.data.ok ? res(e.data.names) : rej(new Error(e.data.error)); };
+        w.onmessage = e => { w.terminate(); URL.revokeObjectURL(url); e.data.ok ? res(e.data) : rej(new Error(e.data.error)); };
         w.onerror   = e => { w.terminate(); URL.revokeObjectURL(url); rej(e); };
         w.postMessage(buffer, [buffer]);
       });
     }
 
-    // ── Seeded shuffle + grouping ─────────────────────────────────────
+    // ── Seeded shuffle ────────────────────────────────────────────────
+    // Groups are pre-computed at boot. newRandomSet() only runs this — no regex, no Map.
     function rng(seed) {
       return () => {
         seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -280,16 +293,9 @@ self.onmessage = async (e) => {
       return a;
     }
 
-    function groupShuffle(names, seed) {
-      // Group by name base (strip trailing digits)
-      const groups = new Map();
-      for (const name of names) {
-        const base = name.replace(/\d+$/, '') || name;
-        if (!groups.has(base)) groups.set(base, []);
-        groups.get(base).push(name);
-      }
-      // Shuffle groups, not individual names — siblings stay adjacent
-      return shuffle([...groups.values()], seed).flat();
+    // Shuffle pre-computed groups and flatten — fast path for "New random set"
+    function applyShuffledDisplay(seed) {
+      displayNames = shuffle(nameGroups, seed).flat();
     }
 
     function getSeed() {
@@ -301,7 +307,7 @@ self.onmessage = async (e) => {
     function newRandomSet() {
       const s = (Math.random() * 2 ** 32) >>> 0;
       sessionStorage.setItem('browse-seed', String(s));
-      displayNames = groupShuffle(allNames, s);
+      applyShuffledDisplay(s);
       recalc();
       scroller.scrollTop = 0;
       scheduleUpdate();
@@ -426,23 +432,28 @@ self.onmessage = async (e) => {
 
     // ── Boot ──────────────────────────────────────────────────────────
     async function boot() {
-      let names;
+      let names, groups;
       try {
         const db        = await openDB();
         const cached    = await idbGet(db, 'names');
+        const cachedGrp = await idbGet(db, 'groups');
         const fetchedAt = await idbGet(db, 'fetchedAt');
         const age       = fetchedAt ? (Date.now() / 1000) - fetchedAt : Infinity;
 
-        if (cached && age < CACHE_MAX) {
-          names = cached;
+        if (cached && cachedGrp && age < CACHE_MAX) {
+          names  = cached;
+          groups = cachedGrp;
         } else {
           loading.textContent = 'Downloading index…';
           const res = await fetch(WORKER_BASE + '/index');
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const buf = await res.arrayBuffer();
-          loading.textContent = 'Decompressing…';
-          names = await decompress(buf);
-          await idbSet(db, 'names', names);
+          loading.textContent = 'Decompressing + grouping…';
+          const result = await decompress(buf);
+          names  = result.names;
+          groups = result.groups;
+          await idbSet(db, 'names',     names);
+          await idbSet(db, 'groups',    groups);
           await idbSet(db, 'fetchedAt', Math.floor(Date.now() / 1000));
         }
       } catch (err) {
@@ -450,14 +461,16 @@ self.onmessage = async (e) => {
         return;
       }
 
-      allNames     = names;
-      displayNames = groupShuffle(allNames, getSeed());
+      allNames   = names;
+      nameGroups = groups;
+      applyShuffledDisplay(getSeed());
 
       loading.style.display = 'none';
       statCount.textContent  = `${allNames.length.toLocaleString()} eicons`;
       btnShuffle.disabled    = false;
 
       recalc();
+      scheduleUpdate();
     }
 
     boot();
