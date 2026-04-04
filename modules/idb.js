@@ -25,7 +25,7 @@
  *     Deletes all records from the store.
  *
  * Usage:
- *   import { openDB, idbGet, idbSet, idbDel } from '/modules/idb.js';
+ *   import { openDB, idbGet, idbSet, idbDel } from './modules/idb.js';
  *   const db = await openDB('eicon-browser', 1, 'index');
  *   await idbSet(db, 'names', myArray);
  *   const names = await idbGet(db, 'names');

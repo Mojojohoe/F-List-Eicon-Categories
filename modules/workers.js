@@ -22,7 +22,7 @@
  *                e.g. [['sammilk1','sammilk2','sammilk3','sammilk4'], ['catgirl'], ...]
  *
  * Usage:
- *   import { decompress } from '/modules/workers.js';
+ *   import { decompress } from './modules/workers.js';
  *   const { names, groups } = await decompress(await res.arrayBuffer());
  */
 

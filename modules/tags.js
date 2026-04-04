@@ -37,7 +37,7 @@
  *     Existing tags are never overwritten — only new eicons are added.
  *
  * Usage:
- *   import { openTagDB, getTags, setTags, getAllTags } from '/modules/tags.js';
+ *   import { openTagDB, getTags, setTags, getAllTags } from './modules/tags.js';
  *   const db = await openTagDB();
  *   const tags = await getTags(db, 'catgirl');
  *   await setTags(db, 'catgirl', [...tags, 'cat', 'girl']);
