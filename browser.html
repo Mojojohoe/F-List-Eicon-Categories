@@ -55,6 +55,44 @@
     .search-input.active { border-color: #5a9a5a; background: #161e16; }
     .search-input::placeholder { color: var(--dim); }
 
+    /* Ghost chips — persistent search tokens shown as pills inside the search wrap */
+    .ghost-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 4px 8px 0;
+      display: none; /* shown when chips exist */
+    }
+    .ghost-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: monospace;
+      cursor: default;
+      background: #1e3a1e;
+      border: 1px solid #2a5a2a;
+      color: #7dbf7d;
+    }
+    .ghost-chip.negated {
+      background: #3a1e1e;
+      border-color: #5a2a2a;
+      color: #bf7d7d;
+    }
+    .ghost-chip-remove {
+      background: none;
+      border: none;
+      color: inherit;
+      opacity: 0.6;
+      cursor: pointer;
+      font-size: 0.7rem;
+      padding: 0;
+      line-height: 1;
+    }
+    .ghost-chip-remove:hover { opacity: 1; }
+
     .search-clear {
       position: absolute;
       right: 7px; top: 50%;
@@ -140,13 +178,12 @@
       position: absolute;
       bottom: 3px;
       right: 3px;
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       border-radius: 3px;
-      background: rgba(0,0,0,0.7);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: #aaa;
-      font-size: 0.7rem;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.9rem;
       line-height: 1;
       cursor: pointer;
       display: flex;
@@ -155,10 +192,19 @@
       opacity: 0;
       transition: opacity 0.1s, background 0.1s;
       z-index: 2;
+      /* Shift the yellow label emoji into green */
+      filter: hue-rotate(75deg) saturate(1.4) brightness(0.9);
     }
     .cell:hover .cell-tag-btn { opacity: 1; }
-    .cell-tag-btn:hover { background: rgba(60,100,60,0.9); color: #8df; }
-    .cell-tag-btn.has-tags { opacity: 0.55; color: #6dbf6d; border-color: #2a4a2a; }
+    .cell-tag-btn:hover {
+      background: rgba(30,60,30,0.9);
+      filter: hue-rotate(75deg) saturate(2) brightness(1.1);
+    }
+    /* Tagged state — slightly visible even without hover */
+    .cell-tag-btn.has-tags {
+      opacity: 0.6;
+      filter: hue-rotate(75deg) saturate(2.5) brightness(1.2);
+    }
     .cell:hover .cell-tag-btn.has-tags { opacity: 1; }
 
     /* ── Tag modal ── */
@@ -376,13 +422,15 @@
       <span class="logo-title">Eicon Browser</span>
       <span class="logo-credit">powered by <a href="https://xariah.net/eicons" target="_blank" rel="noopener">Xariah Dailstone</a></span>
     </div>
-    <div class="search-wrap">
+    <div class="search-wrap" id="search-wrap">
+      <div class="ghost-chips" id="ghost-chips"></div>
       <input class="search-input" id="search-input" type="text"
              placeholder="Loading…" disabled autocomplete="off" spellcheck="false">
-      <button class="search-clear" id="search-clear" title="Clear search (Esc)">✕</button>
+      <button class="search-clear" id="search-clear" title="Clear all (Esc)">✕</button>
     </div>
     <div class="header-right">
       <button class="btn" id="btn-shuffle" onclick="newRandomSet()" disabled>↺ New random set</button>
+      <button class="btn" id="btn-dev-tags" disabled>📡 Dev tags</button>
     </div>
   </header>
 
@@ -398,6 +446,10 @@
         <button class="modal-close" id="modal-close">✕</button>
       </div>
       <div class="modal-body">
+        <div id="modal-recent-wrap" style="display:none">
+          <div class="modal-section-label">Recent tags</div>
+          <div class="chip-row" id="modal-recent-chips" style="margin-bottom:0"></div>
+        </div>
         <div>
           <div class="modal-section-label">Tags</div>
           <div class="chip-row" id="modal-chips"></div>
@@ -495,6 +547,59 @@
     const statCount   = document.getElementById('stat-count');
     const statPos     = document.getElementById('stat-pos');
     const btnShuffle  = document.getElementById('btn-shuffle');
+    const btnDevTags  = document.getElementById('btn-dev-tags');
+
+    // ── Dev tags import ───────────────────────────────────────────────
+    const DEV_TAGS_URL = 'https://mojojohoe.github.io/F-List-Eicon-Categories/dev_tags.txt';
+
+    async function fetchDevTags() {
+      btnDevTags.disabled = true;
+      btnDevTags.textContent = '📡 Fetching…';
+      try {
+        const res  = await fetch(DEV_TAGS_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+
+        // Dry-run: count what would be added without writing
+        const parsed  = JSON.parse(text);
+        const source  = parsed.version ? parsed.tags : parsed;
+        const existing = await getAllTags(tagDB);
+        let wouldAdd = 0;
+        for (const [name, tagVal] of Object.entries(source)) {
+          if (!existing.has(name)) {
+            const tags = typeof tagVal === 'string'
+              ? tagVal.split(',').map(t => t.trim()).filter(Boolean)
+              : [];
+            if (tags.length > 0) wouldAdd++;
+          }
+        }
+
+        const total = Object.keys(source).length;
+        const msg = wouldAdd === 0
+          ? 'Dev tags: nothing new to add — you already have everything.'
+          : `Dev tags: ${wouldAdd.toLocaleString()} new eicons of ${total.toLocaleString()} total. Merge?`;
+
+        if (wouldAdd === 0) {
+          showMessage(msg, 4000);
+          return;
+        }
+
+        if (!confirm(msg + '\n\nYour existing tags will never be overwritten.')) return;
+
+        const { added, skipped } = await importTags(tagDB, text);
+        tagCache = await getAllTags(tagDB);
+        refreshWorkerTags();
+        showMessage(`Dev tags merged: ${added.toLocaleString()} eicons added, ${skipped.toLocaleString()} already had tags.`, 5000);
+
+      } catch (err) {
+        showMessage(`Dev tags failed: ${err.message}`, 4000);
+      } finally {
+        btnDevTags.disabled = false;
+        btnDevTags.textContent = '📡 Dev tags';
+      }
+    }
+
+    btnDevTags.addEventListener('click', fetchDevTags);
     const searchInput = document.getElementById('search-input');
     const searchClear = document.getElementById('search-clear');
 
@@ -504,57 +609,166 @@
     const STORE = IDB_STORE;
 
     // ── Persistent search worker ──────────────────────────────────────
+    // Holds names + tag map. Supports: tag search, name fallback,
+    // negation (-prefix), ghost chips, scored results.
     const SEARCH_SRC = `
 let names = [];
+let tagMap = {};
+
 self.onmessage = (e) => {
   if (e.data.init) { names = e.data.init; return; }
-  const q = e.data.query.toLowerCase();
-  if (!q) { self.postMessage({ results: null, query: e.data.query }); return; }
-  const results = [];
-  for (let i = 0; i < names.length; i++) {
-    if (names[i].includes(q)) results.push(names[i]);
+  if (e.data.tags !== undefined) { tagMap = e.data.tags; return; }
+
+  const { query, chips } = e.data;
+  const positives = [];
+  const negatives = [];
+
+  for (const chip of (chips || [])) {
+    (chip.negated ? negatives : positives).push(chip.text.toLowerCase());
   }
-  results.sort();
-  self.postMessage({ results, query: e.data.query });
+  const inputTrim = (query || '').trim();
+  if (inputTrim) {
+    const neg = inputTrim.startsWith('-');
+    const txt = neg ? inputTrim.slice(1).trim() : inputTrim;
+    if (txt) (neg ? negatives : positives).push(txt.toLowerCase());
+  }
+
+  if (positives.length === 0 && negatives.length === 0) {
+    self.postMessage({ results: null, query, chips });
+    return;
+  }
+
+  const scored = [];
+  for (let i = 0; i < names.length; i++) {
+    const name    = names[i];
+    const nameLow = name.toLowerCase();
+    const tagsLow = tagMap[name] ? tagMap[name].toLowerCase() : '';
+
+    let excluded = false;
+    for (const neg of negatives) {
+      if (nameLow.includes(neg) || tagsLow.includes(neg)) { excluded = true; break; }
+    }
+    if (excluded) continue;
+
+    let score = 0, tagScore = 0, bonus = 0;
+    for (const pos of positives) {
+      if (tagsLow.includes(pos)) { score++; tagScore++; }
+      else if (nameLow.includes(pos)) { score++; }
+    }
+    if (score === 0) continue;
+
+    if (tagsLow) {
+      const tagList = tagsLow.split(',').map(t => t.trim());
+      for (const pos of positives) { if (tagList.includes(pos)) bonus++; }
+    }
+
+    scored.push({ name, total: score + bonus, tagScore });
+  }
+
+  scored.sort((a, b) => b.total - a.total || b.tagScore - a.tagScore || a.name.localeCompare(b.name));
+  self.postMessage({ results: scored.map(s => s.name), query, chips });
 };`;
 
-    let searchWorker  = null;
+    let searchWorker   = null;
     let searchDebounce = null;
-    let pendingQuery  = '';
+    let pendingQuery   = '';
+    let activeChips    = [];
+
+    const ghostChipsEl = document.getElementById('ghost-chips');
 
     function initSearchWorker(names) {
       const url = URL.createObjectURL(new Blob([SEARCH_SRC], {type:'application/javascript'}));
       searchWorker = new Worker(url);
       searchWorker.postMessage({ init: names });
+      searchWorker.postMessage({ tags: buildTagObject() });
       searchWorker.onmessage = ({ data: { results, query } }) => {
-        if (query !== pendingQuery) return; // stale response, typed ahead
+        if (query !== pendingQuery) return;
         results === null ? exitSearch() : applySearchResults(results);
       };
     }
 
-    // ── Search UI ─────────────────────────────────────────────────────
-    function onSearchInput() {
+    function buildTagObject() {
+      const obj = {};
+      for (const [name, tags] of tagCache) obj[name] = tags.join(', ');
+      return obj;
+    }
+
+    function refreshWorkerTags() {
+      if (searchWorker) searchWorker.postMessage({ tags: buildTagObject() });
+    }
+
+    // ── Ghost chips ───────────────────────────────────────────────────
+    function renderGhostChips() {
+      ghostChipsEl.innerHTML = '';
+      ghostChipsEl.style.display = activeChips.length ? '' : 'none';
+      activeChips.forEach((chip, i) => {
+        const el  = document.createElement('div');
+        el.className = 'ghost-chip' + (chip.negated ? ' negated' : '');
+        const lbl = document.createElement('span');
+        lbl.textContent = (chip.negated ? '−' : '') + chip.text;
+        const rm  = document.createElement('button');
+        rm.className = 'ghost-chip-remove';
+        rm.textContent = '✕';
+        rm.addEventListener('click', () => { activeChips.splice(i, 1); renderGhostChips(); triggerSearch(); });
+        el.appendChild(lbl); el.appendChild(rm);
+        ghostChipsEl.appendChild(el);
+      });
+      const has = activeChips.length > 0 || searchInput.value.trim().length > 0;
+      searchClear.style.display = has ? 'flex' : 'none';
+    }
+
+    function commitCurrentToken() {
+      const raw = searchInput.value.trim();
+      if (!raw) return;
+      const negated = raw.startsWith('-');
+      const text    = (negated ? raw.slice(1) : raw).trim();
+      if (!text) return;
+      if (!activeChips.find(c => c.text === text && c.negated === negated)) {
+        activeChips.push({ text, negated });
+      }
+      searchInput.value = '';
+      renderGhostChips();
+      triggerSearch();
+    }
+
+    function triggerSearch() {
       const q = searchInput.value.trim();
       pendingQuery = q;
-      searchClear.style.display = q ? 'flex' : 'none'; // 'flex' not '' — '' falls back to CSS display:none
-      searchInput.classList.toggle('active', q.length > 0);
       clearTimeout(searchDebounce);
       searchDebounce = setTimeout(() => {
-        if (searchWorker) searchWorker.postMessage({ query: q });
+        if (searchWorker) searchWorker.postMessage({ query: q, chips: activeChips });
       }, 150);
+    }
+
+    // ── Search input wiring ───────────────────────────────────────────
+    function onSearchInput() {
+      const q = searchInput.value;
+      const has = activeChips.length > 0 || q.trim().length > 0;
+      searchInput.classList.toggle('active', has);
+      searchClear.style.display = has ? 'flex' : 'none';
+      if (q.endsWith(',')) { searchInput.value = q.slice(0,-1); commitCurrentToken(); return; }
+      triggerSearch();
     }
 
     function clearSearch() {
       searchInput.value = '';
+      activeChips = [];
       pendingQuery = '';
-      searchClear.style.display = 'none';
+      renderGhostChips();
       searchInput.classList.remove('active');
-      if (searchWorker) searchWorker.postMessage({ query: '' });
+      searchClear.style.display = 'none';
+      if (searchWorker) searchWorker.postMessage({ query: '', chips: [] });
     }
 
     searchInput.addEventListener('input', onSearchInput);
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commitCurrentToken(); }
+      if (e.key === 'Escape') clearSearch();
+      if (e.key === 'Backspace' && searchInput.value === '' && activeChips.length > 0) {
+        activeChips.pop(); renderGhostChips(); triggerSearch();
+      }
+    });
     searchClear.addEventListener('click', clearSearch);
-    searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') clearSearch(); });
 
     function applySearchResults(results) {
       isSearching = true;
@@ -564,7 +778,10 @@ self.onmessage = (e) => {
       recalc();
       scroller.scrollTop = 0;
       scheduleUpdate();
-      statCount.textContent = `${results.length.toLocaleString()} matches`;
+      const tagged = results.filter(n => tagCache.has(n)).length;
+      statCount.textContent = tagged > 0
+        ? `${results.length.toLocaleString()} matches (${tagged.toLocaleString()} tagged)`
+        : `${results.length.toLocaleString()} matches`;
     }
 
     function exitSearch() {
@@ -629,7 +846,7 @@ self.onmessage = (e) => {
         const tagBtn  = document.createElement('button');
         tagBtn.className = 'cell-tag-btn';
         tagBtn.title  = 'Tag this eicon';
-        tagBtn.textContent = '🏷';
+        tagBtn.textContent = '🏷️';
         tagBtn.addEventListener('click', e => {
           e.stopPropagation(); // prevent copy handler firing
           const name = el.dataset.name;
@@ -773,23 +990,59 @@ self.onmessage = (e) => {
     const modalName    = document.getElementById('modal-eicon-name');
     const modalSub     = document.getElementById('modal-tag-count');
     const modalChips   = document.getElementById('modal-chips');
+    const modalRecentWrap  = document.getElementById('modal-recent-wrap');
+    const modalRecentChips = document.getElementById('modal-recent-chips');
     const tagInput     = document.getElementById('tag-input');
     const tagAddBtn    = document.getElementById('tag-add-btn');
     const modalClose   = document.getElementById('modal-close');
     const modalCancel  = document.getElementById('modal-cancel');
     const modalSave    = document.getElementById('modal-save');
 
-    let modalEiconName = '';   // name currently being edited
-    let modalTags      = [];   // working copy of tags (not yet saved)
+    let modalEiconName = '';
+    let modalTags      = [];
+    let recentTags     = [];  // last 20 used, persisted in IDB
+
+    async function loadRecentTags() {
+      const db = await openTagDB();
+      const stored = await getTags(db, '__recent__');
+      recentTags = stored || [];
+    }
+
+    async function saveRecentTags(newTags) {
+      // Prepend new tags, deduplicate, cap at 20
+      for (const t of [...newTags].reverse()) {
+        recentTags = [t, ...recentTags.filter(r => r !== t)];
+      }
+      recentTags = recentTags.slice(0, 20);
+      const db = await openTagDB();
+      await setTags(db, '__recent__', recentTags);
+    }
+
+    function renderRecentChips() {
+      if (recentTags.length === 0) { modalRecentWrap.style.display = 'none'; return; }
+      modalRecentWrap.style.display = '';
+      modalRecentChips.innerHTML = '';
+      for (const tag of recentTags) {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.style.cursor = 'pointer';
+        chip.title = `Add "${tag}"`;
+        chip.textContent = tag;
+        chip.addEventListener('click', () => {
+          if (!modalTags.includes(tag)) { modalTags.push(tag); renderModalChips(); }
+        });
+        modalRecentChips.appendChild(chip);
+      }
+    }
 
     function openTagModal(name) {
       modalEiconName = name;
       modalTags      = tagCache.has(name) ? [...tagCache.get(name)] : [];
-
       modalPreview.src = `https://static.f-list.net/images/eicon/${encodeURIComponent(name)}.gif`;
       modalName.textContent = name;
       tagInput.value = '';
       renderModalChips();
+      renderRecentChips();
       backdrop.classList.add('open');
       tagInput.focus();
     }
@@ -815,10 +1068,8 @@ self.onmessage = (e) => {
       for (const tag of modalTags) {
         const chip   = document.createElement('div');
         chip.className = 'chip';
-
         const label  = document.createElement('span');
         label.textContent = tag;
-
         const remove = document.createElement('button');
         remove.className = 'chip-remove';
         remove.textContent = '✕';
@@ -827,7 +1078,6 @@ self.onmessage = (e) => {
           modalTags = modalTags.filter(t => t !== tag);
           renderModalChips();
         });
-
         chip.appendChild(label);
         chip.appendChild(remove);
         modalChips.appendChild(chip);
@@ -835,9 +1085,7 @@ self.onmessage = (e) => {
     }
 
     function addTagFromInput() {
-      const raw  = tagInput.value;
-      // Accept comma-separated input — split and add each
-      const incoming = raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      const incoming = tagInput.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
       for (const t of incoming) {
         if (!modalTags.includes(t)) modalTags.push(t);
       }
@@ -848,9 +1096,12 @@ self.onmessage = (e) => {
     async function saveTagModal() {
       if (!modalEiconName || !tagDB) return;
       await setTags(tagDB, modalEiconName, modalTags);
-      // Update cache
       tagCache.set(modalEiconName, [...modalTags]);
-      // Refresh tag button state on any visible cell showing this eicon
+      // Track recent tags
+      if (modalTags.length > 0) await saveRecentTags(modalTags);
+      // Push updated tags to search worker
+      refreshWorkerTags();
+      // Refresh tag button on visible cells
       for (const cell of indexToCell.values()) {
         if (cell.el.dataset.name === modalEiconName) {
           cell.tagBtn.classList.toggle('has-tags', modalTags.length > 0);
@@ -911,10 +1162,12 @@ self.onmessage = (e) => {
       // Open tag database and warm the cache
       tagDB    = await openTagDB();
       tagCache = await getAllTags(tagDB);
+      await loadRecentTags();
 
       loading.style.display    = 'none';
       statCount.textContent    = `${allNames.length.toLocaleString()} eicons`;
       btnShuffle.disabled      = false;
+      btnDevTags.disabled      = false;
       searchInput.disabled     = false;
       searchInput.placeholder  = 'Search eicons by name…';
 
