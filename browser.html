@@ -40,21 +40,37 @@
     .logo-credit a { color: #5a9a5a; text-decoration: none; }
     .logo-credit a:hover { text-decoration: underline; }
 
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
     .search-wrap { flex: 1; max-width: 480px; position: relative; }
     .search-input {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 0.38rem 0.75rem;
+      padding: 0.38rem 2rem 0.38rem 0.75rem;
       color: var(--text);
       font-size: 0.88rem;
       outline: none;
     }
     .search-input:focus { border-color: var(--accent); }
     .search-input::placeholder { color: var(--dim); }
+    .search-input.active { border-color: #5a9a5a; background: #161e16; }
 
-    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .search-clear {
+      position: absolute;
+      right: 7px; top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--dim);
+      font-size: 1rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 4px;
+      display: none;
+    }
+    .search-clear:hover { color: var(--text); }
 
     .btn {
       background: #232323;
@@ -156,7 +172,8 @@
     </div>
 
     <div class="search-wrap">
-      <input class="search-input" type="text" placeholder="Search tags… (coming soon)" disabled>
+      <input class="search-input" id="search-input" type="text" placeholder="Search eicons by name…" disabled autocomplete="off" spellcheck="false">
+      <button class="search-clear" id="search-clear" title="Clear search">✕</button>
     </div>
 
     <div class="header-right">
@@ -199,15 +216,18 @@
     let totalRows    = 0;
     let poolCells    = [];
     let rafPending   = false;
+    let isSearching  = false; // true when search is active, false = browse mode
 
     // ── DOM ───────────────────────────────────────────────────────────
-    const scroller  = document.getElementById('scroller');
-    const canvas    = document.getElementById('canvas');
-    const loading   = document.getElementById('loading');
-    const tooltip   = document.getElementById('tooltip');
-    const statCount = document.getElementById('stat-count');
-    const statPos   = document.getElementById('stat-pos');
-    const btnShuffle = document.getElementById('btn-shuffle');
+    const scroller    = document.getElementById('scroller');
+    const canvas      = document.getElementById('canvas');
+    const loading     = document.getElementById('loading');
+    const tooltip     = document.getElementById('tooltip');
+    const statCount   = document.getElementById('stat-count');
+    const statPos     = document.getElementById('stat-pos');
+    const btnShuffle  = document.getElementById('btn-shuffle');
+    const searchInput = document.getElementById('search-input');
+    const searchClear = document.getElementById('search-clear');
 
     // ── IndexedDB ─────────────────────────────────────────────────────
     function openDB() {
@@ -272,7 +292,103 @@ self.onmessage = async (e) => {
       });
     }
 
-    // ── Seeded shuffle ────────────────────────────────────────────────
+    // ── Persistent search worker ──────────────────────────────────────
+    // Holds the full names array in memory — never terminated.
+    // Receives {query} messages, returns {results} sorted alphabetically.
+    const SEARCH_WK_SRC = `
+let names = [];
+self.onmessage = (e) => {
+  if (e.data.init) { names = e.data.init; return; }
+  const q = e.data.query.toLowerCase();
+  if (!q) { self.postMessage({ results: null }); return; }
+  const results = [];
+  for (let i = 0; i < names.length; i++) {
+    if (names[i].includes(q)) results.push(names[i]);
+  }
+  results.sort();
+  self.postMessage({ results, query: e.data.query });
+};`;
+
+    let searchWorker  = null;
+    let searchDebounce = null;
+    let pendingQuery  = '';
+
+    function initSearchWorker(names) {
+      const url = URL.createObjectURL(new Blob([SEARCH_WK_SRC], {type:'application/javascript'}));
+      searchWorker = new Worker(url);
+      searchWorker.postMessage({ init: names });
+      searchWorker.onmessage = (e) => {
+        const { results, query } = e.data;
+        // Discard stale responses if user typed ahead
+        if (query !== pendingQuery) return;
+        if (results === null) {
+          // Empty query — return to browse mode
+          exitSearch();
+        } else {
+          applySearchResults(results);
+        }
+      };
+    }
+
+    function applySearchResults(results) {
+      isSearching = true;
+      btnShuffle.disabled = true;
+      resetPool();
+      displayNames = results;
+      recalc();
+      scroller.scrollTop = 0;
+      scheduleUpdate();
+      statCount.textContent = `${results.length.toLocaleString()} matches`;
+    }
+
+    function exitSearch() {
+      isSearching = false;
+      btnShuffle.disabled = false;
+      searchInput.value = '';
+      searchInput.classList.remove('active');
+      searchClear.style.display = 'none';
+      resetPool();
+      displayNames = shuffle(nameGroups, getSeed()).flat();
+      recalc();
+      scroller.scrollTop = 0;
+      scheduleUpdate();
+      statCount.textContent = `${allNames.length.toLocaleString()} eicons`;
+    }
+
+    function resetPool() {
+      for (const cell of indexToCell.values()) {
+        cell.img.src = '';
+        cell.el.style.display = 'none';
+        cell.idx = -1;
+        freePool.push(cell);
+      }
+      indexToCell.clear();
+    }
+
+    // ── Search input wiring ───────────────────────────────────────────
+    function onSearchInput() {
+      const q = searchInput.value.trim();
+      pendingQuery = q;
+      searchClear.style.display = q ? '' : 'none';
+      searchInput.classList.toggle('active', q.length > 0);
+
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => {
+        if (searchWorker) searchWorker.postMessage({ query: q });
+      }, 150);
+    }
+
+    searchInput.addEventListener('input', onSearchInput);
+    searchClear.addEventListener('click', () => {
+      pendingQuery = '';
+      if (searchWorker) searchWorker.postMessage({ query: '' });
+    });
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        pendingQuery = '';
+        if (searchWorker) searchWorker.postMessage({ query: '' });
+      }
+    });
     // Groups are pre-computed at boot. newRandomSet() only runs this — no regex, no Map.
     function rng(seed) {
       return () => {
@@ -308,12 +424,18 @@ self.onmessage = async (e) => {
       const s = (Math.random() * 2 ** 32) >>> 0;
       sessionStorage.setItem('browse-seed', String(s));
       applyShuffledDisplay(s);
+      resetPool();
       recalc();
       scroller.scrollTop = 0;
       scheduleUpdate();
     }
 
     // ── Pool — grows dynamically to fit any viewport/resolution ──────
+    // indexToCell: Map<nameIdx, poolCell> — which cell is showing which index
+    // freePool: poolCell[] — cells not currently assigned to any index
+    let indexToCell = new Map();
+    let freePool    = [];
+
     function growPool(target) {
       while (poolCells.length < target) {
         const el  = document.createElement('div');
@@ -324,7 +446,9 @@ self.onmessage = async (e) => {
         img.draggable = false;
         el.appendChild(img);
         canvas.appendChild(el);
-        poolCells.push({ el, img, idx: -1 });
+        const cell = { el, img, idx: -1 };
+        poolCells.push(cell);
+        freePool.push(cell);
       }
     }
 
@@ -334,13 +458,14 @@ self.onmessage = async (e) => {
       totalRows = Math.ceil(displayNames.length / cols);
       canvas._left = Math.max(0, Math.floor((scroller.clientWidth - cols * PITCH) / 2));
       canvas.style.height = (totalRows * PITCH + 40) + 'px';
-      // Grow pool to cover viewport + buffers at current resolution
-      const visRows  = Math.ceil(scroller.clientHeight / PITCH);
-      const needed   = cols * (visRows + ABOVE + BELOW + 2);
+      const visRows = Math.ceil(scroller.clientHeight / PITCH);
+      const needed  = cols * (visRows + ABOVE + BELOW + 4);
       growPool(needed);
     }
 
-    // ── Update (hot path — called every rAF during scroll) ────────────
+    // ── Update (hot path) ─────────────────────────────────────────────
+    // Uses a Map so only cells that genuinely change index are touched.
+    // Cells already showing the right eicon are never touched — no smear.
     function update() {
       rafPending = false;
       if (!displayNames.length) return;
@@ -349,37 +474,43 @@ self.onmessage = async (e) => {
       const vh        = scroller.clientHeight;
       const left0     = canvas._left || 0;
 
-      const firstRow  = Math.max(0, Math.floor(scrollTop / PITCH) - ABOVE);
-      const lastRow   = Math.min(totalRows - 1, Math.ceil((scrollTop + vh) / PITCH) + BELOW);
-      const firstIdx  = firstRow * cols;
-      const lastIdx   = Math.min(displayNames.length - 1, (lastRow + 1) * cols - 1);
-      const needed    = lastIdx - firstIdx + 1;
+      const firstRow = Math.max(0, Math.floor(scrollTop / PITCH) - ABOVE);
+      const lastRow  = Math.min(totalRows - 1, Math.ceil((scrollTop + vh) / PITCH) + BELOW);
+      const firstIdx = firstRow * cols;
+      const lastIdx  = Math.min(displayNames.length - 1, (lastRow + 1) * cols - 1);
 
-      for (let i = 0; i < poolCells.length; i++) {
-        const cell = poolCells[i];
-        if (i < needed) {
-          const nameIdx = firstIdx + i;
-          const row = Math.floor(nameIdx / cols);
-          const col = nameIdx % cols;
-
-          cell.el.style.display = '';
-          cell.el.style.top  = (row  * PITCH) + 'px';
-          cell.el.style.left = (left0 + col * PITCH) + 'px';
-          cell.el.dataset.name = displayNames[nameIdx];
-
-          if (cell.idx !== nameIdx) {
-            cell.idx = nameIdx;
-            cell.img.src = `https://static.f-list.net/images/eicon/${encodeURIComponent(displayNames[nameIdx])}.gif`;
-          }
-        } else {
-          if (cell.el.style.display !== 'none') {
-            cell.el.style.display = 'none';
-            cell.idx = -1;
-          }
+      // Pass 1 — release cells whose index is now outside the render window
+      for (const [idx, cell] of indexToCell) {
+        if (idx < firstIdx || idx > lastIdx) {
+          cell.img.src = '';          // blank immediately — prevents smear
+          cell.el.style.display = 'none';
+          cell.idx = -1;
+          freePool.push(cell);
+          indexToCell.delete(idx);
         }
       }
 
-      // Status
+      // Pass 2 — assign cells to any indices in window not yet covered
+      for (let nameIdx = firstIdx; nameIdx <= lastIdx; nameIdx++) {
+        if (indexToCell.has(nameIdx)) continue; // already rendered correctly
+
+        const cell = freePool.pop();
+        if (!cell) break; // pool exhausted — grow on next recalc
+
+        const row = Math.floor(nameIdx / cols);
+        const col = nameIdx % cols;
+
+        cell.idx              = nameIdx;
+        cell.el.dataset.name  = displayNames[nameIdx];
+        cell.el.style.top     = (row * PITCH) + 'px';
+        cell.el.style.left    = (left0 + col * PITCH) + 'px';
+        cell.el.style.display = '';
+        cell.img.src = `https://static.f-list.net/images/eicon/${encodeURIComponent(displayNames[nameIdx])}.gif`;
+
+        indexToCell.set(nameIdx, cell);
+      }
+
+      // Status bar
       const pct = totalRows > 0 ? Math.round((scrollTop / (canvas.clientHeight - vh)) * 100) : 0;
       statPos.textContent = `${Math.min(100, Math.max(0, pct))}% scrolled`;
     }
@@ -468,6 +599,11 @@ self.onmessage = async (e) => {
       loading.style.display = 'none';
       statCount.textContent  = `${allNames.length.toLocaleString()} eicons`;
       btnShuffle.disabled    = false;
+      searchInput.disabled   = false;
+      searchInput.placeholder = 'Search eicons by name…';
+
+      // Init persistent search worker with the full names array
+      initSearchWorker(allNames);
 
       recalc();
       scheduleUpdate();
