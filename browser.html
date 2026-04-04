@@ -9,7 +9,6 @@
 
     :root {
       --header-h: 54px;
-      --msg-h:    32px;
       --status-h: 24px;
       --bg:     #141414;
       --bg2:    #1e1e1e;
@@ -90,41 +89,6 @@
     .btn:hover:not(:disabled) { background: #2a2a2a; color: #ccc; }
     .btn:disabled { opacity: 0.4; cursor: default; }
 
-    /* ── Message bar ── */
-    #msg-bar {
-      position: fixed;
-      top: var(--header-h);
-      left: 0; right: 0;
-      height: var(--msg-h);
-      background: #172617;
-      border-bottom: 1px solid #2a4a2a;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      z-index: 99;
-      pointer-events: none;
-      opacity: 0;
-      transform: translateY(-100%);
-      transition: opacity 0.18s ease, transform 0.18s ease;
-    }
-    #msg-bar.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    #msg-bar.hiding {
-      opacity: 0;
-      transform: translateY(-100%);
-      transition: opacity 0.35s ease, transform 0.35s ease;
-    }
-    #msg-text {
-      font-size: 0.78rem;
-      color: #6dbf6d;
-      font-family: monospace;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
     /* ── Grid scroller ── */
     #scroller {
       position: fixed;
@@ -171,7 +135,198 @@
       animation: copyFlash 0.7s ease-out forwards;
     }
 
-    /* ── Tooltip ── */
+    /* ── Tag button (appears on cell hover) ── */
+    .cell-tag-btn {
+      position: absolute;
+      bottom: 3px;
+      right: 3px;
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #aaa;
+      font-size: 0.7rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.1s, background 0.1s;
+      z-index: 2;
+    }
+    .cell:hover .cell-tag-btn { opacity: 1; }
+    .cell-tag-btn:hover { background: rgba(60,100,60,0.9); color: #8df; }
+    .cell-tag-btn.has-tags { opacity: 0.55; color: #6dbf6d; border-color: #2a4a2a; }
+    .cell:hover .cell-tag-btn.has-tags { opacity: 1; }
+
+    /* ── Tag modal ── */
+    #tag-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #tag-modal-backdrop.open { display: flex; }
+
+    #tag-modal {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 10px;
+      width: 420px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 64px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      border-bottom: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+    .modal-preview {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .modal-title {
+      flex: 1;
+      min-width: 0;
+    }
+    .modal-eicon-name {
+      font-size: 0.95rem;
+      color: #ddd;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .modal-eicon-sub {
+      font-size: 0.72rem;
+      color: #555;
+      margin-top: 2px;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: #555;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .modal-close:hover { color: #aaa; background: #2a2a2a; }
+
+    .modal-body {
+      padding: 16px;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-section-label {
+      font-size: 0.68rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    /* Tag chips */
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 28px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #2a3a2a;
+      border: 1px solid #3a5a3a;
+      border-radius: 4px;
+      padding: 3px 8px 3px 9px;
+      font-size: 0.8rem;
+      color: #8dbf8d;
+      cursor: default;
+    }
+    .chip-remove {
+      background: none;
+      border: none;
+      color: #5a8a5a;
+      font-size: 0.75rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      margin-left: 1px;
+    }
+    .chip-remove:hover { color: #e05c5c; }
+    .chip-empty { color: #444; font-size: 0.8rem; font-style: italic; }
+
+    /* Tag input */
+    .tag-input-wrap {
+      display: flex;
+      gap: 8px;
+    }
+    .tag-input {
+      flex: 1;
+      background: #141414;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 0.4rem 0.7rem;
+      color: #ccc;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .tag-input:focus { border-color: var(--accent); }
+    .tag-input::placeholder { color: #444; }
+    .tag-add-btn {
+      background: #2a3a2a;
+      border: 1px solid #3a5a3a;
+      border-radius: 6px;
+      color: #8dbf8d;
+      font-size: 0.82rem;
+      padding: 0 14px;
+      cursor: pointer;
+    }
+    .tag-add-btn:hover { background: #344a34; }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+    .modal-btn {
+      border-radius: 6px;
+      padding: 0.35rem 1rem;
+      font-size: 0.84rem;
+      cursor: pointer;
+      border: 1px solid #333;
+    }
+    .modal-btn.cancel { background: #232323; color: #888; }
+    .modal-btn.cancel:hover { background: #2a2a2a; color: #aaa; }
+    .modal-btn.save   { background: #2a3a2a; color: #8dbf8d; border-color: #3a5a3a; }
+    .modal-btn.save:hover { background: #344a34; }
     #tooltip {
       position: fixed;
       background: rgba(0,0,0,0.88);
@@ -231,6 +386,39 @@
     </div>
   </header>
 
+  <!-- Tag modal -->
+  <div id="tag-modal-backdrop">
+    <div id="tag-modal">
+      <div class="modal-header">
+        <img class="modal-preview" id="modal-preview" src="" alt="">
+        <div class="modal-title">
+          <div class="modal-eicon-name" id="modal-eicon-name">—</div>
+          <div class="modal-eicon-sub" id="modal-tag-count">no tags</div>
+        </div>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="modal-section-label">Tags</div>
+          <div class="chip-row" id="modal-chips"></div>
+        </div>
+        <div>
+          <div class="modal-section-label">Add tag</div>
+          <div class="tag-input-wrap">
+            <input class="tag-input" id="tag-input"
+                   placeholder="type a tag, press Enter or comma…"
+                   autocomplete="off" spellcheck="false">
+            <button class="tag-add-btn" id="tag-add-btn">Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel" id="modal-cancel">Cancel</button>
+        <button class="modal-btn save"   id="modal-save">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Message bar — slides down from header edge -->
   <div id="msg-bar"><span id="msg-text"></span></div>
 
@@ -247,8 +435,18 @@
     <span id="stat-hint" style="margin-left:auto">click an eicon to copy its code</span>
   </div>
 
-  <script>
+  <script type="module">
+    import { showMessage }             from '/modules/messages.js';
+    import { openDB, idbGet, idbSet }  from '/modules/idb.js';
+    import { decompress }              from '/modules/workers.js';
+    import { openTagDB, getTags, setTags, getAllTags } from '/modules/tags.js';
+
     // ── Config ────────────────────────────────────────────────────────
+    // Modules in use:
+    //   messages.js  — showMessage(text, durationMs?)
+    //   idb.js       — openDB(), idbGet(), idbSet(), idbDel()
+    //   workers.js   — decompress(arrayBuffer) → { names, groups }
+    //   tags.js      — openTagDB(), getTags(), setTags(), getAllTags()
     const WORKER_BASE = 'https://eicon-status-worker.joepurple.workers.dev';
     const IDB_NAME    = 'eicon-browser';
     const IDB_VER     = 1;
@@ -286,6 +484,8 @@
     let poolCells    = [];
     let rafPending   = false;
     let isSearching  = false;
+    let tagDB        = null;  // opened at boot, used by modal and tag button rendering
+    let tagCache     = new Map(); // name → string[] — in-memory cache, avoids redundant IDB reads
 
     // ── DOM ───────────────────────────────────────────────────────────
     const scroller    = document.getElementById('scroller');
@@ -294,85 +494,14 @@
     const tooltip     = document.getElementById('tooltip');
     const statCount   = document.getElementById('stat-count');
     const statPos     = document.getElementById('stat-pos');
-    const statHint    = document.getElementById('stat-hint');
     const btnShuffle  = document.getElementById('btn-shuffle');
     const searchInput = document.getElementById('search-input');
     const searchClear = document.getElementById('search-clear');
-    const msgBar      = document.getElementById('msg-bar');
-    const msgText     = document.getElementById('msg-text');
 
-    // ── Message bar ───────────────────────────────────────────────────
-    let msgTimer     = null;
-    let msgHideTimer = null;
+    // showMessage() is imported from messages.js (see module script tag)
 
-    function showMessage(text, duration = 2500) {
-      clearTimeout(msgTimer);
-      clearTimeout(msgHideTimer);
-      msgBar.classList.remove('hiding');
-
-      msgText.textContent = text;
-
-      // Force reflow so transition restarts if bar is already visible
-      void msgBar.offsetWidth;
-      msgBar.classList.add('visible');
-
-      msgTimer = setTimeout(() => {
-        msgBar.classList.add('hiding');
-        msgHideTimer = setTimeout(() => msgBar.classList.remove('visible', 'hiding'), 380);
-      }, duration);
-    }
-
-    // ── IndexedDB ─────────────────────────────────────────────────────
-    function openDB() {
-      return new Promise((res, rej) => {
-        const r = indexedDB.open(IDB_NAME, IDB_VER);
-        r.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
-        r.onsuccess = e => res(e.target.result);
-        r.onerror   = e => rej(e.target.error);
-      });
-    }
-    const idbGet = (db, k) => new Promise((res, rej) => {
-      const r = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(k);
-      r.onsuccess = e => res(e.target.result); r.onerror = e => rej(e.target.error);
-    });
-    const idbSet = (db, k, v) => new Promise((res, rej) => {
-      const r = db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(v, k);
-      r.onsuccess = () => res(); r.onerror = e => rej(e.target.error);
-    });
-
-    // ── Decompress worker (one-shot) ──────────────────────────────────
-    const DECOMP_SRC = `
-self.onmessage = async (e) => {
-  try {
-    const ds = new DecompressionStream('gzip');
-    const stream = new Blob([e.data]).stream().pipeThrough(ds);
-    const reader = stream.getReader();
-    const chunks = [];
-    while (true) { const {value,done} = await reader.read(); if (done) break; chunks.push(value); }
-    const total = chunks.reduce((n,c) => n+c.length, 0);
-    const buf = new Uint8Array(total);
-    let off = 0;
-    for (const c of chunks) { buf.set(c, off); off += c.length; }
-    const names = new TextDecoder().decode(buf).split('\\n').filter(n => n.length > 0);
-    const groupMap = new Map();
-    for (const name of names) {
-      const base = name.replace(/\\d+$/, '') || name;
-      if (!groupMap.has(base)) groupMap.set(base, []);
-      groupMap.get(base).push(name);
-    }
-    self.postMessage({ ok: true, names, groups: [...groupMap.values()] });
-  } catch(err) { self.postMessage({ ok: false, error: err.message }); }
-};`;
-
-    function decompress(buffer) {
-      return new Promise((res, rej) => {
-        const url = URL.createObjectURL(new Blob([DECOMP_SRC], {type:'application/javascript'}));
-        const w = new Worker(url);
-        w.onmessage = e => { w.terminate(); URL.revokeObjectURL(url); e.data.ok ? res(e.data) : rej(new Error(e.data.error)); };
-        w.onerror   = e => { w.terminate(); URL.revokeObjectURL(url); rej(e); };
-        w.postMessage(buffer, [buffer]);
-      });
-    }
+    // ── IDB store name (passed to all idb.js calls) ───────────────────
+    const STORE = IDB_STORE;
 
     // ── Persistent search worker ──────────────────────────────────────
     const SEARCH_SRC = `
@@ -489,15 +618,30 @@ self.onmessage = (e) => {
         const el      = document.createElement('div');
         el.className  = 'cell';
         el.style.display = 'none';
+
         const img     = document.createElement('img');
         img.alt       = '';
         img.draggable = false;
+
         const overlay = document.createElement('div');
         overlay.className = 'cell-overlay';
+
+        const tagBtn  = document.createElement('button');
+        tagBtn.className = 'cell-tag-btn';
+        tagBtn.title  = 'Tag this eicon';
+        tagBtn.textContent = '🏷';
+        tagBtn.addEventListener('click', e => {
+          e.stopPropagation(); // prevent copy handler firing
+          const name = el.dataset.name;
+          if (name) openTagModal(name);
+        });
+
         el.appendChild(img);
         el.appendChild(overlay);
+        el.appendChild(tagBtn);
         canvas.appendChild(el);
-        const cell = { el, img, overlay, idx: -1 };
+
+        const cell = { el, img, overlay, tagBtn, idx: -1 };
         poolCells.push(cell);
         freePool.push(cell);
       }
@@ -569,6 +713,9 @@ self.onmessage = (e) => {
         cell.el.style.left   = (left0 + col * PITCH) + 'px';
         cell.el.style.display = '';
         cell.img.src = `https://static.f-list.net/images/eicon/${encodeURIComponent(name)}.gif`;
+        // Reflect tag state on the tag button
+        const hasTags = tagCache.has(name) && tagCache.get(name).length > 0;
+        cell.tagBtn.classList.toggle('has-tags', hasTags);
         indexToCell.set(nameIdx, cell);
       }
 
@@ -620,14 +767,121 @@ self.onmessage = (e) => {
     scroller.addEventListener('scroll', scheduleUpdate, { passive: true });
     window.addEventListener('resize', () => { recalc(); scheduleUpdate(); });
 
+    // ── Tag modal ─────────────────────────────────────────────────────
+    const backdrop     = document.getElementById('tag-modal-backdrop');
+    const modalPreview = document.getElementById('modal-preview');
+    const modalName    = document.getElementById('modal-eicon-name');
+    const modalSub     = document.getElementById('modal-tag-count');
+    const modalChips   = document.getElementById('modal-chips');
+    const tagInput     = document.getElementById('tag-input');
+    const tagAddBtn    = document.getElementById('tag-add-btn');
+    const modalClose   = document.getElementById('modal-close');
+    const modalCancel  = document.getElementById('modal-cancel');
+    const modalSave    = document.getElementById('modal-save');
+
+    let modalEiconName = '';   // name currently being edited
+    let modalTags      = [];   // working copy of tags (not yet saved)
+
+    function openTagModal(name) {
+      modalEiconName = name;
+      modalTags      = tagCache.has(name) ? [...tagCache.get(name)] : [];
+
+      modalPreview.src = `https://static.f-list.net/images/eicon/${encodeURIComponent(name)}.gif`;
+      modalName.textContent = name;
+      tagInput.value = '';
+      renderModalChips();
+      backdrop.classList.add('open');
+      tagInput.focus();
+    }
+
+    function closeTagModal() {
+      backdrop.classList.remove('open');
+      modalEiconName = '';
+      modalTags      = [];
+      modalPreview.src = '';
+    }
+
+    function renderModalChips() {
+      modalSub.textContent = modalTags.length
+        ? `${modalTags.length} tag${modalTags.length === 1 ? '' : 's'}`
+        : 'no tags';
+
+      if (modalTags.length === 0) {
+        modalChips.innerHTML = '<span class="chip-empty">no tags yet</span>';
+        return;
+      }
+
+      modalChips.innerHTML = '';
+      for (const tag of modalTags) {
+        const chip   = document.createElement('div');
+        chip.className = 'chip';
+
+        const label  = document.createElement('span');
+        label.textContent = tag;
+
+        const remove = document.createElement('button');
+        remove.className = 'chip-remove';
+        remove.textContent = '✕';
+        remove.title = `Remove "${tag}"`;
+        remove.addEventListener('click', () => {
+          modalTags = modalTags.filter(t => t !== tag);
+          renderModalChips();
+        });
+
+        chip.appendChild(label);
+        chip.appendChild(remove);
+        modalChips.appendChild(chip);
+      }
+    }
+
+    function addTagFromInput() {
+      const raw  = tagInput.value;
+      // Accept comma-separated input — split and add each
+      const incoming = raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      for (const t of incoming) {
+        if (!modalTags.includes(t)) modalTags.push(t);
+      }
+      tagInput.value = '';
+      renderModalChips();
+    }
+
+    async function saveTagModal() {
+      if (!modalEiconName || !tagDB) return;
+      await setTags(tagDB, modalEiconName, modalTags);
+      // Update cache
+      tagCache.set(modalEiconName, [...modalTags]);
+      // Refresh tag button state on any visible cell showing this eicon
+      for (const cell of indexToCell.values()) {
+        if (cell.el.dataset.name === modalEiconName) {
+          cell.tagBtn.classList.toggle('has-tags', modalTags.length > 0);
+        }
+      }
+      const msg = modalTags.length > 0
+        ? `Tagged "${modalEiconName}": ${modalTags.join(', ')}`
+        : `Cleared tags for "${modalEiconName}"`;
+      showMessage(msg);
+      closeTagModal();
+    }
+
+    // Modal event wiring
+    tagInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTagFromInput(); }
+      if (e.key === 'Escape') closeTagModal();
+    });
+    tagAddBtn.addEventListener('click', addTagFromInput);
+    modalClose.addEventListener('click', closeTagModal);
+    modalCancel.addEventListener('click', closeTagModal);
+    modalSave.addEventListener('click', saveTagModal);
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeTagModal(); });
+
     // ── Boot ──────────────────────────────────────────────────────────
     async function boot() {
       let names, groups;
       try {
-        const db        = await openDB();
-        const cached    = await idbGet(db, 'names');
-        const cachedGrp = await idbGet(db, 'groups');
-        const fetchedAt = await idbGet(db, 'fetchedAt');
+        const db        = await openDB(IDB_NAME, IDB_VER, STORE);
+        const cached    = await idbGet(db, STORE, 'names');
+        const cachedGrp = await idbGet(db, STORE, 'groups');
+        const fetchedAt = await idbGet(db, STORE, 'fetchedAt');
         const age       = fetchedAt ? (Date.now() / 1000) - fetchedAt : Infinity;
 
         if (cached && cachedGrp && age < CACHE_MAX) {
@@ -641,9 +895,9 @@ self.onmessage = (e) => {
           const result = await decompress(await res.arrayBuffer());
           names  = result.names;
           groups = result.groups;
-          await idbSet(db, 'names',     names);
-          await idbSet(db, 'groups',    groups);
-          await idbSet(db, 'fetchedAt', Math.floor(Date.now() / 1000));
+          await idbSet(db, STORE, 'names',     names);
+          await idbSet(db, STORE, 'groups',    groups);
+          await idbSet(db, STORE, 'fetchedAt', Math.floor(Date.now() / 1000));
         }
       } catch (err) {
         loading.textContent = `Failed to load: ${err.message}`;
@@ -653,6 +907,10 @@ self.onmessage = (e) => {
       allNames   = names;
       nameGroups = groups;
       applyShuffledDisplay(getSeed());
+
+      // Open tag database and warm the cache
+      tagDB    = await openTagDB();
+      tagCache = await getAllTags(tagDB);
 
       loading.style.display    = 'none';
       statCount.textContent    = `${allNames.length.toLocaleString()} eicons`;
