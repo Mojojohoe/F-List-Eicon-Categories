@@ -9,6 +9,7 @@
 
     :root {
       --header-h: 54px;
+      --msg-h:    32px;
       --status-h: 24px;
       --bg:     #141414;
       --bg2:    #1e1e1e;
@@ -40,8 +41,6 @@
     .logo-credit a { color: #5a9a5a; text-decoration: none; }
     .logo-credit a:hover { text-decoration: underline; }
 
-    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-
     .search-wrap { flex: 1; max-width: 480px; position: relative; }
     .search-input {
       width: 100%;
@@ -53,9 +52,9 @@
       font-size: 0.88rem;
       outline: none;
     }
-    .search-input:focus { border-color: var(--accent); }
-    .search-input::placeholder { color: var(--dim); }
+    .search-input:focus  { border-color: var(--accent); }
     .search-input.active { border-color: #5a9a5a; background: #161e16; }
+    .search-input::placeholder { color: var(--dim); }
 
     .search-clear {
       position: absolute;
@@ -64,13 +63,18 @@
       background: none;
       border: none;
       color: var(--dim);
-      font-size: 1rem;
+      font-size: 0.85rem;
       cursor: pointer;
       line-height: 1;
-      padding: 2px 4px;
-      display: none;
+      padding: 3px 5px;
+      border-radius: 3px;
+      display: none;       /* shown via JS with display:flex */
+      align-items: center;
+      justify-content: center;
     }
-    .search-clear:hover { color: var(--text); }
+    .search-clear:hover { color: var(--text); background: #333; }
+
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
     .btn {
       background: #232323;
@@ -85,6 +89,41 @@
     }
     .btn:hover:not(:disabled) { background: #2a2a2a; color: #ccc; }
     .btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* ── Message bar ── */
+    #msg-bar {
+      position: fixed;
+      top: var(--header-h);
+      left: 0; right: 0;
+      height: var(--msg-h);
+      background: #172617;
+      border-bottom: 1px solid #2a4a2a;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 99;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(-100%);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    #msg-bar.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #msg-bar.hiding {
+      opacity: 0;
+      transform: translateY(-100%);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    #msg-text {
+      font-size: 0.78rem;
+      color: #6dbf6d;
+      font-family: monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     /* ── Grid scroller ── */
     #scroller {
@@ -101,16 +140,12 @@
     /* ── Cells ── */
     .cell {
       position: absolute;
-      width: 100px;
-      height: 100px;
       border-radius: 4px;
       overflow: hidden;
       background: #1a1a1a;
       cursor: pointer;
     }
-
     .cell:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
-    .cell.copied { outline: 2px solid #7ab87a; }
 
     .cell img {
       width: 100%;
@@ -118,6 +153,22 @@
       object-fit: contain;
       display: block;
       pointer-events: none;
+    }
+
+    /* Copy flash overlay — sits on top of img, invisible until flash class added */
+    .cell-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 3px;
+      pointer-events: none;
+      opacity: 0;
+    }
+    @keyframes copyFlash {
+      0%   { opacity: 0.65; background: #fff; }
+      100% { opacity: 0;    background: #fff; }
+    }
+    .cell-overlay.flash {
+      animation: copyFlash 0.7s ease-out forwards;
     }
 
     /* ── Tooltip ── */
@@ -132,7 +183,7 @@
       display: none;
       z-index: 9999;
       white-space: nowrap;
-      max-width: 260px;
+      max-width: 300px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
@@ -170,16 +221,18 @@
       <span class="logo-title">Eicon Browser</span>
       <span class="logo-credit">powered by <a href="https://xariah.net/eicons" target="_blank" rel="noopener">Xariah Dailstone</a></span>
     </div>
-
     <div class="search-wrap">
-      <input class="search-input" id="search-input" type="text" placeholder="Search eicons by name…" disabled autocomplete="off" spellcheck="false">
-      <button class="search-clear" id="search-clear" title="Clear search">✕</button>
+      <input class="search-input" id="search-input" type="text"
+             placeholder="Loading…" disabled autocomplete="off" spellcheck="false">
+      <button class="search-clear" id="search-clear" title="Clear search (Esc)">✕</button>
     </div>
-
     <div class="header-right">
       <button class="btn" id="btn-shuffle" onclick="newRandomSet()" disabled>↺ New random set</button>
     </div>
   </header>
+
+  <!-- Message bar — slides down from header edge -->
+  <div id="msg-bar"><span id="msg-text"></span></div>
 
   <div id="scroller">
     <div id="canvas"></div>
@@ -200,23 +253,39 @@
     const IDB_NAME    = 'eicon-browser';
     const IDB_VER     = 1;
     const IDB_STORE   = 'index';
-    const CACHE_MAX   = 7 * 24 * 3600; // seconds
+    const CACHE_MAX   = 7 * 24 * 3600;
 
-    const CELL      = 100;       // cell size (square, px) — native eicon size
-    const GAP       = 5;         // gap between cells (px)
-    const PITCH     = CELL + GAP; // 105px
-    const ABOVE     = 2;         // buffer rows above viewport
-    const BELOW     = 5;         // buffer+prefetch rows below viewport
+    const CELL  = 100;        // native eicon size (px)
+    const GAP   = 5;
+    const PITCH = CELL + GAP; // 105px
+    const ABOVE = 2;
+    const BELOW = 6;
+
+    // ── Composite specs ───────────────────────────────────────────────
+    // Empty until the tag system provides data.
+    // Format: Map<firstName, {cols: N, rows: M}>
+    // e.g. compositeSpecs.set('rohriride1', {cols: 2, rows: 3})
+    // When populated, getItemSize() returns the correct pixel dimensions
+    // and the masonry layout engine (to be wired in with tag data) will
+    // compute positions so composites don't overlap single eicons.
+    const compositeSpecs = new Map();
+
+    function getItemSize(name) {
+      const spec = compositeSpecs.get(name);
+      return spec
+        ? { w: spec.cols * PITCH - GAP, h: spec.rows * PITCH - GAP }
+        : { w: CELL, h: CELL };
+    }
 
     // ── State ─────────────────────────────────────────────────────────
     let allNames     = [];
-    let nameGroups   = []; // pre-computed groups — built once, never again
+    let nameGroups   = [];
     let displayNames = [];
     let cols         = 1;
     let totalRows    = 0;
     let poolCells    = [];
     let rafPending   = false;
-    let isSearching  = false; // true when search is active, false = browse mode
+    let isSearching  = false;
 
     // ── DOM ───────────────────────────────────────────────────────────
     const scroller    = document.getElementById('scroller');
@@ -225,9 +294,33 @@
     const tooltip     = document.getElementById('tooltip');
     const statCount   = document.getElementById('stat-count');
     const statPos     = document.getElementById('stat-pos');
+    const statHint    = document.getElementById('stat-hint');
     const btnShuffle  = document.getElementById('btn-shuffle');
     const searchInput = document.getElementById('search-input');
     const searchClear = document.getElementById('search-clear');
+    const msgBar      = document.getElementById('msg-bar');
+    const msgText     = document.getElementById('msg-text');
+
+    // ── Message bar ───────────────────────────────────────────────────
+    let msgTimer     = null;
+    let msgHideTimer = null;
+
+    function showMessage(text, duration = 2500) {
+      clearTimeout(msgTimer);
+      clearTimeout(msgHideTimer);
+      msgBar.classList.remove('hiding');
+
+      msgText.textContent = text;
+
+      // Force reflow so transition restarts if bar is already visible
+      void msgBar.offsetWidth;
+      msgBar.classList.add('visible');
+
+      msgTimer = setTimeout(() => {
+        msgBar.classList.add('hiding');
+        msgHideTimer = setTimeout(() => msgBar.classList.remove('visible', 'hiding'), 380);
+      }, duration);
+    }
 
     // ── IndexedDB ─────────────────────────────────────────────────────
     function openDB() {
@@ -238,23 +331,17 @@
         r.onerror   = e => rej(e.target.error);
       });
     }
-    function idbGet(db, key) {
-      return new Promise((res, rej) => {
-        const r = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
-        r.onsuccess = e => res(e.target.result);
-        r.onerror   = e => rej(e.target.error);
-      });
-    }
-    function idbSet(db, key, val) {
-      return new Promise((res, rej) => {
-        const r = db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(val, key);
-        r.onsuccess = () => res();
-        r.onerror   = e => rej(e.target.error);
-      });
-    }
+    const idbGet = (db, k) => new Promise((res, rej) => {
+      const r = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(k);
+      r.onsuccess = e => res(e.target.result); r.onerror = e => rej(e.target.error);
+    });
+    const idbSet = (db, k, v) => new Promise((res, rej) => {
+      const r = db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(v, k);
+      r.onsuccess = () => res(); r.onerror = e => rej(e.target.error);
+    });
 
-    // ── Web Worker ────────────────────────────────────────────────────
-    const WK_SRC = `
+    // ── Decompress worker (one-shot) ──────────────────────────────────
+    const DECOMP_SRC = `
 self.onmessage = async (e) => {
   try {
     const ds = new DecompressionStream('gzip');
@@ -267,24 +354,19 @@ self.onmessage = async (e) => {
     let off = 0;
     for (const c of chunks) { buf.set(c, off); off += c.length; }
     const names = new TextDecoder().decode(buf).split('\\n').filter(n => n.length > 0);
-
-    // Pre-compute groups while still in the worker — strip trailing digits to find siblings.
-    // Doing this here means newRandomSet() only needs a cheap shuffle+flat, never regex again.
     const groupMap = new Map();
     for (const name of names) {
       const base = name.replace(/\\d+$/, '') || name;
       if (!groupMap.has(base)) groupMap.set(base, []);
       groupMap.get(base).push(name);
     }
-    const groups = [...groupMap.values()];
-
-    self.postMessage({ ok: true, names, groups });
+    self.postMessage({ ok: true, names, groups: [...groupMap.values()] });
   } catch(err) { self.postMessage({ ok: false, error: err.message }); }
 };`;
 
     function decompress(buffer) {
       return new Promise((res, rej) => {
-        const url = URL.createObjectURL(new Blob([WK_SRC], {type:'application/javascript'}));
+        const url = URL.createObjectURL(new Blob([DECOMP_SRC], {type:'application/javascript'}));
         const w = new Worker(url);
         w.onmessage = e => { w.terminate(); URL.revokeObjectURL(url); e.data.ok ? res(e.data) : rej(new Error(e.data.error)); };
         w.onerror   = e => { w.terminate(); URL.revokeObjectURL(url); rej(e); };
@@ -293,14 +375,12 @@ self.onmessage = async (e) => {
     }
 
     // ── Persistent search worker ──────────────────────────────────────
-    // Holds the full names array in memory — never terminated.
-    // Receives {query} messages, returns {results} sorted alphabetically.
-    const SEARCH_WK_SRC = `
+    const SEARCH_SRC = `
 let names = [];
 self.onmessage = (e) => {
   if (e.data.init) { names = e.data.init; return; }
   const q = e.data.query.toLowerCase();
-  if (!q) { self.postMessage({ results: null }); return; }
+  if (!q) { self.postMessage({ results: null, query: e.data.query }); return; }
   const results = [];
   for (let i = 0; i < names.length; i++) {
     if (names[i].includes(q)) results.push(names[i]);
@@ -314,21 +394,38 @@ self.onmessage = (e) => {
     let pendingQuery  = '';
 
     function initSearchWorker(names) {
-      const url = URL.createObjectURL(new Blob([SEARCH_WK_SRC], {type:'application/javascript'}));
+      const url = URL.createObjectURL(new Blob([SEARCH_SRC], {type:'application/javascript'}));
       searchWorker = new Worker(url);
       searchWorker.postMessage({ init: names });
-      searchWorker.onmessage = (e) => {
-        const { results, query } = e.data;
-        // Discard stale responses if user typed ahead
-        if (query !== pendingQuery) return;
-        if (results === null) {
-          // Empty query — return to browse mode
-          exitSearch();
-        } else {
-          applySearchResults(results);
-        }
+      searchWorker.onmessage = ({ data: { results, query } }) => {
+        if (query !== pendingQuery) return; // stale response, typed ahead
+        results === null ? exitSearch() : applySearchResults(results);
       };
     }
+
+    // ── Search UI ─────────────────────────────────────────────────────
+    function onSearchInput() {
+      const q = searchInput.value.trim();
+      pendingQuery = q;
+      searchClear.style.display = q ? 'flex' : 'none'; // 'flex' not '' — '' falls back to CSS display:none
+      searchInput.classList.toggle('active', q.length > 0);
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => {
+        if (searchWorker) searchWorker.postMessage({ query: q });
+      }, 150);
+    }
+
+    function clearSearch() {
+      searchInput.value = '';
+      pendingQuery = '';
+      searchClear.style.display = 'none';
+      searchInput.classList.remove('active');
+      if (searchWorker) searchWorker.postMessage({ query: '' });
+    }
+
+    searchInput.addEventListener('input', onSearchInput);
+    searchClear.addEventListener('click', clearSearch);
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') clearSearch(); });
 
     function applySearchResults(results) {
       isSearching = true;
@@ -344,52 +441,15 @@ self.onmessage = (e) => {
     function exitSearch() {
       isSearching = false;
       btnShuffle.disabled = false;
-      searchInput.value = '';
-      searchInput.classList.remove('active');
-      searchClear.style.display = 'none';
       resetPool();
-      displayNames = shuffle(nameGroups, getSeed()).flat();
+      applyShuffledDisplay(getSeed());
       recalc();
       scroller.scrollTop = 0;
       scheduleUpdate();
       statCount.textContent = `${allNames.length.toLocaleString()} eicons`;
     }
 
-    function resetPool() {
-      for (const cell of indexToCell.values()) {
-        cell.img.src = '';
-        cell.el.style.display = 'none';
-        cell.idx = -1;
-        freePool.push(cell);
-      }
-      indexToCell.clear();
-    }
-
-    // ── Search input wiring ───────────────────────────────────────────
-    function onSearchInput() {
-      const q = searchInput.value.trim();
-      pendingQuery = q;
-      searchClear.style.display = q ? '' : 'none';
-      searchInput.classList.toggle('active', q.length > 0);
-
-      clearTimeout(searchDebounce);
-      searchDebounce = setTimeout(() => {
-        if (searchWorker) searchWorker.postMessage({ query: q });
-      }, 150);
-    }
-
-    searchInput.addEventListener('input', onSearchInput);
-    searchClear.addEventListener('click', () => {
-      pendingQuery = '';
-      if (searchWorker) searchWorker.postMessage({ query: '' });
-    });
-    searchInput.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        pendingQuery = '';
-        if (searchWorker) searchWorker.postMessage({ query: '' });
-      }
-    });
-    // Groups are pre-computed at boot. newRandomSet() only runs this — no regex, no Map.
+    // ── Shuffle ───────────────────────────────────────────────────────
     function rng(seed) {
       return () => {
         seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -398,27 +458,17 @@ self.onmessage = (e) => {
         return ((t ^ t >>> 14) >>> 0) / 4294967296;
       };
     }
-
     function shuffle(arr, seed) {
-      const rand = rng(seed);
-      const a = arr.slice();
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(rand() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
+      const rand = rng(seed), a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
       return a;
     }
-
-    // Shuffle pre-computed groups and flatten — fast path for "New random set"
-    function applyShuffledDisplay(seed) {
-      displayNames = shuffle(nameGroups, seed).flat();
-    }
-
     function getSeed() {
       let s = sessionStorage.getItem('browse-seed');
       if (!s) { s = (Math.random() * 2 ** 32) >>> 0; sessionStorage.setItem('browse-seed', String(s)); }
       return parseInt(s, 10);
     }
+    function applyShuffledDisplay(seed) { displayNames = shuffle(nameGroups, seed).flat(); }
 
     function newRandomSet() {
       const s = (Math.random() * 2 ** 32) >>> 0;
@@ -430,26 +480,38 @@ self.onmessage = (e) => {
       scheduleUpdate();
     }
 
-    // ── Pool — grows dynamically to fit any viewport/resolution ──────
-    // indexToCell: Map<nameIdx, poolCell> — which cell is showing which index
-    // freePool: poolCell[] — cells not currently assigned to any index
+    // ── Pool ──────────────────────────────────────────────────────────
     let indexToCell = new Map();
     let freePool    = [];
 
     function growPool(target) {
       while (poolCells.length < target) {
-        const el  = document.createElement('div');
-        el.className = 'cell';
+        const el      = document.createElement('div');
+        el.className  = 'cell';
         el.style.display = 'none';
-        const img = document.createElement('img');
-        img.alt = '';
+        const img     = document.createElement('img');
+        img.alt       = '';
         img.draggable = false;
+        const overlay = document.createElement('div');
+        overlay.className = 'cell-overlay';
         el.appendChild(img);
+        el.appendChild(overlay);
         canvas.appendChild(el);
-        const cell = { el, img, idx: -1 };
+        const cell = { el, img, overlay, idx: -1 };
         poolCells.push(cell);
         freePool.push(cell);
       }
+    }
+
+    function resetPool() {
+      for (const cell of indexToCell.values()) {
+        cell.img.src = '';
+        cell.overlay.classList.remove('flash');
+        cell.el.style.display = 'none';
+        cell.idx = -1;
+        freePool.push(cell);
+      }
+      indexToCell.clear();
     }
 
     // ── Layout ────────────────────────────────────────────────────────
@@ -459,13 +521,10 @@ self.onmessage = (e) => {
       canvas._left = Math.max(0, Math.floor((scroller.clientWidth - cols * PITCH) / 2));
       canvas.style.height = (totalRows * PITCH + 40) + 'px';
       const visRows = Math.ceil(scroller.clientHeight / PITCH);
-      const needed  = cols * (visRows + ABOVE + BELOW + 4);
-      growPool(needed);
+      growPool(cols * (visRows + ABOVE + BELOW + 4));
     }
 
     // ── Update (hot path) ─────────────────────────────────────────────
-    // Uses a Map so only cells that genuinely change index are touched.
-    // Cells already showing the right eicon are never touched — no smear.
     function update() {
       rafPending = false;
       if (!displayNames.length) return;
@@ -479,10 +538,11 @@ self.onmessage = (e) => {
       const firstIdx = firstRow * cols;
       const lastIdx  = Math.min(displayNames.length - 1, (lastRow + 1) * cols - 1);
 
-      // Pass 1 — release cells whose index is now outside the render window
+      // Pass 1: release out-of-range cells
       for (const [idx, cell] of indexToCell) {
         if (idx < firstIdx || idx > lastIdx) {
-          cell.img.src = '';          // blank immediately — prevents smear
+          cell.img.src = '';
+          cell.overlay.classList.remove('flash');
           cell.el.style.display = 'none';
           cell.idx = -1;
           freePool.push(cell);
@@ -490,27 +550,28 @@ self.onmessage = (e) => {
         }
       }
 
-      // Pass 2 — assign cells to any indices in window not yet covered
+      // Pass 2: assign free cells to uncovered indices
       for (let nameIdx = firstIdx; nameIdx <= lastIdx; nameIdx++) {
-        if (indexToCell.has(nameIdx)) continue; // already rendered correctly
-
+        if (indexToCell.has(nameIdx)) continue;
         const cell = freePool.pop();
-        if (!cell) break; // pool exhausted — grow on next recalc
+        if (!cell) break;
 
-        const row = Math.floor(nameIdx / cols);
-        const col = nameIdx % cols;
+        const row  = Math.floor(nameIdx / cols);
+        const col  = nameIdx % cols;
+        const name = displayNames[nameIdx];
+        const { w, h } = getItemSize(name); // composite-aware sizing
 
-        cell.idx              = nameIdx;
-        cell.el.dataset.name  = displayNames[nameIdx];
-        cell.el.style.top     = (row * PITCH) + 'px';
-        cell.el.style.left    = (left0 + col * PITCH) + 'px';
+        cell.idx             = nameIdx;
+        cell.el.dataset.name = name;
+        cell.el.style.width  = w + 'px';
+        cell.el.style.height = h + 'px';
+        cell.el.style.top    = (row * PITCH) + 'px';
+        cell.el.style.left   = (left0 + col * PITCH) + 'px';
         cell.el.style.display = '';
-        cell.img.src = `https://static.f-list.net/images/eicon/${encodeURIComponent(displayNames[nameIdx])}.gif`;
-
+        cell.img.src = `https://static.f-list.net/images/eicon/${encodeURIComponent(name)}.gif`;
         indexToCell.set(nameIdx, cell);
       }
 
-      // Status bar
       const pct = totalRows > 0 ? Math.round((scrollTop / (canvas.clientHeight - vh)) * 100) : 0;
       statPos.textContent = `${Math.min(100, Math.max(0, pct))}% scrolled`;
     }
@@ -519,24 +580,27 @@ self.onmessage = (e) => {
       if (!rafPending) { rafPending = true; requestAnimationFrame(update); }
     }
 
-    // ── Tooltip ───────────────────────────────────────────────────────
-    let tooltipTarget = null;
+    // ── Copy flash ────────────────────────────────────────────────────
+    function flashCell(cellEl) {
+      const overlay = cellEl.querySelector('.cell-overlay');
+      if (!overlay) return;
+      overlay.classList.remove('flash');
+      void overlay.offsetWidth; // force reflow to restart animation
+      overlay.classList.add('flash');
+      overlay.addEventListener('animationend', () => overlay.classList.remove('flash'), { once: true });
+    }
 
+    // ── Tooltip ───────────────────────────────────────────────────────
     scroller.addEventListener('mouseover', e => {
       const cell = e.target.closest?.('.cell');
-      if (!cell || !cell.dataset.name) { tooltip.style.display = 'none'; return; }
-      tooltipTarget = cell;
-      tooltip.textContent = cell.dataset.name;
-      tooltip.style.display = 'block';
+      tooltip.style.display = (cell && cell.dataset.name) ? 'block' : 'none';
+      if (cell && cell.dataset.name) tooltip.textContent = cell.dataset.name;
     }, { passive: true });
 
     scroller.addEventListener('mousemove', e => {
       if (tooltip.style.display === 'none') return;
-      const tx = e.clientX + 14;
-      const ty = e.clientY - 34;
-      // Keep tooltip on screen
-      tooltip.style.left = Math.min(tx, window.innerWidth - 280) + 'px';
-      tooltip.style.top  = Math.max(4, ty) + 'px';
+      tooltip.style.left = Math.min(e.clientX + 14, window.innerWidth - 310) + 'px';
+      tooltip.style.top  = Math.max(4, e.clientY - 34) + 'px';
     }, { passive: true });
 
     scroller.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; }, { passive: true });
@@ -545,15 +609,10 @@ self.onmessage = (e) => {
     scroller.addEventListener('click', e => {
       const cell = e.target.closest?.('.cell');
       if (!cell || !cell.dataset.name) return;
-      const name = cell.dataset.name;
-      const bbcode = `[eicon]${name}[/eicon]`;
+      const bbcode = `[eicon]${cell.dataset.name}[/eicon]`;
       navigator.clipboard?.writeText(bbcode).then(() => {
-        cell.classList.add('copied');
-        document.getElementById('stat-hint').textContent = `Copied: ${bbcode}`;
-        setTimeout(() => {
-          cell.classList.remove('copied');
-          document.getElementById('stat-hint').textContent = 'click an eicon to copy its code';
-        }, 1200);
+        flashCell(cell);
+        showMessage(`Copied: ${bbcode}`);
       });
     });
 
@@ -578,9 +637,8 @@ self.onmessage = (e) => {
           loading.textContent = 'Downloading index…';
           const res = await fetch(WORKER_BASE + '/index');
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const buf = await res.arrayBuffer();
           loading.textContent = 'Decompressing + grouping…';
-          const result = await decompress(buf);
+          const result = await decompress(await res.arrayBuffer());
           names  = result.names;
           groups = result.groups;
           await idbSet(db, 'names',     names);
@@ -588,7 +646,7 @@ self.onmessage = (e) => {
           await idbSet(db, 'fetchedAt', Math.floor(Date.now() / 1000));
         }
       } catch (err) {
-        loading.textContent = `Failed to load index: ${err.message}`;
+        loading.textContent = `Failed to load: ${err.message}`;
         return;
       }
 
@@ -596,15 +654,13 @@ self.onmessage = (e) => {
       nameGroups = groups;
       applyShuffledDisplay(getSeed());
 
-      loading.style.display = 'none';
-      statCount.textContent  = `${allNames.length.toLocaleString()} eicons`;
-      btnShuffle.disabled    = false;
-      searchInput.disabled   = false;
-      searchInput.placeholder = 'Search eicons by name…';
+      loading.style.display    = 'none';
+      statCount.textContent    = `${allNames.length.toLocaleString()} eicons`;
+      btnShuffle.disabled      = false;
+      searchInput.disabled     = false;
+      searchInput.placeholder  = 'Search eicons by name…';
 
-      // Init persistent search worker with the full names array
       initSearchWorker(allNames);
-
       recalc();
       scheduleUpdate();
     }
